@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.bjfu.journal.mapper.SysLoginLogMapper">
+
+  <insert id="insert" parameterType="SysLoginLog" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO sys_login_log(user_id, username, ip, ua, success, msg, login_time)
+    VALUES(#{userId}, #{username}, #{ip}, #{ua}, #{success}, #{msg}, SYSDATETIME())
+  </insert>
+
+  <select id="list" resultType="SysLoginLog">
+    SELECT TOP 200 * FROM sys_login_log
+    <where>
+      <if test="username != null and username != ''">
+        username = #{username}
+      </if>
+    </where>
+    ORDER BY login_time DESC
+  </select>
+
+</mapper>
