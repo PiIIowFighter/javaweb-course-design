@@ -1,0 +1,30 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /Online_SMsystem4SP
+
+spring:
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+  datasource:
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    #  SMSS 创建的库名：journal_system
+    # 账号/密码按你自己的 SQL Server 修改
+    url: jdbc:sqlserver://localhost:1433;databaseName=journal_system;encrypt=false;trustServerCertificate=true
+    username: yyt
+    password: 231002110
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+mybatis:
+  mapper-locations: classpath:mappers/*.xml
+  type-aliases-package: edu.bjfu.journal.model
+  configuration:
+    map-underscore-to-camel-case: true
+
+app:
+  upload-dir: D:/javaweb_workspace/Online_SMsystem4SP/uploads

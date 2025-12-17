@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.bjfu.journal.mapper.SysUserMapper">
+
+  <select id="selectById" resultType="SysUser">
+    SELECT * FROM sys_user WHERE id = #{id}
+  </select>
+
+  <select id="selectByUsername" resultType="SysUser">
+    SELECT * FROM sys_user WHERE username = #{username}
+  </select>
+
+  <select id="list" resultType="SysUser">
+    SELECT * FROM sys_user
+    <where>
+      <if test="keyword != null and keyword != ''">
+        (username LIKE CONCAT('%', #{keyword}, '%')
+         OR real_name LIKE CONCAT('%', #{keyword}, '%')
+         OR email LIKE CONCAT('%', #{keyword}, '%'))
+      </if>
+      <if test="status != null">
+        AND status = #{status}
+      </if>
+    </where>
+    ORDER BY id DESC
+  </select>
+
+  <insert id="insert" parameterType="SysUser" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO sys_user(username, password_hash, real_name, email, phone, status, created_at, updated_at)
+    VALUES(#{username}, #{passwordHash}, #{realName}, #{email}, #{phone}, #{status}, SYSDATETIME(), SYSDATETIME())
+  </insert>
+
+  <update id="update" parameterType="SysUser">
+    UPDATE sys_user
+    SET real_name=#{realName}, email=#{email}, phone=#{phone}, updated_at=SYSDATETIME()
+    WHERE id=#{id}
+  </update>
+
+  <delete id="deleteById">
+    DELETE FROM sys_user WHERE id=#{id}
+  </delete>
+
+  <update id="updateStatus">
+    UPDATE sys_user SET status=#{status}, updated_at=SYSDATETIME() WHERE id=#{id}
+  </update>
+
+  <update id="updateLastLogin">
+    UPDATE sys_user SET last_login_at=SYSDATETIME(), updated_at=SYSDATETIME() WHERE id=#{id}
+  </update>
+
+</mapper>
