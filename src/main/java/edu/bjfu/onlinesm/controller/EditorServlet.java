@@ -67,11 +67,10 @@ public class EditorServlet extends HttpServlet {
 
         try {
             switch (path) {
-	            case "/dashboard":
-	                // 不在 EditorServlet 里自己渲染，统一走 /dashboard 做角色分发
-	                resp.sendRedirect(req.getContextPath() + "/dashboard");
-	                break;
-
+                case "/dashboard":
+                    req.getRequestDispatcher("/WEB-INF/jsp/editor/editor_dashboard.jsp")
+                            .forward(req, resp);
+                    break;
 
                 case "/formalCheck":
                     // SUBMITTED / FORMAL_CHECK 状态稿件列表，供编辑部管理员“形式审查 / 格式检查”
@@ -176,9 +175,22 @@ public class EditorServlet extends HttpServlet {
 
     private void handleUnderReviewList(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
+        // 先尝试自动推进：当某稿件所有“有效邀请”的审稿记录都已 SUBMITTED，则
+        // 将稿件状态从 UNDER_REVIEW 推进为 EDITOR_RECOMMENDATION（可提交编辑建议）。
+        reviewDAO.promoteAllUnderReviewManuscriptsIfReady();
 
+        // 页面需要同时展示：
+        // 1) UNDER_REVIEW（外审进行中）列表
+        // 2) EDITOR_RECOMMENDATION（外审完成，可提交编辑建议）下拉选择
         List<Manuscript> underReviewList = manuscriptDAO.findByStatuses("UNDER_REVIEW");
+        List<Manuscript> readyList = manuscriptDAO.findByStatuses("EDITOR_RECOMMENDATION");
+
+        req.setAttribute("underReviewList", underReviewList);
+        req.setAttribute("readyList", readyList);
+
+        // 兼容旧 JSP（若还在使用 ${manuscripts}）：
         req.setAttribute("manuscripts", underReviewList);
+
         req.getRequestDispatcher("/WEB-INF/jsp/editor/under_review_list.jsp")
                 .forward(req, resp);
     }
@@ -448,9 +460,10 @@ public class EditorServlet extends HttpServlet {
         int manuscriptId = Integer.parseInt(manuscriptIdStr);
         String decision  = suggestion.trim();   // 直接作为 Decision 存入表中
 
-        // 这里用最简单的方式直接 UPDATE dbo.Manuscripts
+        // 当稿件状态已进入 EDITOR_RECOMMENDATION（外审完成，可提交编辑建议），
+        // 编辑提交建议后应推进到 FINAL_DECISION_PENDING，等待主编终审。
         String sql = "UPDATE dbo.Manuscripts "
-                   + "SET Status = 'EDITOR_RECOMMENDATION', "
+                   + "SET Status = 'FINAL_DECISION_PENDING', "
                    + "    Decision = ?, "
                    + "    LastStatusTime = SYSUTCDATETIME() "
                    + "WHERE ManuscriptId = ?";

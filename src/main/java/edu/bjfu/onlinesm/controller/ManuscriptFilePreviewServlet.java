@@ -32,7 +32,8 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
     // 用于审稿人权限校验（只能查看分配给自己的稿件）
     private boolean reviewerHasAccess(int reviewerId, int manuscriptId) throws Exception {
-        String sql = "SELECT TOP 1 1 FROM dbo.Reviews WHERE ManuscriptId=? AND ReviewerId=?";
+        // 结构图要求：审稿人仅在“接受邀请”后（ACCEPTED / SUBMITTED）才允许下载/查看稿件文件
+        String sql = "SELECT TOP 1 1 FROM dbo.Reviews WHERE ManuscriptId=? AND ReviewerId=? AND Status IN ('ACCEPTED','SUBMITTED')";
         try (java.sql.Connection conn = edu.bjfu.onlinesm.util.DbUtil.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, manuscriptId);
@@ -110,12 +111,15 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                 filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
                         ? v.getFileAnonymousPath()
                         : v.getFileOriginalPath();
+            } else if ("original".equalsIgnoreCase(type)) {
+                // 明确下载原稿（审稿人也可下载，但仍需满足 reviewerHasAccess 的状态校验）
+                filePath = v.getFileOriginalPath();
             } else if ("cover".equalsIgnoreCase(type)) {
                 filePath = v.getCoverLetterPath();
             } else if ("response".equalsIgnoreCase(type)) {
                 filePath = v.getResponseLetterPath();
             } else {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type + "（支持 manuscript/anonymous/cover/response）");
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type + "（支持 manuscript/anonymous/original/cover/response）");
                 return;
             }
 

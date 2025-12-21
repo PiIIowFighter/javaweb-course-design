@@ -33,6 +33,20 @@ public class Review implements Serializable {
     private int remindCount;
     private LocalDateTime lastRemindedAt;
 
+    // ====== v2: 结构图要求的评审字段（给编辑/作者的意见与打分表） ======
+    /** 给编辑的保密意见（Confidential to Editor） */
+    private String confidentialToEditor;
+    /** 关键评价（Key Evaluation） */
+    private String keyEvaluation;
+    /** 打分表：原创性（0-10） */
+    private Integer scoreOriginality;
+    /** 打分表：重要性（0-10） */
+    private Integer scoreSignificance;
+    /** 打分表：方法/技术质量（0-10） */
+    private Integer scoreMethodology;
+    /** 打分表：表达/结构（0-10） */
+    private Integer scorePresentation;
+
     public int getReviewId() {
         return reviewId;
     }
@@ -135,6 +149,54 @@ public class Review implements Serializable {
 
     public void setLastRemindedAt(LocalDateTime lastRemindedAt) {
         this.lastRemindedAt = lastRemindedAt;
+    }
+
+    public String getConfidentialToEditor() {
+        return confidentialToEditor;
+    }
+
+    public void setConfidentialToEditor(String confidentialToEditor) {
+        this.confidentialToEditor = confidentialToEditor;
+    }
+
+    public String getKeyEvaluation() {
+        return keyEvaluation;
+    }
+
+    public void setKeyEvaluation(String keyEvaluation) {
+        this.keyEvaluation = keyEvaluation;
+    }
+
+    public Integer getScoreOriginality() {
+        return scoreOriginality;
+    }
+
+    public void setScoreOriginality(Integer scoreOriginality) {
+        this.scoreOriginality = scoreOriginality;
+    }
+
+    public Integer getScoreSignificance() {
+        return scoreSignificance;
+    }
+
+    public void setScoreSignificance(Integer scoreSignificance) {
+        this.scoreSignificance = scoreSignificance;
+    }
+
+    public Integer getScoreMethodology() {
+        return scoreMethodology;
+    }
+
+    public void setScoreMethodology(Integer scoreMethodology) {
+        this.scoreMethodology = scoreMethodology;
+    }
+
+    public Integer getScorePresentation() {
+        return scorePresentation;
+    }
+
+    public void setScorePresentation(Integer scorePresentation) {
+        this.scorePresentation = scorePresentation;
     }
 
 

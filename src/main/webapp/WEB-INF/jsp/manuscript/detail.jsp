@@ -430,6 +430,14 @@
     </c:if>
 
     <c:if test="${not empty reviews}">
+        <script type="text/javascript">
+            function toggleReviewDetail(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+            }
+        </script>
+
         <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
             <thead>
             <tr>
@@ -440,6 +448,7 @@
                 <th>最后催审时间</th>
                 <th>催审次数</th>
                 <th>推荐结论</th>
+                <th>评审详情</th>
                 <th>操作</th>
             </tr>
             </thead>
@@ -464,6 +473,39 @@
                     <td><c:out value="${r.remindCount}"/></td>
                     <td><c:out value="${r.recommendation}"/></td>
                     <td>
+                        <c:if test="${r.status == 'SUBMITTED'}">
+                            <div>
+                                总体分：<c:out value="${r.score}"/>
+                                <span style="margin:0 8px;">|</span>
+                                <a href="javascript:void(0)" onclick="toggleReviewDetail('revDetail_${r.reviewId}')">展开/收起</a>
+                            </div>
+                            <div id="revDetail_${r.reviewId}" style="display:none; margin-top:6px; max-width:900px;">
+                                <div style="margin-bottom:6px;">
+                                    <strong>关键评价 KeyEvaluation：</strong>
+                                    <div style="white-space:pre-wrap;"><c:out value="${r.keyEvaluation}"/></div>
+                                </div>
+                                <div style="margin-bottom:6px;">
+                                    <strong>多维评分：</strong>
+                                    ScoreOriginality=<c:out value="${r.scoreOriginality}"/>,
+                                    ScoreSignificance=<c:out value="${r.scoreSignificance}"/>,
+                                    ScoreMethodology=<c:out value="${r.scoreMethodology}"/>,
+                                    ScorePresentation=<c:out value="${r.scorePresentation}"/>
+                                </div>
+                                <div style="margin-bottom:6px;">
+                                    <strong>给编辑的保密意见 ConfidentialToEditor：</strong>
+                                    <div style="white-space:pre-wrap;"><c:out value="${r.confidentialToEditor}"/></div>
+                                </div>
+                                <div>
+                                    <strong>给作者的意见 Content：</strong>
+                                    <div style="white-space:pre-wrap;"><c:out value="${r.content}"/></div>
+                                </div>
+                            </div>
+                        </c:if>
+                        <c:if test="${r.status != 'SUBMITTED'}">
+                            -
+                        </c:if>
+                    </td>
+                    <td>
                         <c:if test="${r.status != 'SUBMITTED'}">
                             <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
                                 <input type="hidden" name="reviewId" value="${r.reviewId}"/>
@@ -478,7 +520,7 @@
         </table>
     </c:if>
 
-    <h3>邀请新的审稿人</h3>
+    <h3 id="inviteReviewers">邀请新的审稿人</h3>
     <c:if test="${empty reviewers}">
         <p>当前审稿人库为空，请先由主编在“审稿人库管理”中添加审稿人。</p>
     </c:if>
@@ -509,6 +551,49 @@
     <h3>与作者和审稿人沟通（备注说明）</h3>
     <p>未实现真实邮件发送，可在操作时通过“备注 / 日志”记录沟通要点，
         数据库中的 Logs / ManuscriptStatusHistory 表可了解沟通情况。</p>
+</c:if>
+
+<!-- ====================== 作者查看：仅展示给作者的意见（Content） ====================== -->
+<c:if test="${not empty manuscript
+          and sessionScope.currentUser.roleCode == 'AUTHOR'
+          and manuscript.currentStatus != 'DRAFT'}">
+
+    <h3>审稿意见（给作者的意见）</h3>
+
+    <c:set var="hasSubmitted" value="false"/>
+    <c:forEach items="${reviews}" var="rr">
+        <c:if test="${rr.status == 'SUBMITTED'}">
+            <c:set var="hasSubmitted" value="true"/>
+        </c:if>
+    </c:forEach>
+
+    <c:if test="${empty reviews || !hasSubmitted}">
+        <p>目前暂无可展示的审稿意见（审稿尚未提交）。</p>
+    </c:if>
+
+    <c:if test="${not empty reviews && hasSubmitted}">
+        <table border="1" cellpadding="4" cellspacing="0" style="background:#fff; max-width: 980px; width:100%;">
+            <thead>
+            <tr>
+                <th style="width: 120px;">推荐结论</th>
+                <th style="width: 80px;">总体分</th>
+                <th>给作者的意见（Content）</th>
+            </tr>
+            </thead>
+            <tbody>
+            <c:forEach items="${reviews}" var="r">
+                <c:if test="${r.status == 'SUBMITTED'}">
+                    <tr>
+                        <td><c:out value="${r.recommendation}"/></td>
+                        <td><c:out value="${r.score}"/></td>
+                        <td style="white-space:pre-wrap;"><c:out value="${r.content}"/></td>
+                    </tr>
+                </c:if>
+            </c:forEach>
+            </tbody>
+        </table>
+    </c:if>
+
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

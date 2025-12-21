@@ -21,8 +21,8 @@ import java.util.List;
  * 编辑委员会管理模块控制器：维护 dbo.EditorialBoard。
  *
  * URL:
- *  GET  /admin/editorial/list?journalId=1
- *  GET  /admin/editorial/add?journalId=1
+ *  GET  /admin/editorial/list
+ *  GET  /admin/editorial/add
  *  GET  /admin/editorial/edit?id=xx
  *  POST /admin/editorial/save
  *  POST /admin/editorial/delete
@@ -84,41 +84,44 @@ public class EditorialBoardServlet extends HttpServlet {
             throw new ServletException("保存编委会数据失败", e);
         }
 
-        String journalId = req.getParameter("journalId");
-        String redirect = req.getContextPath() + "/admin/editorial/list";
-        if (journalId != null && !journalId.trim().isEmpty()) {
-            redirect += "?journalId=" + journalId.trim();
-        }
-        resp.sendRedirect(redirect);
+        // 课程设计场景只有 1 个期刊：不需要 journalId 参数。
+        resp.sendRedirect(req.getContextPath() + "/admin/editorial/list");
     }
 
     private void handleList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
-        List<Journal> journals = journalDAO.findAll();
-        Integer selectedJournalId = parseInt(req.getParameter("journalId"));
-        if (selectedJournalId == null && journals != null && !journals.isEmpty()) {
-            selectedJournalId = journals.get(0).getJournalId();
-        }
+        Journal primary = journalDAO.findPrimary();
+        Integer selectedJournalId = primary == null ? null : primary.getJournalId();
 
-        req.setAttribute("journals", journals);
+        req.setAttribute("primaryJournal", primary);
         req.setAttribute("selectedJournalId", selectedJournalId);
-        req.setAttribute("members", editorialBoardDAO.findByJournalId(selectedJournalId));
+        if (selectedJournalId == null) {
+            req.setAttribute("members", java.util.Collections.emptyList());
+        } else {
+            req.setAttribute("members", editorialBoardDAO.findByJournalId(selectedJournalId));
+        }
         req.getRequestDispatcher("/WEB-INF/jsp/admin/editorial/editorial_board_list.jsp").forward(req, resp);
     }
 
     private void handleForm(HttpServletRequest req, HttpServletResponse resp, Integer boardMemberId)
             throws SQLException, ServletException, IOException {
+        Journal primary = journalDAO.findPrimary();
         EditorialBoardMember member = null;
         if (boardMemberId != null) {
             member = editorialBoardDAO.findById(boardMemberId);
         }
         if (member == null) {
             member = new EditorialBoardMember();
-            Integer journalId = parseInt(req.getParameter("journalId"));
-            if (journalId != null) member.setJournalId(journalId);
+            if (primary != null) {
+                member.setJournalId(primary.getJournalId());
+            }
+        }
+
+        if (member.getJournalId() == null && primary != null) {
+            member.setJournalId(primary.getJournalId());
         }
 
         req.setAttribute("member", member);
-        req.setAttribute("journals", journalDAO.findAll());
+        req.setAttribute("primaryJournal", primary);
         req.setAttribute("users", userDAO.findSelectableUsers());
         req.getRequestDispatcher("/WEB-INF/jsp/admin/editorial/editorial_board_form.jsp").forward(req, resp);
     }
@@ -130,6 +133,13 @@ public class EditorialBoardServlet extends HttpServlet {
         String position = safe(req.getParameter("position"));
         String section = safe(req.getParameter("section"));
         String bio = safe(req.getParameter("bio"));
+
+        if (journalId == null) {
+            Journal primary = journalDAO.findPrimary();
+            if (primary != null) {
+                journalId = primary.getJournalId();
+            }
+        }
 
         if (userId == null || journalId == null || position.isEmpty()) {
             return;

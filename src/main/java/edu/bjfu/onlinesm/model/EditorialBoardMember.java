@@ -19,6 +19,10 @@ public class EditorialBoardMember implements Serializable {
     private String affiliation;
     private String email;
 
+    /** 关联的系统账号信息（用于后台编委会管理列表展示） */
+    private String username;
+    private String roleCode;
+
     public Integer getBoardMemberId() {
         return boardMemberId;
     }
@@ -89,5 +93,21 @@ public class EditorialBoardMember implements Serializable {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getRoleCode() {
+        return roleCode;
+    }
+
+    public void setRoleCode(String roleCode) {
+        this.roleCode = roleCode;
     }
 }

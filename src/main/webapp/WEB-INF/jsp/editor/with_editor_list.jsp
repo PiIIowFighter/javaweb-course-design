@@ -36,7 +36,9 @@
                 </c:choose>
             </td>
             <td>
+                <!-- WITH_EDITOR：可查看详情，并可直接定位到“邀请新的审稿人”区块 -->
                 <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
+                <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers" style="margin-left:8px;">邀请审稿人</a>
                 <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
                     
                 </c:if>

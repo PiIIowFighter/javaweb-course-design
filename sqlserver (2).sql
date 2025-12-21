@@ -316,15 +316,15 @@ BEGIN
         ManuscriptId   INT NOT NULL,
         VersionId      INT NULL,
         ReviewerId     INT NOT NULL,
-        Content        NVARCHAR(MAX) NULL,
-        ConfidentialToEditor NVARCHAR(MAX) NULL,
-        KeyEvaluation NVARCHAR(1000) NULL,
-        ScoreOriginality DECIMAL(4,2) NULL,
-        ScoreSignificance DECIMAL(4,2) NULL,
-        ScoreMethodology DECIMAL(4,2) NULL,
-        ScorePresentation DECIMAL(4,2) NULL,
-        Score          DECIMAL(4,2) NULL,
-        Recommendation NVARCHAR(50) NULL,
+        Content               NVARCHAR(MAX) NULL,        -- 给作者的意见（Comments to Author）
+        ConfidentialToEditor  NVARCHAR(MAX) NULL,        -- 给编辑的意见（Confidential to Editor）
+        KeyEvaluation         NVARCHAR(MAX) NULL,        -- 关键评价
+        Score                 DECIMAL(4,2) NULL,         -- 总体评分（可由多维评分均值生成）
+        ScoreOriginality      DECIMAL(4,2) NULL,         -- 创新性
+        ScoreSignificance     DECIMAL(4,2) NULL,         -- 重要性
+        ScoreMethodology      DECIMAL(4,2) NULL,         -- 方法与严谨性
+        ScorePresentation     DECIMAL(4,2) NULL,         -- 写作与呈现
+        Recommendation        NVARCHAR(50) NULL,
         Status         NVARCHAR(30) NOT NULL DEFAULT N'INVITED', -- INVITED/ACCEPTED/DECLINED/SUBMITTED/EXPIRED
         InvitedAt      DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
         AcceptedAt     DATETIME2(0) NULL,
@@ -338,34 +338,6 @@ BEGIN
         CONSTRAINT FK_Reviews_Reviewer   FOREIGN KEY(ReviewerId)   REFERENCES dbo.Users(UserId),
         CONSTRAINT CK_Reviews_Status CHECK (Status IN (N'INVITED', N'ACCEPTED', N'DECLINED', N'SUBMITTED', N'EXPIRED'))
     );
-END;
-GO
-
-
-/* ============================================================
-   ★ 升级补丁：审稿人评审结构图字段（V2）
-   - 解决 reviewer 提交评审时报错：列名 'ConfidentialToEditor' 无效
-   - 可安全重复执行（按列是否存在判断）
-   ============================================================ */
-IF OBJECT_ID(N'dbo.Reviews', N'U') IS NOT NULL
-BEGIN
-    IF COL_LENGTH('dbo.Reviews','ConfidentialToEditor') IS NULL
-        ALTER TABLE dbo.Reviews ADD ConfidentialToEditor NVARCHAR(MAX) NULL;
-
-    IF COL_LENGTH('dbo.Reviews','KeyEvaluation') IS NULL
-        ALTER TABLE dbo.Reviews ADD KeyEvaluation NVARCHAR(1000) NULL;
-
-    IF COL_LENGTH('dbo.Reviews','ScoreOriginality') IS NULL
-        ALTER TABLE dbo.Reviews ADD ScoreOriginality DECIMAL(4,2) NULL;
-
-    IF COL_LENGTH('dbo.Reviews','ScoreSignificance') IS NULL
-        ALTER TABLE dbo.Reviews ADD ScoreSignificance DECIMAL(4,2) NULL;
-
-    IF COL_LENGTH('dbo.Reviews','ScoreMethodology') IS NULL
-        ALTER TABLE dbo.Reviews ADD ScoreMethodology DECIMAL(4,2) NULL;
-
-    IF COL_LENGTH('dbo.Reviews','ScorePresentation') IS NULL
-        ALTER TABLE dbo.Reviews ADD ScorePresentation DECIMAL(4,2) NULL;
 END;
 GO
 

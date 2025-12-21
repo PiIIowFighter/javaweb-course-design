@@ -1,6 +1,8 @@
 package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.ReviewDAO;
+import edu.bjfu.onlinesm.dao.ManuscriptDAO;
+import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
 
@@ -21,6 +23,7 @@ import java.util.List;
 public class ReviewerServlet extends HttpServlet {
 
     private final ReviewDAO reviewDAO = new ReviewDAO();
+    private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
 
     // ==================== GET：页面展示 ====================
 
@@ -28,7 +31,7 @@ public class ReviewerServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req,
                          HttpServletResponse resp) throws ServletException, IOException {
 
-        if (!ensureLoggedIn(req, resp)) {
+        if (!ensureReviewer(req, resp)) {
             return;
         }
 
@@ -59,6 +62,11 @@ public class ReviewerServlet extends HttpServlet {
                 handleReviewForm(req, resp);
                 break;
 
+            case "/invitation":
+                // 查看邀请详情（摘要等），再决定是否接受/拒绝
+                handleInvitationDetail(req, resp);
+                break;
+
             default:
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -70,7 +78,7 @@ public class ReviewerServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req,
                           HttpServletResponse resp) throws ServletException, IOException {
 
-        if (!ensureLoggedIn(req, resp)) {
+        if (!ensureReviewer(req, resp)) {
             return;
         }
 
@@ -120,7 +128,8 @@ public class ReviewerServlet extends HttpServlet {
 
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
-            reviewDAO.acceptInvitation(reviewId);
+            User current = getCurrentUser(req);
+            reviewDAO.acceptInvitation(reviewId, current.getUserId());
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
@@ -145,12 +154,62 @@ public class ReviewerServlet extends HttpServlet {
 
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
-            reviewDAO.declineInvitation(reviewId);
+            User current = getCurrentUser(req);
+            reviewDAO.declineInvitation(reviewId, current.getUserId());
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
         } catch (SQLException e) {
             throw new ServletException("拒绝审稿邀请时数据库出错", e);
+        }
+    }
+
+    /**
+     * 查看邀请详情：仅允许当前审稿人查看自己被邀请的记录（Status=INVITED）。
+     * 该页仅展示：标题/摘要/关键词/研究主题/资助信息等（不展示作者信息与决策历史）。
+     */
+    private void handleInvitationDetail(HttpServletRequest req,
+                                        HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String reviewIdStr = req.getParameter("id");
+        if (reviewIdStr == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少审稿记录 ID。");
+            return;
+        }
+
+        User current = getCurrentUser(req);
+        try {
+            int reviewId = Integer.parseInt(reviewIdStr);
+            Review review = reviewDAO.findById(reviewId);
+            if (review == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到审稿记录。");
+                return;
+            }
+            if (review.getReviewerId() != current.getUserId()) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看该审稿邀请。");
+                return;
+            }
+            // 允许 INVITED/ACCEPTED 查看邀请页（ACCEPTED 也可回看摘要）；其他状态禁止
+            if (!("INVITED".equals(review.getStatus()) || "ACCEPTED".equals(review.getStatus()))) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该审稿记录当前状态不支持查看邀请详情。");
+                return;
+            }
+
+            Manuscript m = manuscriptDAO.findById(review.getManuscriptId());
+            if (m == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到对应稿件。");
+                return;
+            }
+
+            req.setAttribute("review", review);
+            req.setAttribute("manuscript", m);
+            req.getRequestDispatcher("/WEB-INF/jsp/reviewer/invitation_detail.jsp")
+                    .forward(req, resp);
+        } catch (NumberFormatException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
+        } catch (SQLException e) {
+            throw new ServletException("加载邀请详情时数据库出错", e);
         }
     }
 
@@ -205,11 +264,36 @@ public class ReviewerServlet extends HttpServlet {
 
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
-            req.setAttribute("reviewId", reviewId);
+            User current = getCurrentUser(req);
+
+            Review review = reviewDAO.findById(reviewId);
+            if (review == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到审稿记录。");
+                return;
+            }
+            if (review.getReviewerId() != current.getUserId()) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权访问该审稿记录。");
+                return;
+            }
+            if (!"ACCEPTED".equals(review.getStatus())) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "请先在邀请详情页接受审稿邀请后再提交评审意见。");
+                return;
+            }
+
+            Manuscript m = manuscriptDAO.findById(review.getManuscriptId());
+            if (m == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到对应稿件。");
+                return;
+            }
+
+            req.setAttribute("review", review);
+            req.setAttribute("manuscript", m);
             req.getRequestDispatcher("/WEB-INF/jsp/reviewer/review_form.jsp")
                     .forward(req, resp);
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
+        } catch (SQLException e) {
+            throw new ServletException("加载评审表单时数据库出错", e);
         }
     }
 
@@ -220,38 +304,75 @@ public class ReviewerServlet extends HttpServlet {
                                     HttpServletResponse resp)
             throws ServletException, IOException {
 
-        User current = getCurrentUser(req); // 现在没用到，保留以后可做校验
+        User current = getCurrentUser(req);
 
-        String reviewIdStr    = req.getParameter("reviewId");
-        String content        = req.getParameter("content");
-        String scoreStr       = req.getParameter("score");
+        String reviewIdStr = req.getParameter("reviewId");
         String recommendation = req.getParameter("recommendation");
 
+        // 给编辑的意见
+        String confidentialToEditor = req.getParameter("confidentialToEditor");
+        String keyEvaluation = req.getParameter("keyEvaluation");
+
+        // 给作者的意见
+        String commentsToAuthor = req.getParameter("content");
+
+        // 多维评分
+        String s1 = req.getParameter("scoreOriginality");
+        String s2 = req.getParameter("scoreSignificance");
+        String s3 = req.getParameter("scoreMethodology");
+        String s4 = req.getParameter("scorePresentation");
+
         if (reviewIdStr == null
-                || content == null || content.trim().isEmpty()
-                || recommendation == null || recommendation.trim().isEmpty()) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
+                || recommendation == null || recommendation.trim().isEmpty()
+                || commentsToAuthor == null || commentsToAuthor.trim().isEmpty()
+                || confidentialToEditor == null || confidentialToEditor.trim().isEmpty()
+                || keyEvaluation == null || keyEvaluation.trim().isEmpty()
+                || s1 == null || s2 == null || s3 == null || s4 == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数（多维评分/给编辑意见/关键评价/给作者意见/推荐结论）。");
             return;
         }
 
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
-            Double score = null;
-            if (scoreStr != null && !scoreStr.trim().isEmpty()) {
-                score = Double.parseDouble(scoreStr.trim());
-            }
+            Double scoreOriginality = Double.parseDouble(s1.trim());
+            Double scoreSignificance = Double.parseDouble(s2.trim());
+            Double scoreMethodology = Double.parseDouble(s3.trim());
+            Double scorePresentation = Double.parseDouble(s4.trim());
 
-            reviewDAO.submitReview(reviewId,
-                    content.trim(),
-                    score,
+            // 简单范围校验（前端也限制）：0~10
+            checkScoreRange(scoreOriginality);
+            checkScoreRange(scoreSignificance);
+            checkScoreRange(scoreMethodology);
+            checkScoreRange(scorePresentation);
+
+            Double scoreOverall = (scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation) / 4.0;
+
+            reviewDAO.submitReviewV2(
+                    reviewId,
+                    current.getUserId(),
+                    commentsToAuthor.trim(),
+                    confidentialToEditor.trim(),
+                    keyEvaluation.trim(),
+                    scoreOverall,
+                    scoreOriginality,
+                    scoreSignificance,
+                    scoreMethodology,
+                    scorePresentation,
                     recommendation.trim());
 
-            // 提交后跳转到历史评审记录
             resp.sendRedirect(req.getContextPath() + "/reviewer/history");
         } catch (NumberFormatException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误。");
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误（reviewId 或评分必须为数字）。");
+        } catch (IllegalArgumentException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         } catch (SQLException e) {
             throw new ServletException("提交评审意见时数据库出错", e);
+        }
+    }
+
+    private void checkScoreRange(Double v) {
+        if (v == null || v < 0 || v > 10) {
+            throw new IllegalArgumentException("评分必须在 0~10 范围内。");
         }
     }
 
@@ -264,10 +385,15 @@ public class ReviewerServlet extends HttpServlet {
                 : null;
     }
 
-    private boolean ensureLoggedIn(HttpServletRequest req,
+    private boolean ensureReviewer(HttpServletRequest req,
                                    HttpServletResponse resp) throws IOException {
-        if (getCurrentUser(req) == null) {
+        User u = getCurrentUser(req);
+        if (u == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
+            return false;
+        }
+        if (!"REVIEWER".equals(u.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有审稿人可以访问该模块。");
             return false;
         }
         return true;

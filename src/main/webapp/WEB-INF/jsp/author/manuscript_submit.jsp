@@ -26,16 +26,13 @@
             <legend><b>1. 元数据</b></legend>
 
             <div class="form-row">
-                <label for="journalId">期刊</label>
-                <select id="journalId" name="journalId">
-                    <option value="">-- 请选择期刊 --</option>
-                    <c:forEach var="j" items="${journals}">
-                        <option value="${j.journalId}"
-                                <c:if test="${not empty manuscript and manuscript.journalId == j.journalId}">selected</c:if>>
-                            <c:out value="${j.name}"/>
-                        </option>
-                    </c:forEach>
-                </select>
+                <label>期刊</label>
+                <c:set var="primaryJournal" value="${not empty journals ? journals[0] : null}"/>
+                <c:set var="resolvedJournalId" value="${(not empty manuscript and not empty manuscript.journalId) ? manuscript.journalId : (not empty primaryJournal ? primaryJournal.journalId : '')}"/>
+                <div>
+                    <c:out value="${not empty primaryJournal ? primaryJournal.name : '（未配置期刊）'}"/>
+                    <input type="hidden" id="journalId" name="journalId" value="${resolvedJournalId}"/>
+                </div>
             </div>
 
             <div class="form-row">

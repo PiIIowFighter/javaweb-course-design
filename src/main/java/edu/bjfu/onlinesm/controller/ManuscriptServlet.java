@@ -132,6 +132,62 @@ public class ManuscriptServlet extends HttpServlet {
     }
 
     /**
+     * 投稿表单回显（基于当前请求中已解析出的临时数据），用于校验失败时不丢失用户输入。
+     */
+    private void forwardSubmitFormWithTempData(HttpServletRequest req, HttpServletResponse resp,
+                                              Manuscript manuscript,
+                                              List<ManuscriptAuthor> authors,
+                                              List<ManuscriptRecommendedReviewer> recommendedReviewers)
+            throws ServletException, IOException, SQLException {
+
+        List<Journal> journals = journalDAO.findAll();
+        req.setAttribute("journals", journals);
+        req.setAttribute("manuscript", manuscript);
+        req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
+        req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
+
+        // 若是编辑草稿时校验失败，可继续展示当前版本信息
+        if (manuscript != null && manuscript.getManuscriptId() != null) {
+            req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
+        }
+
+        req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
+    }
+
+    /**
+     * 检查“推荐审稿人”是否存在不完整行：只要某行被填写（姓名/邮箱/理由任一不为空），则必须同时提供姓名与邮箱。
+     * 返回首个错误提示；若无错误返回 null。
+     */
+    private String findFirstIncompleteRecommendedReviewerRow(HttpServletRequest req) {
+        String[] names = req.getParameterValues("recReviewerName");
+        String[] emails = req.getParameterValues("recReviewerEmail");
+        String[] reasons = req.getParameterValues("recReviewerReason");
+
+        if (names == null && emails == null && reasons == null) {
+            return null;
+        }
+
+        int max = 0;
+        if (names != null) max = Math.max(max, names.length);
+        if (emails != null) max = Math.max(max, emails.length);
+        if (reasons != null) max = Math.max(max, reasons.length);
+
+        for (int i = 0; i < max; i++) {
+            String n = (names == null ? null : getArrayValue(names, i));
+            String e = (emails == null ? null : getArrayValue(emails, i));
+            String r = (reasons == null ? null : getArrayValue(reasons, i));
+
+            boolean allEmpty = (n == null || n.isEmpty()) && (e == null || e.isEmpty()) && (r == null || r.isEmpty());
+            if (allEmpty) continue;
+
+            if (n == null || n.isEmpty() || e == null || e.isEmpty()) {
+                return "推荐审稿人第 " + (i + 1) + " 行信息不完整：已填写内容但“姓名/邮箱”未同时填写，请补全或删除该行。";
+            }
+        }
+        return null;
+    }
+
+    /**
      * 编辑草稿：仅允许作者编辑自己的 DRAFT。
      * GET /manuscripts/edit?id=xxx
      */
@@ -171,6 +227,13 @@ public class ManuscriptServlet extends HttpServlet {
      */
     private void handleDetail(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
+
+        // 结构图要求：审稿人不能直接查看稿件详情页（避免看到作者信息/决策历史等），
+        // 必须通过 /reviewer/invitation 查看摘要并接受邀请后，再通过 /files/preview 下载稿件。
+        if ("REVIEWER".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权访问稿件详情页，请在‘待评审稿件’中查看摘要并下载稿件。");
+            return;
+        }
 
         Integer manuscriptId = parseInt(req.getParameter("id"));
         if (manuscriptId == null) {
@@ -252,16 +315,25 @@ public class ManuscriptServlet extends HttpServlet {
             List<ManuscriptAuthor> authors = buildAuthorsFromRequest(req);
             List<ManuscriptRecommendedReviewer> recs = buildRecommendedReviewersFromRequest(req);
 
+            // 推荐审稿人：任意一行如果被填写了（姓名/邮箱/理由任一不为空），则必须同时提供“姓名 + 邮箱”。
+            // 数据库表 ManuscriptRecommendedReviewers 约束 FullName/Email NOT NULL。
+            String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
+            if (isFinalSubmit && recRowError != null) {
+                req.setAttribute("error", recRowError);
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
+
             // 基本校验：最终提交至少要有标题和 1 个作者
             if (isFinalSubmit) {
                 if (m.getTitle() == null || m.getTitle().isEmpty()) {
                     req.setAttribute("error", "稿件标题不能为空。");
-                    handleSubmitForm(req, resp, current, existing == null ? m : existing);
+                    forwardSubmitFormWithTempData(req, resp, m, authors, recs);
                     return;
                 }
                 if (authors.isEmpty()) {
                     req.setAttribute("error", "最终提交前至少需要填写 1 位作者。");
-                    handleSubmitForm(req, resp, current, existing == null ? m : existing);
+                    forwardSubmitFormWithTempData(req, resp, m, authors, recs);
                     return;
                 }
             }
@@ -376,7 +448,7 @@ public class ManuscriptServlet extends HttpServlet {
                 group = "incomplete";
             }
 
-            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=" + group + "&msg=" + URLEncoder.encode(msg, "UTF-8"));
+            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=" + group + "&msg=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new ServletException("保存稿件失败", e);
         }
@@ -425,6 +497,13 @@ public class ManuscriptServlet extends HttpServlet {
             List<ManuscriptAuthor> authors = buildAuthorsFromRequest(req);
             List<ManuscriptRecommendedReviewer> recs = buildRecommendedReviewersFromRequest(req);
             toUpdate.setAuthorList(joinAuthorNames(authors));
+
+            // Resubmit 也是“提交”性质操作：若填写了推荐审稿人，则必须姓名+邮箱齐全。
+            String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
+            if (recRowError != null) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, recRowError);
+                return;
+            }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
             Part coverFile = safeGetPart(req, "coverFile");
@@ -512,7 +591,7 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             String msg = "已重新提交（Resubmit），稿件 ID：" + genManuscriptCode(manuscriptId);
-            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, "UTF-8"));
+            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new ServletException("执行 Resubmit 失败", e);
         }
@@ -889,6 +968,12 @@ public class ManuscriptServlet extends HttpServlet {
             String e = getArrayValue(emails, i);
             String r = getArrayValue(reasons, i);
             if ((n == null || n.isEmpty()) && (e == null || e.isEmpty()) && (r == null || r.isEmpty())) {
+                continue;
+            }
+
+            // 仅保存“姓名+邮箱”齐全的推荐审稿人行；不完整行交由上层（最终提交）校验提示，
+            // 或在保存草稿时自动忽略，避免数据库 NOT NULL 约束导致 500。
+            if (n == null || n.isEmpty() || e == null || e.isEmpty()) {
                 continue;
             }
             ManuscriptRecommendedReviewer rr = new ManuscriptRecommendedReviewer();

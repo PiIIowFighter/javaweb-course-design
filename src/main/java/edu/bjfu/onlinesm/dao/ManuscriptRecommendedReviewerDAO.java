@@ -27,9 +27,16 @@ public class ManuscriptRecommendedReviewerDAO {
         String sql = "INSERT INTO dbo.ManuscriptRecommendedReviewers (ManuscriptId, FullName, Email, Reason) VALUES (?,?,?,?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             for (ManuscriptRecommendedReviewer r : list) {
+                // 数据库约束：FullName/Email NOT NULL。
+                // 防御性处理：若前端传入不完整行（例如只填了姓名/理由但没填邮箱），则跳过，避免 500。
+                String fullName = r == null ? null : r.getFullName();
+                String email = r == null ? null : r.getEmail();
+                if (fullName == null || fullName.trim().isEmpty() || email == null || email.trim().isEmpty()) {
+                    continue;
+                }
                 ps.setInt(1, manuscriptId);
-                ps.setString(2, r.getFullName());
-                ps.setString(3, r.getEmail());
+                ps.setString(2, fullName.trim());
+                ps.setString(3, email.trim());
                 ps.setString(4, r.getReason());
                 ps.addBatch();
             }

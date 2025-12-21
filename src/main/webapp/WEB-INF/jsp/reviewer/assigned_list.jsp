@@ -33,10 +33,15 @@
             <td><c:out value="${r.invitedAt}"/></td>
             <td><c:out value="${r.dueAt}"/></td>
             <td>
-                <a href="${ctx}/manuscripts/detail?id=${r.manuscriptId}" target="_blank">查看稿件详情/附件</a>
-                <span style="margin:0 8px;">|</span>
-                <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=manuscript" target="_blank">下载手稿</a>
+                <a href="${ctx}/reviewer/invitation?id=${r.reviewId}">查看稿件摘要</a>
                 <br/>
+                <c:if test="${r.status == 'ACCEPTED' || r.status == 'SUBMITTED'}">
+                    下载与审阅：
+                    <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=manuscript" target="_blank">匿名稿</a>
+                    <span style="margin:0 6px;">|</span>
+                    <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=original" target="_blank">原稿</a>
+                    <br/>
+                </c:if>
                 <c:choose>
                     <c:when test="${r.status == 'INVITED'}">
                         <form method="post" action="${ctx}/reviewer/accept" style="display:inline;">

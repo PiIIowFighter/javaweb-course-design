@@ -8,6 +8,8 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
+<c:set var="resolvedJournalId" value="${not empty member.journalId ? member.journalId : (not empty primaryJournal ? primaryJournal.journalId : '')}"/>
+
 <form action="${ctx}/admin/editorial/save" method="post" style="max-width: 800px;">
     <c:if test="${not empty member.boardMemberId}">
         <input type="hidden" name="boardMemberId" value="${member.boardMemberId}"/>
@@ -17,13 +19,8 @@
         <tr>
             <th style="width: 160px;">期刊</th>
             <td>
-                <select name="journalId" required>
-                    <c:forEach var="j" items="${journals}">
-                        <option value="${j.journalId}" <c:if test="${member.journalId == j.journalId}">selected</c:if>>
-                            ${j.name}
-                        </option>
-                    </c:forEach>
-                </select>
+                <c:out value="${not empty primaryJournal ? primaryJournal.name : '（未配置期刊）'}"/>
+                <input type="hidden" name="journalId" value="${resolvedJournalId}"/>
             </td>
         </tr>
         <tr>
@@ -67,7 +64,7 @@
 
     <div style="margin-top: 12px;">
         <button type="submit"><i class="bi bi-save"></i> 保存</button>
-        <a style="margin-left: 10px;" href="${ctx}/admin/editorial/list?journalId=${member.journalId}">返回列表</a>
+        <a style="margin-left: 10px;" href="${ctx}/admin/editorial/list">返回列表</a>
     </div>
 </form>
 
