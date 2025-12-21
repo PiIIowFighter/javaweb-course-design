@@ -68,8 +68,7 @@ public class EditorServlet extends HttpServlet {
         try {
             switch (path) {
                 case "/dashboard":
-                    req.getRequestDispatcher("/WEB-INF/jsp/editor/editor_dashboard.jsp")
-                            .forward(req, resp);
+                    resp.sendRedirect(req.getContextPath() + "/dashboard");
                     break;
 
                 case "/formalCheck":
