@@ -67,10 +67,11 @@ public class EditorServlet extends HttpServlet {
 
         try {
             switch (path) {
-                case "/dashboard":
-                    req.getRequestDispatcher("/WEB-INF/jsp/editor/editor_dashboard.jsp")
-                            .forward(req, resp);
-                    break;
+	            case "/dashboard":
+	                // 不在 EditorServlet 里自己渲染，统一走 /dashboard 做角色分发
+	                resp.sendRedirect(req.getContextPath() + "/dashboard");
+	                break;
+
 
                 case "/formalCheck":
                     // SUBMITTED / FORMAL_CHECK 状态稿件列表，供编辑部管理员“形式审查 / 格式检查”

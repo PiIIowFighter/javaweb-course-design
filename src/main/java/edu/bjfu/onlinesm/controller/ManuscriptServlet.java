@@ -376,7 +376,7 @@ public class ManuscriptServlet extends HttpServlet {
                 group = "incomplete";
             }
 
-            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=" + group + "&msg=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
+            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=" + group + "&msg=" + URLEncoder.encode(msg, "UTF-8"));
         } catch (Exception e) {
             throw new ServletException("保存稿件失败", e);
         }
@@ -512,7 +512,7 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             String msg = "已重新提交（Resubmit），稿件 ID：" + genManuscriptCode(manuscriptId);
-            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
+            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, "UTF-8"));
         } catch (Exception e) {
             throw new ServletException("执行 Resubmit 失败", e);
         }
