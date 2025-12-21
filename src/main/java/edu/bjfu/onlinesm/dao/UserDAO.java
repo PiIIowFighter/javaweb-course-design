@@ -60,6 +60,34 @@ public class UserDAO {
     }
 
     /**
+     * 用于下拉框选择用户（不返回 PasswordHash）。
+     * 适用场景：编委会管理等后台配置页面。
+     */
+    public List<User> findSelectableUsers() throws SQLException {
+        String sql = "SELECT u.UserId, u.Username, u.Email, u.FullName, u.Affiliation, u.ResearchArea, u.Status, r.RoleCode " +
+                "FROM dbo.Users u JOIN dbo.Roles r ON u.RoleId = r.RoleId " +
+                "ORDER BY u.UserId ASC";
+        List<User> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                User u = new User();
+                u.setUserId(rs.getInt("UserId"));
+                u.setUsername(rs.getString("Username"));
+                u.setEmail(rs.getString("Email"));
+                u.setFullName(rs.getString("FullName"));
+                u.setAffiliation(rs.getString("Affiliation"));
+                u.setResearchArea(rs.getString("ResearchArea"));
+                u.setStatus(rs.getString("Status"));
+                u.setRoleCode(rs.getString("RoleCode"));
+                list.add(u);
+            }
+        }
+        return list;
+    }
+
+    /**
      * 根据角色代码查询用户列表，例如 REVIEWER / EDITOR / EDITOR_IN_CHIEF 等。
      * 供主编管理“审稿人库”、分配责任编辑等场景使用。
      */

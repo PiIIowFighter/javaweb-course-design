@@ -294,6 +294,11 @@ public class ManuscriptServlet extends HttpServlet {
                 // 版本：每次保存草稿/提交都生成一个“当前版本”
                 int nextVersionNumber = getNextVersionNumber(conn, manuscriptId);
 
+                // 取上一版“当前版本”（用于沿用附件路径，避免未重新上传文件导致附件丢失）
+                ManuscriptVersion prevCurrent = versionDAO.findCurrentByManuscriptId(conn, manuscriptId);
+
+                
+
                 // 保存文件（可为空）
                 ManuscriptVersion v = new ManuscriptVersion();
                 v.setManuscriptId(manuscriptId);
@@ -312,6 +317,10 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
+                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
+                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+
+
                 String coverPath = null;
                 String remark = null;
                 if (coverFile != null && coverFile.getSize() > 0) {
@@ -326,7 +335,28 @@ public class ManuscriptServlet extends HttpServlet {
                     }
                 }
 
+                // 未重新上传文件时，沿用上一版的附件路径
+                if (prevCurrent != null) {
+                    if (fileOriginalPath == null || fileOriginalPath.trim().isEmpty()) {
+                        fileOriginalPath = prevCurrent.getFileOriginalPath();
+                    }
+                    if (fileAnonymousPath == null || fileAnonymousPath.trim().isEmpty()) {
+                        fileAnonymousPath = prevCurrent.getFileAnonymousPath();
+                    }
+                    if (coverPath == null || coverPath.trim().isEmpty()) {
+                        coverPath = prevCurrent.getCoverLetterPath();
+                    }
+                    // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
+                    if (v.getResponseLetterPath() == null) {
+                        v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
+                    }
+                    if (remark == null || remark.trim().isEmpty()) {
+                        remark = prevCurrent.getRemark();
+                    }
+                }
+
                 v.setFileOriginalPath(fileOriginalPath);
+                v.setFileAnonymousPath(fileAnonymousPath);
                 v.setCoverLetterPath(coverPath);
                 v.setRemark(remark);
 
@@ -413,6 +443,9 @@ public class ManuscriptServlet extends HttpServlet {
 
                 int nextVersionNumber = getNextVersionNumber(conn, manuscriptId);
 
+                // 取上一版“当前版本”（用于沿用附件路径，避免未重新上传文件导致附件丢失）
+                ManuscriptVersion prevCurrent = versionDAO.findCurrentByManuscriptId(conn, manuscriptId);
+
                 ManuscriptVersion v = new ManuscriptVersion();
                 v.setManuscriptId(manuscriptId);
                 v.setVersionNumber(nextVersionNumber);
@@ -430,6 +463,9 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
+                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
+                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+
                 String coverPath = null;
                 String remark = null;
                 if (coverFile != null && coverFile.getSize() > 0) {
@@ -445,8 +481,29 @@ public class ManuscriptServlet extends HttpServlet {
                 }
 
                 v.setFileOriginalPath(fileOriginalPath);
+                v.setFileAnonymousPath(fileAnonymousPath);
                 v.setCoverLetterPath(coverPath);
                 v.setRemark(remark);
+
+                // 未重新上传文件时，沿用上一版的附件路径
+                if (prevCurrent != null) {
+                    if (v.getFileOriginalPath() == null || v.getFileOriginalPath().trim().isEmpty()) {
+                        v.setFileOriginalPath(prevCurrent.getFileOriginalPath());
+                    }
+                    if (v.getFileAnonymousPath() == null || v.getFileAnonymousPath().trim().isEmpty()) {
+                        v.setFileAnonymousPath(prevCurrent.getFileAnonymousPath());
+                    }
+                    if (v.getCoverLetterPath() == null || v.getCoverLetterPath().trim().isEmpty()) {
+                        v.setCoverLetterPath(prevCurrent.getCoverLetterPath());
+                    }
+                    // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
+                    if (v.getResponseLetterPath() == null || v.getResponseLetterPath().trim().isEmpty()) {
+                        v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
+                    }
+                    if (v.getRemark() == null || v.getRemark().trim().isEmpty()) {
+                        v.setRemark(prevCurrent.getRemark());
+                    }
+                }
 
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);

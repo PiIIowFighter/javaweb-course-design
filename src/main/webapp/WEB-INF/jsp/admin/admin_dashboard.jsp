@@ -9,5 +9,7 @@
     <li><a href="${pageContext.request.contextPath}/admin/system/status">系统维护</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/logs/list">系统日志查询</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/journals/list">期刊管理</a></li>
+    <li><a href="${pageContext.request.contextPath}/admin/editorial/list">编辑委员会管理</a></li>
+    <li><a href="${pageContext.request.contextPath}/admin/news/list">公告/新闻管理</a></li>
 </ul>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

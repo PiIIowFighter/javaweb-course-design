@@ -12,8 +12,19 @@
 </c:if>
 
 <c:if test="${not empty user}">
-    <form action="${pageContext.request.contextPath}/admin/users/update" method="post">
-        <input type="hidden" name="userId" value="${user.userId}"/>
+    <c:choose>
+        <c:when test="${user.roleCode == 'SUPER_ADMIN'}">
+            <div style="padding:8px 12px;border:1px solid #f2c200;background:#fff7d6;margin:10px 0;">
+                <strong>提示：</strong>超级管理员（SUPER_ADMIN）为最高权限用户，不能被任何人修改。
+            </div>
+            <p>
+                用户ID：${user.userId}，用户名：${user.username}，邮箱：${user.email}，状态：${user.status}
+            </p>
+            <p><a href="${pageContext.request.contextPath}/admin/users/list">返回列表</a></p>
+        </c:when>
+        <c:otherwise>
+            <form action="${pageContext.request.contextPath}/admin/users/update" method="post">
+                <input type="hidden" name="userId" value="${user.userId}"/>
 
         <div>
             <label>用户ID：
@@ -66,11 +77,13 @@
             </label>
         </div>
 
-        <div style="margin-top:12px;">
-            <button type="submit">保存修改</button>
-            <a href="${pageContext.request.contextPath}/admin/users/list">返回列表</a>
-        </div>
-    </form>
+                <div style="margin-top:12px;">
+                    <button type="submit">保存修改</button>
+                    <a href="${pageContext.request.contextPath}/admin/users/list">返回列表</a>
+                </div>
+            </form>
+        </c:otherwise>
+    </c:choose>
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

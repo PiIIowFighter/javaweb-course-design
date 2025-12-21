@@ -14,6 +14,46 @@ import java.util.List;
 public class ManuscriptDAO {
 
     /**
+     * 前台“Latest published”列表：用 ACCEPTED 状态近似已发表。
+     * 课程设计中未单独维护 PublishedArticles 表，因此此处仅做展示用途。
+     */
+    public List<Manuscript> findLatestAccepted(int limit) throws SQLException {
+        String top = limit > 0 ? "TOP " + limit + " " : "";
+        String sql = "SELECT " + top + " ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
+                     "FROM dbo.Manuscripts " +
+                     "WHERE IsArchived = 0 AND IsWithdrawn = 0 AND Status IN ('ACCEPTED') " +
+                     "ORDER BY FinalDecisionTime DESC, ManuscriptId DESC";
+
+        List<Manuscript> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        }
+        return list;
+    }
+
+    /** 前台详情页：只允许读取 ACCEPTED 状态稿件。 */
+    public Manuscript findAcceptedById(int manuscriptId) throws SQLException {
+        String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
+                     "FROM dbo.Manuscripts WHERE ManuscriptId = ? AND Status IN ('ACCEPTED')";
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 新增稿件（可指定状态）。
      * @param conn          事务连接（由调用方控制提交/回滚）
      * @param m             稿件对象
@@ -184,6 +224,67 @@ public class ManuscriptDAO {
             }
         }
         return list;
+    }
+
+    /**
+     * 主编“全览权限”使用：查询系统内全部稿件（包含已归档/已撤稿/草稿等）。
+     *
+     * 说明：当前项目未单独维护“稿件状态历史表”，因此这里的“历史入口”
+     * 主要通过跳转到 /manuscripts/detail?id=xxx 查看：
+     *  - 当前版本/附件（dbo.ManuscriptVersions 等）
+     *  - 审稿流程记录（dbo.Reviews）
+     */
+    public List<Manuscript> findAllForChief() throws SQLException {
+        String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime "
+                   + "FROM dbo.Manuscripts "
+                   + "ORDER BY ISNULL(SubmitTime, LastStatusTime) DESC, ManuscriptId DESC";
+
+        List<Manuscript> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 主编特殊权限：撤销之前的终审决定（Rescind Decision）。
+     * 将稿件状态回退到 FINAL_DECISION_PENDING，并清空 Decision/FinalDecisionTime。
+     */
+    public void rescindDecision(int manuscriptId) throws SQLException {
+        String sql = "UPDATE dbo.Manuscripts "
+                   + "SET Status = 'FINAL_DECISION_PENDING', "
+                   + "    Decision = NULL, "
+                   + "    FinalDecisionTime = NULL, "
+                   + "    LastStatusTime = SYSUTCDATETIME() "
+                   + "WHERE ManuscriptId = ?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 主编特殊权限：撤稿（Retract）。
+     * 当前实现采用“归档 + 标记撤稿”方式：IsWithdrawn=1、IsArchived=1、Status=ARCHIVED。
+     */
+    public void retractManuscript(int manuscriptId) throws SQLException {
+        String sql = "UPDATE dbo.Manuscripts "
+                   + "SET IsWithdrawn = 1, "
+                   + "    IsArchived = 1, "
+                   + "    Status = 'ARCHIVED', "
+                   + "    LastStatusTime = SYSUTCDATETIME() "
+                   + "WHERE ManuscriptId = ?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.executeUpdate();
+        }
     }
 
     /**

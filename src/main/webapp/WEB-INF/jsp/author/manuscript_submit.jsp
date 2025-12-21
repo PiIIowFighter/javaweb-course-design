@@ -163,7 +163,7 @@
                 <label>手稿文件</label>
                 <div>
                     <input type="file" name="manuscriptFile" accept=".pdf,.doc,.docx"/>
-                    <c:if test="${not empty currentVersion and not empty currentVersion.fileOriginalPath}">
+                    <c:if test="${not empty currentVersion and (not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath)}">
                         <div class="help">
                             当前版本：
                             <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">预览/下载</a>

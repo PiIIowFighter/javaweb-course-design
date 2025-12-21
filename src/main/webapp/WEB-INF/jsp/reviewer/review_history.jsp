@@ -19,6 +19,7 @@
         <th>提交时间</th>
         <th>评分</th>
         <th>推荐意见</th>
+        <th>稿件附件</th>
     </tr>
     </thead>
     <tbody>
@@ -29,6 +30,12 @@
             <td><c:out value="${r.submittedAt}"/></td>
             <td><c:out value="${r.score}"/></td>
             <td><c:out value="${r.recommendation}"/></td>
+            <td>
+                <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+                <a href="${ctx}/manuscripts/detail?id=${r.manuscriptId}" target="_blank">查看详情/附件</a>
+                <span style="margin:0 8px;">|</span>
+                <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=manuscript" target="_blank">下载手稿</a>
+            </td>
         </tr>
     </c:forEach>
     </tbody>

@@ -107,6 +107,16 @@ public class EditorServlet extends HttpServlet {
                     handleReviewerPoolPage(req, resp, current);
                     break;
 
+                case "/overview":
+                    // 主编全览：查看系统内全部稿件状态，并可跳转到稿件详情页查看审稿流程
+                    handleChiefOverview(req, resp, current);
+                    break;
+
+                case "/special":
+                    // 主编特殊权限：撤稿 / 撤销决策
+                    handleChiefSpecialPage(req, resp, current);
+                    break;
+
                 default:
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
@@ -200,6 +210,47 @@ public class EditorServlet extends HttpServlet {
         List<User> reviewers = userDAO.findByRoleCode("REVIEWER");
         req.setAttribute("reviewers", reviewers);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/reviewer_pool.jsp")
+                .forward(req, resp);
+    }
+
+    /**
+     * 主编“全览权限”：查看系统内所有稿件的状态，并可跳转到稿件详情页查看审稿流程/版本/附件。
+     */
+    private void handleChiefOverview(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以查看全览列表。");
+            return;
+        }
+
+        List<Manuscript> list = manuscriptDAO.findAllForChief();
+        req.setAttribute("manuscripts", list);
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_overview.jsp")
+                .forward(req, resp);
+    }
+
+    /**
+     * 主编“特殊权限”：撤稿（Retract）/ 撤销终审决定（Rescind Decision）。
+     */
+    private void handleChiefSpecialPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以访问特殊权限页面。");
+            return;
+        }
+
+        // 只展示与“决策/撤稿”相关的稿件，避免列表过大
+        List<Manuscript> list = manuscriptDAO.findByStatuses(
+                "EDITOR_RECOMMENDATION",
+                "FINAL_DECISION_PENDING",
+                "REVISION",
+                "ACCEPTED",
+                "REJECTED"
+        );
+        req.setAttribute("manuscripts", list);
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_special.jsp")
                 .forward(req, resp);
     }
 
@@ -537,6 +588,38 @@ public class EditorServlet extends HttpServlet {
         }
 
         int manuscriptId = Integer.parseInt(idStr);
+
+        // 特殊权限操作需要读取当前状态做最基本校验
+        Manuscript currentManuscript = manuscriptDAO.findById(manuscriptId);
+        if (currentManuscript == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该稿件。");
+            return;
+        }
+
+        if ("rescind".equals(op)) {
+            // 撤销终审决定：仅允许对已做出最终决定的稿件操作
+            String st = currentManuscript.getCurrentStatus();
+            if (!"ACCEPTED".equals(st) && !"REJECTED".equals(st) && !"REVISION".equals(st)) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "只有已做出最终决定的稿件才可以撤销决策。");
+                return;
+            }
+            manuscriptDAO.rescindDecision(manuscriptId);
+            resp.sendRedirect(req.getContextPath() + "/editor/special");
+            return;
+        }
+
+        if ("retract".equals(op)) {
+            // 撤稿：主编可对任意非归档稿件执行撤稿（归档 + 标记撤稿）
+            if ("ARCHIVED".equals(currentManuscript.getCurrentStatus())) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该稿件已经归档/撤稿，无需重复操作。");
+                return;
+            }
+            manuscriptDAO.retractManuscript(manuscriptId);
+            resp.sendRedirect(req.getContextPath() + "/editor/special");
+            return;
+        }
+
+        // 常规终审决策：Accept / Reject / Revision
         String decision;
         String newStatus;
         switch (op) {
@@ -562,7 +645,7 @@ public class EditorServlet extends HttpServlet {
     }
 
     /**
-     * 审稿人库管理：新增 / 启用 / 禁用审稿人账号。
+     * 审稿人库管理：邀请（创建待审核）/ 审核通过 / 启用 / 禁用审稿人账号。
      */
     private void handleReviewerPoolPost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws SQLException, IOException {
@@ -572,14 +655,15 @@ public class EditorServlet extends HttpServlet {
             return;
         }
 
+        // 兼容：op=invite/create/approve/disable/enable
         String op = req.getParameter("op");
         if (op == null) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
             return;
         }
 
-        if ("create".equals(op)) {
-            // 新增审稿人账号
+        if ("create".equals(op) || "invite".equals(op)) {
+            // 邀请 / 新增审稿人账号：创建 REVIEWER 角色账号，默认状态为 PENDING（待审核）
             String username = req.getParameter("username");
             String password = req.getParameter("password");
             String fullName = req.getParameter("fullName");
@@ -600,11 +684,14 @@ public class EditorServlet extends HttpServlet {
             u.setEmail(email);
             u.setAffiliation(affiliation);
             u.setResearchArea(researchArea);
-            u.setStatus("ACTIVE");
+
+            // 按结构图：邀请后需“审核资格”，因此先置为 PENDING
+            u.setStatus("PENDING");
 
             userDAO.createUserWithRole(u, "REVIEWER");
+
         } else {
-            // 启用 / 禁用审稿人账号
+            // 审核 / 启用 / 禁用审稿人账号
             String userIdStr = req.getParameter("userId");
             if (userIdStr == null) {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少用户 ID 参数。");
@@ -612,9 +699,14 @@ public class EditorServlet extends HttpServlet {
             }
             int userId = Integer.parseInt(userIdStr);
 
-            if ("disable".equals(op)) {
+            if ("approve".equals(op)) {
+                // 审核通过：PENDING -> ACTIVE
+                userDAO.updateStatus(userId, "ACTIVE");
+            } else if ("disable".equals(op)) {
+                // 移除/禁用：ACTIVE/PENDING -> DISABLED
                 userDAO.updateStatus(userId, "DISABLED");
             } else if ("enable".equals(op)) {
+                // 重新启用：DISABLED -> ACTIVE
                 userDAO.updateStatus(userId, "ACTIVE");
             } else {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -624,6 +716,7 @@ public class EditorServlet extends HttpServlet {
 
         resp.sendRedirect(req.getContextPath() + "/editor/reviewers");
     }
+
 
     
 

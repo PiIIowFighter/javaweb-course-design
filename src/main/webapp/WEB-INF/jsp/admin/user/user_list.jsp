@@ -49,41 +49,48 @@
             <td>${u.email}</td>
             <td>${u.roleCode}</td>
             <td>${u.status}</td>
-            <td>
-                <a href="${pageContext.request.contextPath}/admin/users/edit?userId=${u.userId}">编辑</a>
-                <span style="color:#999"> | </span>
+	            <td>
+	                <c:choose>
+	                    <c:when test="${u.roleCode == 'SUPER_ADMIN'}">
+	                        <span style="color:#999">超级管理员（最高权限）不可修改</span>
+	                    </c:when>
+	                    <c:otherwise>
+	                        <a href="${pageContext.request.contextPath}/admin/users/edit?userId=${u.userId}">编辑</a>
+	                        <span style="color:#999"> | </span>
 
-                <!-- 封禁 / 解封 -->
-                <c:choose>
-                    <c:when test="${u.status == 'ACTIVE'}">
-                        <form action="${pageContext.request.contextPath}/admin/users/status" method="post" style="display:inline;">
-                            <input type="hidden" name="userId" value="${u.userId}"/>
-                            <input type="hidden" name="targetStatus" value="DISABLED"/>
-                            <button type="submit">封禁</button>
-                        </form>
-                    </c:when>
-                    <c:otherwise>
-                        <form action="${pageContext.request.contextPath}/admin/users/status" method="post" style="display:inline;">
-                            <input type="hidden" name="userId" value="${u.userId}"/>
-                            <input type="hidden" name="targetStatus" value="ACTIVE"/>
-                            <button type="submit">解封</button>
-                        </form>
-                    </c:otherwise>
-                </c:choose>
+	                        <!-- 封禁 / 解封 -->
+	                        <c:choose>
+	                            <c:when test="${u.status == 'ACTIVE'}">
+	                                <form action="${pageContext.request.contextPath}/admin/users/status" method="post" style="display:inline;">
+	                                    <input type="hidden" name="userId" value="${u.userId}"/>
+	                                    <input type="hidden" name="targetStatus" value="DISABLED"/>
+	                                    <button type="submit">封禁</button>
+	                                </form>
+	                            </c:when>
+	                            <c:otherwise>
+	                                <form action="${pageContext.request.contextPath}/admin/users/status" method="post" style="display:inline;">
+	                                    <input type="hidden" name="userId" value="${u.userId}"/>
+	                                    <input type="hidden" name="targetStatus" value="ACTIVE"/>
+	                                    <button type="submit">解封</button>
+	                                </form>
+	                            </c:otherwise>
+	                        </c:choose>
 
-                <!-- 重置密码 -->
-                <form action="${pageContext.request.contextPath}/admin/users/resetPassword" method="post" style="display:inline;margin-left:4px;">
-                    <input type="hidden" name="userId" value="${u.userId}"/>
-                    <button type="submit">重置密码为 123456</button>
-                </form>
+	                        <!-- 重置密码 -->
+	                        <form action="${pageContext.request.contextPath}/admin/users/resetPassword" method="post" style="display:inline;margin-left:4px;">
+	                            <input type="hidden" name="userId" value="${u.userId}"/>
+	                            <button type="submit">重置密码为 123456</button>
+	                        </form>
 
-                <span style="color:#999"> | </span>
-                <!-- 删除（不建议频繁使用，课程设计阶段提供） -->
-                <form action="${pageContext.request.contextPath}/admin/users/delete" method="post" style="display:inline;" onsubmit="return confirm('确定删除该用户吗？此操作不可恢复');">
-                    <input type="hidden" name="userId" value="${u.userId}"/>
-                    <button type="submit">删除</button>
-                </form>
-            </td>
+	                        <span style="color:#999"> | </span>
+	                        <!-- 删除（不建议频繁使用，课程设计阶段提供） -->
+	                        <form action="${pageContext.request.contextPath}/admin/users/delete" method="post" style="display:inline;" onsubmit="return confirm('确定删除该用户吗？此操作不可恢复');">
+	                            <input type="hidden" name="userId" value="${u.userId}"/>
+	                            <button type="submit">删除</button>
+	                        </form>
+	                    </c:otherwise>
+	                </c:choose>
+	            </td>
         </tr>
     </c:forEach>
     </tbody>

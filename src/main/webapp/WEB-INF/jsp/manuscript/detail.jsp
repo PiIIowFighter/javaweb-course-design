@@ -62,12 +62,27 @@
             <th>附件</th>
             <td>
                 <c:if test="${not empty currentVersion}">
-                    <c:if test="${not empty currentVersion.fileOriginalPath}">
+                    <!-- 手稿：审稿人默认查看匿名稿（由 /files/preview 内部根据角色选择文件路径） -->
+                    <c:if test="${not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath}">
                         <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">Manuscript 预览/下载</a>
                     </c:if>
-                    <c:if test="${not empty currentVersion.coverLetterPath}">
+
+                    <!-- 匿名稿：若系统已生成匿名稿，可额外提供入口（工作人员也可用来核查匿名处理是否到位） -->
+                    <c:if test="${not empty currentVersion.fileAnonymousPath}">
                         <span style="margin-left:12px;"></span>
-                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">Cover Letter 预览/下载</a>
+                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=anonymous">匿名稿 预览/下载</a>
+                    </c:if>
+
+                    <!-- Cover/Response：审稿人通常不应看到 -->
+                    <c:if test="${sessionScope.currentUser.roleCode != 'REVIEWER'}">
+                        <c:if test="${not empty currentVersion.coverLetterPath}">
+                            <span style="margin-left:12px;"></span>
+                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">Cover Letter 预览/下载</a>
+                        </c:if>
+                        <c:if test="${not empty currentVersion.responseLetterPath}">
+                            <span style="margin-left:12px;"></span>
+                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=response">Response Letter 预览/下载</a>
+                        </c:if>
                     </c:if>
                 </c:if>
                 <c:if test="${empty currentVersion}">
@@ -492,8 +507,8 @@
     </c:if>
 
     <h3>与作者和审稿人沟通（备注说明）</h3>
-    <p>课程设计阶段不实现真实邮件发送，可在操作时通过“备注 / 日志”记录沟通要点，
-        教师检查数据库中的 Logs / ManuscriptStatusHistory 表即可了解沟通情况。</p>
+    <p>未实现真实邮件发送，可在操作时通过“备注 / 日志”记录沟通要点，
+        数据库中的 Logs / ManuscriptStatusHistory 表可了解沟通情况。</p>
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

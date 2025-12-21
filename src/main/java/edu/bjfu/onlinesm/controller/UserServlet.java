@@ -130,6 +130,13 @@ public class UserServlet extends HttpServlet {
             return;
         }
         int userId = Integer.parseInt(userIdStr);
+
+        // 约束：超级管理员是最高权限用户，不能被任何人修改（包括封禁/解封）。
+        User target = userDAO.findById(userId);
+        if (isSuperAdmin(target)) {
+            return;
+        }
+
         userDAO.updateStatus(userId, targetStatus);
         OperationLogger.log(req, "USER", "修改用户状态", "userId=" + userId + ", status=" + targetStatus);
     }
@@ -140,6 +147,13 @@ public class UserServlet extends HttpServlet {
             return;
         }
         int userId = Integer.parseInt(userIdStr);
+
+        // 约束：超级管理员是最高权限用户，不能被任何人修改（包括重置密码）。
+        User target = userDAO.findById(userId);
+        if (isSuperAdmin(target)) {
+            return;
+        }
+
         // 简单重置为 123456，实际系统中应由管理员输入或发送重置链接
         userDAO.resetPassword(userId, "123456");
         OperationLogger.log(req, "USER", "重置密码", "userId=" + userId + ", newPassword=123456");
@@ -161,6 +175,11 @@ public class UserServlet extends HttpServlet {
             password = "123456";
         }
 
+        // 约束：禁止任何人创建 SUPER_ADMIN。
+        if (roleCode != null && "SUPER_ADMIN".equalsIgnoreCase(roleCode.trim())) {
+            return;
+        }
+
         User newUser = new User();
         newUser.setUsername(username.trim());
         newUser.setPasswordHash(password.trim());
@@ -177,6 +196,19 @@ public class UserServlet extends HttpServlet {
         if (userIdStr == null || userIdStr.trim().isEmpty()) return;
 
         int userId = Integer.parseInt(userIdStr);
+
+        // 约束：超级管理员是最高权限用户，不能被任何人修改（包括角色/状态/资料）。
+        User target = userDAO.findById(userId);
+        if (isSuperAdmin(target)) {
+            return;
+        }
+
+        // 约束：禁止把任何用户提升为 SUPER_ADMIN。
+        String incomingRole = req.getParameter("roleCode");
+        if (incomingRole != null && "SUPER_ADMIN".equalsIgnoreCase(incomingRole.trim())) {
+            return;
+        }
+
         User u = new User();
         u.setUserId(userId);
         u.setEmail(req.getParameter("email"));
@@ -184,7 +216,7 @@ public class UserServlet extends HttpServlet {
         u.setAffiliation(req.getParameter("affiliation"));
         u.setResearchArea(req.getParameter("researchArea"));
         u.setStatus(req.getParameter("status"));
-        u.setRoleCode(req.getParameter("roleCode"));
+        u.setRoleCode(incomingRole);
         userDAO.adminUpdateUser(u);
         OperationLogger.log(req, "USER", "更新用户信息", "userId=" + userId + ", role=" + u.getRoleCode() + ", status=" + u.getStatus());
     }
@@ -200,12 +232,16 @@ public class UserServlet extends HttpServlet {
             return;
         }
         User target = userDAO.findById(userId);
-        if (target != null && "SUPER_ADMIN".equalsIgnoreCase(target.getRoleCode())) {
+        if (isSuperAdmin(target)) {
             // 不允许删除超级管理员
             return;
         }
         userDAO.deleteUser(userId);
         OperationLogger.log(req, "USER", "删除用户", "userId=" + userId);
+    }
+
+    private boolean isSuperAdmin(User u) {
+        return u != null && u.getRoleCode() != null && "SUPER_ADMIN".equalsIgnoreCase(u.getRoleCode());
     }
 
     private User getCurrentUser(HttpServletRequest req) {

@@ -20,9 +20,28 @@ public final class SchemaUtil {
         String sql = "IF OBJECT_ID('dbo.RolePermissions', 'U') IS NULL\n" +
                 "BEGIN\n" +
                 "  CREATE TABLE dbo.RolePermissions(\n" +
-                "    RoleCode VARCHAR(50) NOT NULL,\n" +
-                "    PermissionKey VARCHAR(100) NOT NULL,\n" +
+                "    RoleCode NVARCHAR(50) NOT NULL,\n" +
+                "    PermissionKey NVARCHAR(100) NOT NULL,\n" +
                 "    CONSTRAINT PK_RolePermissions PRIMARY KEY(RoleCode, PermissionKey)\n" +
+                "  );\n" +
+                "END";
+        exec(sql);
+    }
+
+    /**
+     * 编委会表：dbo.EditorialBoard。
+     * 课程设计阶段用于“编委会管理”模块，避免首次运行因缺表导致 500。
+     */
+    public static void ensureEditorialBoardTable() throws SQLException {
+        String sql = "IF OBJECT_ID('dbo.EditorialBoard', 'U') IS NULL\n" +
+                "BEGIN\n" +
+                "  CREATE TABLE dbo.EditorialBoard(\n" +
+                "    BoardMemberId INT IDENTITY(1,1) PRIMARY KEY,\n" +
+                "    UserId INT NOT NULL,\n" +
+                "    JournalId INT NOT NULL,\n" +
+                "    Position NVARCHAR(50) NOT NULL,\n" +
+                "    Section NVARCHAR(100) NULL,\n" +
+                "    Bio NVARCHAR(MAX) NULL\n" +
                 "  );\n" +
                 "END";
         exec(sql);

@@ -10,6 +10,27 @@ import java.sql.*;
  */
 public class ManuscriptVersionDAO {
 
+    /**
+     * 在同一事务/连接内读取当前版本。
+     * 用于“保存草稿/Resubmit”时：当用户未重新上传文件，仍需沿用上一个当前版本的附件路径。
+     */
+    public ManuscriptVersion findCurrentByManuscriptId(Connection conn, int manuscriptId) throws SQLException {
+        String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, " +
+                "FileAnonymousPath, FileOriginalPath, CoverLetterPath, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
+                "FROM dbo.ManuscriptVersions WHERE ManuscriptId = ? AND IsCurrent = 1 " +
+                "ORDER BY VersionNumber DESC, VersionId DESC";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     public ManuscriptVersion findCurrentByManuscriptId(int manuscriptId) throws SQLException {
         String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
                 "FROM dbo.ManuscriptVersions WHERE ManuscriptId = ? AND IsCurrent = 1 ORDER BY VersionNumber DESC, VersionId DESC";

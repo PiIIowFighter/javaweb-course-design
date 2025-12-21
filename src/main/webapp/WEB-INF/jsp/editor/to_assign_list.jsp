@@ -50,7 +50,7 @@
                         <button type="submit" name="op" value="assign">
                             指派责任编辑
                         </button>
-                    
+                    </form>
                 </c:if>
             </td>
         </tr>

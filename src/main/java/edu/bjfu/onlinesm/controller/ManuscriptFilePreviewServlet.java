@@ -30,6 +30,19 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
 
+    // 用于审稿人权限校验（只能查看分配给自己的稿件）
+    private boolean reviewerHasAccess(int reviewerId, int manuscriptId) throws Exception {
+        String sql = "SELECT TOP 1 1 FROM dbo.Reviews WHERE ManuscriptId=? AND ReviewerId=?";
+        try (java.sql.Connection conn = edu.bjfu.onlinesm.util.DbUtil.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.setInt(2, reviewerId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User current = (User) req.getSession().getAttribute("currentUser");
@@ -53,10 +66,28 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                 return;
             }
 
-            // 作者只能看自己的
-            if ("AUTHOR".equals(current.getRoleCode()) && !Objects.equals(current.getUserId(), m.getSubmitterId())) {
+            String role = current.getRoleCode();
+
+            // 1) 作者：只能查看自己的
+            if ("AUTHOR".equals(role) && !Objects.equals(current.getUserId(), m.getSubmitterId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看他人稿件文件。");
                 return;
+            }
+
+            // 2) 审稿人：只能查看分配给自己的稿件；且默认不允许查看 Cover Letter
+            if ("REVIEWER".equals(role)) {
+                if (!reviewerHasAccess(current.getUserId(), manuscriptId)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看未分配给您的稿件文件。");
+                    return;
+                }
+                if ("cover".equalsIgnoreCase(type)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看 Cover Letter。");
+                    return;
+                }
+                if ("response".equalsIgnoreCase(type)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看 Response Letter。");
+                    return;
+                }
             }
 
             ManuscriptVersion v = versionDAO.findCurrentByManuscriptId(manuscriptId);
@@ -67,11 +98,24 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
             String filePath = null;
             if ("manuscript".equalsIgnoreCase(type)) {
-                filePath = v.getFileOriginalPath();
+                // 审稿人优先看匿名稿（若没有匿名稿，就退化为原稿）
+                if ("REVIEWER".equals(role)) {
+                    filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
+                            ? v.getFileAnonymousPath()
+                            : v.getFileOriginalPath();
+                } else {
+                    filePath = v.getFileOriginalPath();
+                }
+            } else if ("anonymous".equalsIgnoreCase(type)) {
+                filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
+                        ? v.getFileAnonymousPath()
+                        : v.getFileOriginalPath();
             } else if ("cover".equalsIgnoreCase(type)) {
                 filePath = v.getCoverLetterPath();
+            } else if ("response".equalsIgnoreCase(type)) {
+                filePath = v.getResponseLetterPath();
             } else {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type);
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type + "（支持 manuscript/anonymous/cover/response）");
                 return;
             }
 

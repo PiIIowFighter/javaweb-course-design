@@ -461,3 +461,195 @@ GO
 
 PRINT '✅ Online_SMSystem4SP schema initialized (v2025-12-21).';
 GO
+
+/* ============================================================
+   99. About Journal - Pages & Seed (Aims / Policies / News seed)
+   说明：
+   - 关于期刊页面的 Aims and scope、Policies and Guidelines 通过 dbo.JournalPages 配置；
+   - 若已存在记录则更新（MERGE），便于重复执行；
+   - 如 News 表为空，插入 3 条已发布新闻（便于前台展示）。
+   ============================================================ */
+
+USE [Online_SMSystem4SP];
+GO
+
+/* 99.1 表：dbo.JournalPages */
+IF OBJECT_ID(N'dbo.JournalPages', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.JournalPages (
+        PageId     INT IDENTITY(1,1) PRIMARY KEY,
+        JournalId  INT NOT NULL,
+        PageKey    NVARCHAR(50) NOT NULL,     -- aims / policies
+        Title      NVARCHAR(200) NOT NULL,
+        Content    NVARCHAR(MAX) NOT NULL,    -- 存 HTML（<p><ul> 等）
+        UpdatedAt  DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_JournalPages_Journal FOREIGN KEY(JournalId) REFERENCES dbo.Journals(JournalId)
+    );
+
+    CREATE UNIQUE INDEX UX_JournalPages_Journal_PageKey
+        ON dbo.JournalPages(JournalId, PageKey);
+END
+GO
+
+/* 99.2 初始化 Aims / Policies（若已存在则更新） */
+DECLARE @jid INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId ASC);
+
+IF @jid IS NOT NULL
+BEGIN
+    /* Aims and scope */
+    MERGE dbo.JournalPages AS T
+    USING (SELECT @jid AS JournalId, N'aims' AS PageKey) AS S
+    ON (T.JournalId = S.JournalId AND T.PageKey = S.PageKey)
+    WHEN MATCHED THEN
+        UPDATE SET
+            Title = N'论文主旨与投稿范围（Aims and scope）',
+            Content = N'
+<p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
+<h3>主要研究方向</h3>
+<ul>
+  <li>机器学习 / 深度学习（监督、无监督、强化学习）</li>
+  <li>计算机视觉与模式识别（检测、分割、生成模型）</li>
+  <li>自然语言处理与大模型（检索增强、对齐、推理）</li>
+  <li>数据挖掘与知识图谱（图学习、信息抽取）</li>
+  <li>智能系统与工程应用（部署、评测、系统优化）</li>
+</ul>
+<h3>稿件类型</h3>
+<ul>
+  <li>研究论文（Research Article）</li>
+  <li>综述论文（Review）</li>
+  <li>简报/短文（Short Communication）</li>
+</ul>
+<p><b>投稿要求：</b>稿件需包含清晰的问题定义、方法描述、实验设置与结论分析；鼓励提供数据/代码链接以提升可复现性。</p>
+',
+            UpdatedAt = SYSUTCDATETIME()
+    WHEN NOT MATCHED THEN
+        INSERT (JournalId, PageKey, Title, Content)
+        VALUES (@jid, N'aims', N'论文主旨与投稿范围（Aims and scope）',
+N'
+<p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
+<h3>主要研究方向</h3>
+<ul>
+  <li>机器学习 / 深度学习（监督、无监督、强化学习）</li>
+  <li>计算机视觉与模式识别（检测、分割、生成模型）</li>
+  <li>自然语言处理与大模型（检索增强、对齐、推理）</li>
+  <li>数据挖掘与知识图谱（图学习、信息抽取）</li>
+  <li>智能系统与工程应用（部署、评测、系统优化）</li>
+</ul>
+<h3>稿件类型</h3>
+<ul>
+  <li>研究论文（Research Article）</li>
+  <li>综述论文（Review）</li>
+  <li>简报/短文（Short Communication）</li>
+</ul>
+<p><b>投稿要求：</b>稿件需包含清晰的问题定义、方法描述、实验设置与结论分析；鼓励提供数据/代码链接以提升可复现性。</p>
+');
+    ;
+
+    /* Policies and Guidelines */
+    MERGE dbo.JournalPages AS T
+    USING (SELECT @jid AS JournalId, N'policies' AS PageKey) AS S
+    ON (T.JournalId = S.JournalId AND T.PageKey = S.PageKey)
+    WHEN MATCHED THEN
+        UPDATE SET
+            Title = N'政策与指南（Policies and Guidelines）',
+            Content = N'
+<p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。若与系统功能存在差异，以系统实际流程为准。</p>
+
+<h3>1. 投稿与格式要求</h3>
+<ul>
+  <li>稿件需包含：标题、摘要、关键词、正文、参考文献（按期刊格式）。</li>
+  <li>图表需提供清晰标题与编号；引用数据需注明来源。</li>
+</ul>
+
+<h3>2. 同行评审政策</h3>
+<ul>
+  <li>采用同行评审流程（系统中对应：初审 → 指派编辑 → 外审 → 终审）。</li>
+  <li>审稿意见与修回记录将被系统保存以便追踪。</li>
+</ul>
+
+<h3>3. 出版伦理与学术规范</h3>
+<ul>
+  <li>严禁一稿多投、抄袭、伪造数据等学术不端行为。</li>
+  <li>作者署名与贡献需真实有效；如存在利益冲突需在稿件中声明。</li>
+</ul>
+
+<h3>4. 版权与许可</h3>
+<ul>
+  <li>录用后作者需确认版权/许可协议（可在后续版本中扩展为在线协议确认）。</li>
+</ul>
+
+<h3>5. 数据与代码可复现</h3>
+<ul>
+  <li>鼓励提供数据与代码的公开链接或附加材料，提升研究可复现性。</li>
+</ul>
+',
+            UpdatedAt = SYSUTCDATETIME()
+    WHEN NOT MATCHED THEN
+        INSERT (JournalId, PageKey, Title, Content)
+        VALUES (@jid, N'policies', N'政策与指南（Policies and Guidelines）',
+N'
+<p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。若与系统功能存在差异，以系统实际流程为准。</p>
+
+<h3>1. 投稿与格式要求</h3>
+<ul>
+  <li>稿件需包含：标题、摘要、关键词、正文、参考文献（按期刊格式）。</li>
+  <li>图表需提供清晰标题与编号；引用数据需注明来源。</li>
+</ul>
+
+<h3>2. 同行评审政策</h3>
+<ul>
+  <li>采用同行评审流程（系统中对应：初审 → 指派编辑 → 外审 → 终审）。</li>
+  <li>审稿意见与修回记录将被系统保存以便追踪。</li>
+</ul>
+
+<h3>3. 出版伦理与学术规范</h3>
+<ul>
+  <li>严禁一稿多投、抄袭、伪造数据等学术不端行为。</li>
+  <li>作者署名与贡献需真实有效；如存在利益冲突需在稿件中声明。</li>
+</ul>
+
+<h3>4. 版权与许可</h3>
+<ul>
+  <li>录用后作者需确认版权/许可协议（可在后续版本中扩展为在线协议确认）。</li>
+</ul>
+
+<h3>5. 数据与代码可复现</h3>
+<ul>
+  <li>鼓励提供数据与代码的公开链接或附加材料，提升研究可复现性。</li>
+</ul>
+');
+END
+GO
+
+/* 99.3 初始化 News（若 News 表为空） */
+IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.News)
+    BEGIN
+        DECLARE @authorId INT =
+            COALESCE(
+                (SELECT TOP 1 UserId FROM dbo.Users WHERE Username = N'eoadmin'),
+                (SELECT TOP 1 UserId FROM dbo.Users WHERE Username = N'admin'),
+                (SELECT TOP 1 UserId FROM dbo.Users ORDER BY UserId ASC)
+            );
+
+        IF @authorId IS NOT NULL
+        BEGIN
+            INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
+            VALUES
+              (N'期刊系统上线公告',
+               N'本期刊在线投稿与审稿系统已上线，欢迎作者注册并提交稿件。',
+               SYSUTCDATETIME(), @authorId, 1),
+              (N'征稿通知：AI 与可复现研究专题',
+               N'本期刊开设专题：AI 与可复现研究（Special Issue），欢迎相关工作投稿。',
+               DATEADD(DAY, -3, SYSUTCDATETIME()), @authorId, 1),
+              (N'审稿人招募',
+               N'期刊长期招募审稿人，欢迎具有相关研究背景的学者加入审稿人库。',
+               DATEADD(DAY, -10, SYSUTCDATETIME()), @authorId, 1);
+        END
+    END
+END
+GO
+
+PRINT N'? Online_SMSystem4SP full schema + AboutJournal seed initialized (v2025-12-21).';
+GO

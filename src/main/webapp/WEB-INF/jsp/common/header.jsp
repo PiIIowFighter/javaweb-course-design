@@ -32,11 +32,26 @@
                 <i class="bi bi-house" aria-hidden="true"></i>
                 <span>首页</span>
             </a>
+
+            <a href="${pageContext.request.contextPath}/about/aims">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>关于期刊</span>
+            </a>
+
+            <a href="${pageContext.request.contextPath}/news/list">
+                <i class="bi bi-newspaper" aria-hidden="true"></i>
+                <span>新闻</span>
+            </a>
             <c:choose>
                 <c:when test="${not empty sessionScope.currentUser}">
                     <a href="${pageContext.request.contextPath}/dashboard">
                         <i class="bi bi-grid" aria-hidden="true"></i>
                         <span>工作台</span>
+                    </a>
+
+                    <a href="${pageContext.request.contextPath}/manuscripts/submit">
+                        <i class="bi bi-upload" aria-hidden="true"></i>
+                        <span>提交论文</span>
                     </a>
                     <a href="${pageContext.request.contextPath}/profile">
                         <i class="bi bi-person" aria-hidden="true"></i>
@@ -55,6 +70,11 @@
                     <a href="${pageContext.request.contextPath}/auth/register">
                         <i class="bi bi-person-plus" aria-hidden="true"></i>
                         <span>注册</span>
+                    </a>
+
+                    <a href="${pageContext.request.contextPath}/auth/login">
+                        <i class="bi bi-upload" aria-hidden="true"></i>
+                        <span>提交论文</span>
                     </a>
                 </c:otherwise>
             </c:choose>
