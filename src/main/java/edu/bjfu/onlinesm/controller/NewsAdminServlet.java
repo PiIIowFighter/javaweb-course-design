@@ -5,6 +5,11 @@ import edu.bjfu.onlinesm.model.News;
 import edu.bjfu.onlinesm.model.User;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.http.Part;
+import java.io.File;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -27,10 +32,13 @@ import java.util.List;
  * 允许角色：SUPER_ADMIN / SYSTEM_ADMIN / EDITOR_IN_CHIEF / EO_ADMIN
  */
 @WebServlet(name = "NewsAdminServlet", urlPatterns = {"/admin/news/*"})
+@MultipartConfig
 public class NewsAdminServlet extends HttpServlet {
 
     private final NewsDAO newsDAO = new NewsDAO();
 
+    private static final String BASE_UPLOAD_DIR = "D:/upload";
+    private static final String NEWS_SUB_DIR = "news";
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User current = getCurrentUser(req);
@@ -42,7 +50,26 @@ public class NewsAdminServlet extends HttpServlet {
         String path = req.getPathInfo();
         if (path == null || "/".equals(path) || "/list".equals(path)) {
             try {
-                List<News> list = newsDAO.findAll();
+                String keyword = req.getParameter("keyword");
+                String fromStr = req.getParameter("fromDate");
+                String toStr = req.getParameter("toDate");
+
+                LocalDate fromDate = null;
+                LocalDate toDate = null;
+                if (fromStr != null && !fromStr.isEmpty()) {
+                    try {
+                        fromDate = LocalDate.parse(fromStr);
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (toStr != null && !toStr.isEmpty()) {
+                    try {
+                        toDate = LocalDate.parse(toStr);
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                List<News> list = newsDAO.search(keyword, fromDate, toDate);
                 req.setAttribute("newsList", list);
             } catch (SQLException e) {
                 throw new ServletException("查询新闻/公告列表失败", e);
@@ -111,37 +138,103 @@ public class NewsAdminServlet extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/jsp/admin/news/news_form.jsp").forward(req, resp);
     }
 
-    private void handleSave(HttpServletRequest req, User current) throws SQLException {
+    private void handleSave(HttpServletRequest req, User current) throws SQLException, IOException, ServletException {
         String idStr = req.getParameter("id");
         String title = req.getParameter("title");
         String content = req.getParameter("content");
         String publishedParam = req.getParameter("published");
+        String publishDateStr = req.getParameter("publishDate");
 
         boolean isPublished = "true".equalsIgnoreCase(publishedParam)
                 || "on".equalsIgnoreCase(publishedParam); // checkbox 提交时可能是 on
 
+        Integer id = null;
+        if (idStr != null && !idStr.isEmpty()) {
+            try {
+                id = Integer.parseInt(idStr);
+            } catch (NumberFormatException ignored) {
+                id = null;
+            }
+        }
+
+        News existing = null;
+        if (id != null) {
+            existing = newsDAO.findById(id);
+        }
+
+        // 解析发布日期：用于“定时发布”
+        LocalDateTime publishDateTime = null;
+        if (publishDateStr != null && !publishDateStr.isEmpty()) {
+            try {
+                LocalDate d = LocalDate.parse(publishDateStr);
+                publishDateTime = d.atStartOfDay();
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 处理附件上传：支持 PDF 等指南文件
+        String attachmentPath = (existing != null) ? existing.getAttachmentPath() : null;
+        Part attachmentPart = null;
+        try {
+            attachmentPart = req.getPart("attachment");
+        } catch (IllegalStateException ex) {
+            // 上传超出限制等异常，直接忽略附件，避免影响主体保存
+        }
+
+        if (attachmentPart != null && attachmentPart.getSize() > 0) {
+            File baseDir = new File(BASE_UPLOAD_DIR, NEWS_SUB_DIR);
+            if (!baseDir.exists() && !baseDir.mkdirs()) {
+                throw new ServletException("无法创建新闻附件上传目录：" + baseDir.getAbsolutePath());
+            }
+
+            String submittedName = attachmentPart.getSubmittedFileName();
+            String ext = "";
+            if (submittedName != null) {
+                int dot = submittedName.lastIndexOf('.');
+                if (dot >= 0) {
+                    ext = submittedName.substring(dot);
+                }
+            }
+
+            String storedName = "news_" + System.currentTimeMillis() + ext;
+            File target = new File(baseDir, storedName);
+            attachmentPart.write(target.getAbsolutePath());
+            attachmentPath = storedName;
+        }
+
         News news = new News();
+        if (existing != null && existing.getNewsId() != null) {
+            news.setNewsId(existing.getNewsId());
+        }
         news.setTitle(title);
         news.setContent(content);
         news.setPublished(isPublished);
         news.setAuthorId(current.getUserId());
+        news.setAttachmentPath(attachmentPath);
 
-        if (idStr == null || idStr.isEmpty()) {
-            // 新增
+        if (isPublished) {
+            if (publishDateTime != null) {
+                // 表单显式指定发布日期：支持“定时发布”
+                news.setPublishedAt(publishDateTime);
+            } else if (existing != null && existing.getPublishedAt() != null) {
+                // 未修改发布日期，则沿用原值
+                news.setPublishedAt(existing.getPublishedAt());
+            } else {
+                // 新发布且未指定时间，交给 DAO 使用当前时间
+                news.setPublishedAt(null);
+            }
+        } else {
+            // 保存为草稿或撤销发布：不再对外展示
+            news.setPublishedAt(null);
+        }
+
+        if (news.getNewsId() == null) {
             newsDAO.insert(news);
         } else {
-            try {
-                news.setNewsId(Integer.parseInt(idStr));
-            } catch (NumberFormatException e) {
-                // id 非法，当作新增
-            }
-            if (news.getNewsId() == null) {
-                newsDAO.insert(news);
-            } else {
-                newsDAO.update(news);
-            }
+            newsDAO.update(news);
         }
     }
+
 
     private void handleDelete(HttpServletRequest req) throws SQLException {
         String idStr = req.getParameter("id");

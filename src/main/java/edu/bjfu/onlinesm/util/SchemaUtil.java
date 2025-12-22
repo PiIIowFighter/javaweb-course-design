@@ -58,8 +58,10 @@ public final class SchemaUtil {
                 "    Action NVARCHAR(200) NOT NULL,\n" +
                 "    Detail NVARCHAR(MAX) NULL,\n" +
                 "    Ip NVARCHAR(64) NULL,\n" +
-                "    CreatedAt DATETIME NOT NULL DEFAULT(GETDATE())\n" +
+                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME()\n" +
                 "  );\n" +
+                "  CREATE INDEX IX_OperationLogs_CreatedAt ON dbo.OperationLogs(CreatedAt DESC, LogId DESC);\n" +
+                "  CREATE INDEX IX_OperationLogs_ActorUsername ON dbo.OperationLogs(ActorUsername);\n" +
                 "END";
         exec(sql);
     }

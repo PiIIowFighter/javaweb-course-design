@@ -60,9 +60,14 @@
             <label>角色：
                 <select name="roleCode" required>
                     <c:forEach var="r" items="${roles}">
-                        <c:if test="${r != 'SUPER_ADMIN'}">
-                            <option value="${r}" <c:if test="${user.roleCode == r}">selected</c:if>>${r}</option>
-                        </c:if>
+                        <!-- SUPER_ADMIN 永远不可选；SYSTEM_ADMIN 仅 SUPER_ADMIN 可选 -->
+                        <c:choose>
+                            <c:when test="${r == 'SUPER_ADMIN'}"></c:when>
+                            <c:when test="${r == 'SYSTEM_ADMIN' && sessionScope.currentUser.roleCode != 'SUPER_ADMIN'}"></c:when>
+                            <c:otherwise>
+                                <option value="${r}" <c:if test="${user.roleCode == r}">selected</c:if>>${r}</option>
+                            </c:otherwise>
+                        </c:choose>
                     </c:forEach>
                 </select>
             </label>

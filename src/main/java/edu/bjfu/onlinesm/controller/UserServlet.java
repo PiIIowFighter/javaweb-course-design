@@ -159,6 +159,10 @@ public class UserServlet extends HttpServlet {
         OperationLogger.log(req, "USER", "重置密码", "userId=" + userId + ", newPassword=123456");
     }
     private void handleCreateUser(HttpServletRequest req) throws SQLException {
+        // 当前登录用户（用于“只有超级管理员才能创建系统管理员账号”等约束）
+        User current = getCurrentUser(req);
+        String currentRole = current == null ? "" : (current.getRoleCode() == null ? "" : current.getRoleCode().trim().toUpperCase());
+
         String username = req.getParameter("username");
         String password = req.getParameter("password");
         String fullName = req.getParameter("fullName");
@@ -175,8 +179,21 @@ public class UserServlet extends HttpServlet {
             password = "123456";
         }
 
-        // 约束：禁止任何人创建 SUPER_ADMIN。
-        if (roleCode != null && "SUPER_ADMIN".equalsIgnoreCase(roleCode.trim())) {
+        String normalizedRole = roleCode == null ? "" : roleCode.trim().toUpperCase();
+
+        // 约束 1：禁止任何人创建 SUPER_ADMIN。
+        if ("SUPER_ADMIN".equalsIgnoreCase(normalizedRole)) {
+            return;
+        }
+
+        // 约束 2：作者/审稿人属于外部用户，一般不允许通过后台“创建”；应通过注册功能自行创建账号。
+        // （课程设计演示用账号可由初始化 SQL 脚本插入）
+        if ("AUTHOR".equalsIgnoreCase(normalizedRole) || "REVIEWER".equalsIgnoreCase(normalizedRole)) {
+            return;
+        }
+
+        // 约束 3：只有 SUPER_ADMIN 才能创建 SYSTEM_ADMIN（系统管理员）账号。
+        if ("SYSTEM_ADMIN".equalsIgnoreCase(normalizedRole) && !"SUPER_ADMIN".equalsIgnoreCase(currentRole)) {
             return;
         }
 
@@ -187,8 +204,8 @@ public class UserServlet extends HttpServlet {
         newUser.setEmail(email);
         newUser.setStatus(status == null || status.isEmpty() ? "ACTIVE" : status);
 
-        userDAO.createUserWithRole(newUser, roleCode);
-        OperationLogger.log(req, "USER", "新增用户", "username=" + newUser.getUsername() + ", role=" + roleCode);
+        userDAO.createUserWithRole(newUser, normalizedRole);
+        OperationLogger.log(req, "USER", "新增用户", "username=" + newUser.getUsername() + ", role=" + normalizedRole);
     }
 
     private void handleUpdateUser(HttpServletRequest req) throws SQLException {
@@ -196,6 +213,10 @@ public class UserServlet extends HttpServlet {
         if (userIdStr == null || userIdStr.trim().isEmpty()) return;
 
         int userId = Integer.parseInt(userIdStr);
+
+        // 当前登录用户（用于角色提升等约束）
+        User current = getCurrentUser(req);
+        String currentRole = current == null ? "" : (current.getRoleCode() == null ? "" : current.getRoleCode().trim().toUpperCase());
 
         // 约束：超级管理员是最高权限用户，不能被任何人修改（包括角色/状态/资料）。
         User target = userDAO.findById(userId);
@@ -206,6 +227,13 @@ public class UserServlet extends HttpServlet {
         // 约束：禁止把任何用户提升为 SUPER_ADMIN。
         String incomingRole = req.getParameter("roleCode");
         if (incomingRole != null && "SUPER_ADMIN".equalsIgnoreCase(incomingRole.trim())) {
+            return;
+        }
+
+        // 约束：只有 SUPER_ADMIN 才能把用户角色设置为 SYSTEM_ADMIN。
+        if (incomingRole != null
+                && "SYSTEM_ADMIN".equalsIgnoreCase(incomingRole.trim())
+                && !"SUPER_ADMIN".equalsIgnoreCase(currentRole)) {
             return;
         }
 

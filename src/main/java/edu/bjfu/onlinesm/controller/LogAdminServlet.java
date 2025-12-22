@@ -10,6 +10,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -28,11 +32,26 @@ public class LogAdminServlet extends HttpServlet {
 
         String path = req.getPathInfo();
         if (path == null || "/".equals(path) || "/list".equals(path)) {
-            String keyword = req.getParameter("keyword");
+            String keyword = safe(req.getParameter("keyword"));
+            String actor = safe(req.getParameter("actor"));
+            String module = safe(req.getParameter("module"));
+
+            LocalDateTime from = parseDateTime(req.getParameter("from"));
+            LocalDateTime to = parseDateTime(req.getParameter("to"));
+
             try {
-                List<OperationLog> logs = logDAO.findRecent(200, keyword);
+                List<OperationLog> logs = logDAO.findByFilters(200,
+                        keyword.isEmpty() ? null : keyword,
+                        actor.isEmpty() ? null : actor,
+                        module.isEmpty() ? null : module,
+                        from,
+                        to);
                 req.setAttribute("logs", logs);
                 req.setAttribute("keyword", keyword);
+                req.setAttribute("actor", actor);
+                req.setAttribute("module", module);
+                req.setAttribute("from", safe(req.getParameter("from")));
+                req.setAttribute("to", safe(req.getParameter("to")));
             } catch (SQLException e) {
                 throw new ServletException("读取操作日志失败", e);
             }
@@ -56,5 +75,32 @@ public class LogAdminServlet extends HttpServlet {
             return false;
         }
         return true;
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /**
+     * 支持两种格式：
+     * 1) datetime-local: 2025-12-22T10:30
+     * 2) date: 2025-12-22（按当天 00:00 处理）
+     */
+    private static LocalDateTime parseDateTime(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isEmpty()) return null;
+
+        try {
+            // datetime-local
+            if (s.contains("T")) {
+                return LocalDateTime.parse(s, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+            // date
+            LocalDate d = LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE);
+            return d.atStartOfDay();
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 }

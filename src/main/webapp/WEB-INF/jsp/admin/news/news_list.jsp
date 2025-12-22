@@ -6,6 +6,24 @@
 <h2>新闻 / 公告管理</h2>
 <p>展示 dbo.News 表中的公告列表，并支持新增、编辑和删除操作。</p>
 
+
+<form method="get" action="${pageContext.request.contextPath}/admin/news/list" style="margin: 12px 0;">
+    <label>关键词：
+        <input type="text" name="keyword" value="${param.keyword}" style="width: 220px;"/>
+    </label>
+    &nbsp;&nbsp;
+    <label>起始日期：
+        <input type="date" name="fromDate" value="${param.fromDate}"/>
+    </label>
+    &nbsp;&nbsp;
+    <label>结束日期：
+        <input type="date" name="toDate" value="${param.toDate}"/>
+    </label>
+    &nbsp;&nbsp;
+    <input type="submit" value="筛选"/>
+    <a href="${pageContext.request.contextPath}/admin/news/list">清除条件</a>
+</form>
+
 <p>
     <a href="${pageContext.request.contextPath}/admin/news/edit">+ 新增新闻 / 公告</a>
 </p>
@@ -19,14 +37,26 @@
         <tr>
             <th>ID</th>
             <th>标题</th>
-            <th>发布时间</th>
+            <th>附件</th>
             <th>发布状态</th>
+            <th>发布时间</th>
             <th>操作</th>
         </tr>
         <c:forEach var="n" items="${newsList}">
             <tr>
                 <td>${n.newsId}</td>
                 <td>${n.title}</td>
+                <td>
+                    <c:if test="${not empty n.attachmentPath}">
+                        <a href="${pageContext.request.contextPath}/news/attachment?id=${n.newsId}" target="_blank">查看附件</a>
+                    </c:if>
+                </td>
+                <td>
+                    <c:choose>
+                        <c:when test="${n.published}">已发布</c:when>
+                        <c:otherwise>草稿</c:otherwise>
+                    </c:choose>
+                </td>
                 <td>
                     <c:choose>
                         <c:when test="${n.publishedAt != null}">
@@ -36,17 +66,11 @@
                     </c:choose>
                 </td>
                 <td>
-                    <c:choose>
-                        <c:when test="${n.published}">已发布</c:when>
-                        <c:otherwise>草稿</c:otherwise>
-                    </c:choose>
-                </td>
-                <td>
                     <a href="${pageContext.request.contextPath}/admin/news/edit?id=${n.newsId}">编辑</a>
                     |
-                    <form action="${pageContext.request.contextPath}/admin/news/delete"
-                          method="post" style="display:inline;"
-                          onsubmit="return confirm('确定要删除这条新闻/公告吗？');">
+                    <form action="${pageContext.request.contextPath}/admin/news/delete" method="post"
+                          style="display:inline;"
+                          onsubmit="return confirm('确定要删除这条新闻/公告吗？删除后无法恢复。');">
                         <input type="hidden" name="id" value="${n.newsId}"/>
                         <input type="submit" value="删除"/>
                     </form>

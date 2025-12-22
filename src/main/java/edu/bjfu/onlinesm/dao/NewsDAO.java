@@ -5,13 +5,14 @@ import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.lang.reflect.Method;
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * NewsDAO
- * 表：dbo.News(NewsId, Title, Content, PublishedAt, AuthorId, IsPublished)
+ * 表：dbo.News(NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath)
+ *
  *
  * ✅ 适配：News.publishedAt 为 LocalDateTime
  * ✅ 修复：不再调用 News.getPublished()（你项目里没有这个方法），改用反射兼容不同 getter 命名
@@ -27,9 +28,9 @@ public class NewsDAO {
         if (n <= 0) return new ArrayList<>();
 
         String sql =
-                "SELECT TOP " + n + " NewsId, Title, Content, PublishedAt, AuthorId, IsPublished " +
+                "SELECT TOP " + n + " NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
                 "FROM dbo.News " +
-                "WHERE IsPublished = 1 " +
+                "WHERE IsPublished = 1 AND (PublishedAt IS NULL OR PublishedAt <= SYSDATETIME()) " +
                 "ORDER BY PublishedAt DESC, NewsId DESC";
 
         List<News> list = new ArrayList<>();
@@ -52,9 +53,9 @@ public class NewsDAO {
     /** 已发布新闻（不限制条数） */
     public List<News> findPublished() throws SQLException {
         String sql =
-                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished " +
+                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
                 "FROM dbo.News " +
-                "WHERE IsPublished = 1 " +
+                "WHERE IsPublished = 1 AND (PublishedAt IS NULL OR PublishedAt <= SYSDATETIME()) " +
                 "ORDER BY PublishedAt DESC, NewsId DESC";
 
         List<News> list = new ArrayList<>();
@@ -72,7 +73,7 @@ public class NewsDAO {
     /** 详情：按ID查 */
     public News findById(int newsId) throws SQLException {
         String sql =
-                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished " +
+                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
                 "FROM dbo.News WHERE NewsId = ?";
 
         try (Connection conn = DbUtil.getConnection();
@@ -90,24 +91,61 @@ public class NewsDAO {
        后台：管理端 CRUD
        ========================= */
 
-    /** 后台列表：全部新闻（含未发布） */
+    /** 后台列表：全部新闻（含未发布，可与搜索共用） */
     public List<News> findAll() throws SQLException {
-        String sql =
-                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished " +
-                "FROM dbo.News " +
-                "ORDER BY PublishedAt DESC, NewsId DESC";
+        return search(null, null, null);
+    }
+
+    /** 按关键词与发布日期区间搜索新闻（后台列表用） */
+    public List<News> search(String keyword, LocalDate fromDate, LocalDate toDate) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
+                "FROM dbo.News WHERE 1=1 ");
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (Title LIKE ? OR Content LIKE ?)");
+            String like = "%" + keyword.trim() + "%";
+            params.add(like);
+            params.add(like);
+        }
+
+        if (fromDate != null) {
+            sql.append(" AND PublishedAt >= ?");
+            params.add(Timestamp.valueOf(fromDate.atStartOfDay()));
+        }
+
+        if (toDate != null) {
+            sql.append(" AND PublishedAt < ?");
+            params.add(Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
+        }
+
+        sql.append(" ORDER BY PublishedAt DESC, NewsId DESC");
 
         List<News> list = new ArrayList<>();
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
-            while (rs.next()) {
-                list.add(mapRow(rs));
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof Timestamp) {
+                    ps.setTimestamp(i + 1, (Timestamp) p);
+                } else {
+                    ps.setObject(i + 1, p);
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
             }
         }
         return list;
     }
+
+
 
     /**
      * ✅ 解决你报错：NewsAdminServlet 调用 insert(news)
@@ -117,8 +155,8 @@ public class NewsDAO {
      */
     public int insert(News news) throws SQLException {
         String sql =
-                "INSERT INTO dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished) " +
-                "VALUES (?, ?, ?, ?, ?)";
+                "INSERT INTO dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
 
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
@@ -140,13 +178,13 @@ public class NewsDAO {
 
             ps.setInt(4, news.getAuthorId());
             ps.setBoolean(5, isPublished);
+            ps.setString(6, news.getAttachmentPath());
 
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
                     int id = keys.getInt(1);
-                    // 尝试回写 ID（如果你的 News 有 setNewsId）
                     try {
                         news.setNewsId(id);
                     } catch (Exception ignored) {
@@ -157,6 +195,7 @@ public class NewsDAO {
         }
         return 0;
     }
+
 
     /**
      * ✅ 解决你报错：NewsAdminServlet 调用 update(news)
@@ -171,15 +210,17 @@ public class NewsDAO {
 
         String sql =
                 "UPDATE dbo.News " +
-                "SET Title = ?, Content = ?, AuthorId = ?, IsPublished = ?, " +
-                "    PublishedAt = CASE " +
-                "        WHEN ? = 1 THEN ISNULL(PublishedAt, ?) " +
-                "        ELSE NULL " +
-                "    END " +
+                "SET Title = ?, Content = ?, AuthorId = ?, IsPublished = ?, AttachmentPath = ?, PublishedAt = ? " +
                 "WHERE NewsId = ?";
 
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
+
+        Timestamp publishedAt = null;
+        if (isPublished) {
+            LocalDateTime ldt = news.getPublishedAt();
+            publishedAt = (ldt == null) ? nowTs : Timestamp.valueOf(ldt);
+        }
 
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -188,15 +229,17 @@ public class NewsDAO {
             ps.setString(2, news.getContent());
             ps.setInt(3, news.getAuthorId());
             ps.setBoolean(4, isPublished);
+            ps.setString(5, news.getAttachmentPath());
 
-            ps.setBoolean(5, isPublished);
-            ps.setTimestamp(6, nowTs);
+            if (publishedAt == null) ps.setNull(6, Types.TIMESTAMP);
+            else ps.setTimestamp(6, publishedAt);
 
             ps.setInt(7, news.getNewsId());
 
             ps.executeUpdate();
         }
     }
+
 
     public void delete(int newsId) throws SQLException {
         String sql = "DELETE FROM dbo.News WHERE NewsId = ?";
@@ -218,6 +261,7 @@ public class NewsDAO {
         n.setTitle(rs.getString("Title"));
         n.setContent(rs.getString("Content"));
         n.setAuthorId(rs.getInt("AuthorId"));
+        n.setAttachmentPath(rs.getString("AttachmentPath"));
 
         Timestamp ts = rs.getTimestamp("PublishedAt");
         LocalDateTime ldt = (ts == null) ? null : ts.toLocalDateTime();
@@ -228,6 +272,7 @@ public class NewsDAO {
 
         return n;
     }
+
 
     /**
      * ✅ 关键修复：用反射兼容不同命名（不会再出现“方法不存在”的编译报错）

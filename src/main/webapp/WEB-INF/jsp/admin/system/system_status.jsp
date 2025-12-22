@@ -6,6 +6,10 @@
 
 <h2>系统运行状态</h2>
 
+<p style="color:#666;">
+    系统管理员/超级管理员可在此查看运行环境与数据库连通性，并通过“日志查询”对所有操作进行审计和排查故障。
+</p>
+
 <table border="1" cellpadding="6" cellspacing="0">
     <tr><th>当前时间</th><td>${now}</td></tr>
     <tr><th>Java 版本</th><td>${javaVersion}</td></tr>
@@ -58,6 +62,8 @@
 </c:if>
 
 <p style="margin-top:12px;">
+    <a href="${pageContext.request.contextPath}/admin/logs/list">进入日志查询（支持时间范围/用户/模块筛选）</a>
+    <span style="color:#999;"> | </span>
     <a href="${pageContext.request.contextPath}/dashboard">返回工作台</a>
 </p>
 

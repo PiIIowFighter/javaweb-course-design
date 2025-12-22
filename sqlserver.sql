@@ -896,3 +896,43 @@ GO
 
 PRINT N'✅ Add-on section executed. Original schema/data preserved; new tables & seeds added.';
 GO
+
+
+-- =============================================
+-- 附加：新闻发布/公告功能扩展相关结构补丁
+-- 说明：不修改原始建表与数据，只在其基础上增加/调整
+-- =============================================
+
+-- news_feature_patch.sql
+-- 说明：在原有 Online_SMSystem4SP 数据库基础上，为“发布新闻 / 更新期刊公告”增加：
+-- 1）支持定时发布（PublishedAt 允许为空，由业务逻辑控制具体发布时间）
+-- 2）支持上传附件（AttachmentPath 字段存储附件相对路径）
+
+IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
+BEGIN
+    PRINT '>> Patching dbo.News for scheduled publish & attachment support...';
+
+    -- 1. 确保 PublishedAt 允许为 NULL（用于草稿或尚未到发布时间的记录）
+    BEGIN TRY
+        ALTER TABLE dbo.News ALTER COLUMN PublishedAt DATETIME2(0) NULL;
+        PRINT ' - Column PublishedAt altered to DATETIME2(0) NULL.';
+    END TRY
+    BEGIN CATCH
+        PRINT ' - Skip altering PublishedAt (可能已为 NULL 或存在依赖)。';
+    END CATCH;
+
+    -- 2. 如不存在 AttachmentPath 字段，则新增
+    IF COL_LENGTH('dbo.News', 'AttachmentPath') IS NULL
+    BEGIN
+        ALTER TABLE dbo.News ADD AttachmentPath NVARCHAR(500) NULL;
+        PRINT ' - Column AttachmentPath(NVARCHAR(500) NULL) added.';
+    END
+    ELSE
+    BEGIN
+        PRINT ' - Column AttachmentPath already exists, skip.';
+    END
+END
+ELSE
+BEGIN
+    PRINT '!! dbo.News 不存在，请先执行原始 sqlserver.sql 初始化数据库。';
+END;

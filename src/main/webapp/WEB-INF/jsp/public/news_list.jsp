@@ -37,6 +37,9 @@
                     <div class="muted"><c:out value="${n.publishedAt}"/></div>
                     <div>
                         <a href="${ctx}/news/detail?id=${n.newsId}"><c:out value="${n.title}"/></a>
+                        <c:if test="${not empty n.attachmentPath}">
+                            <span class="muted">（含附件）</span>
+                        </c:if>
                     </div>
                 </li>
             </c:forEach>

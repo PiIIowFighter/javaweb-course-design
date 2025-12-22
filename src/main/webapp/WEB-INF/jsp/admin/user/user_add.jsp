@@ -5,7 +5,14 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <h2>新增用户</h2>
-<p>通过此表单可以为系统创建新用户。默认初始密码为 <strong>123456</strong>，请用户登录后尽快修改密码。</p>
+<p>
+    通过此表单可以为系统创建<strong>后台内部账号</strong>（如系统管理员、主编、编辑、编辑部管理员等）。
+    默认初始密码为 <strong>123456</strong>，请用户登录后尽快修改密码。
+</p>
+<p style="color:#666;">
+    说明：作者/审稿人属于外部用户，一般应通过“注册”功能自行创建账号（后台不提供创建入口）。
+    同时，只有<strong>超级管理员</strong>可以创建“系统管理员（SYSTEM_ADMIN）”账号。
+</p>
 
 <form action="${pageContext.request.contextPath}/admin/users/add" method="post">
     <div>
@@ -33,9 +40,16 @@
             <select name="roleCode" required>
                 <option value="">-- 请选择角色 --</option>
                 <c:forEach var="r" items="${roles}">
-                    <c:if test="${r != 'SUPER_ADMIN'}">
-                        <option value="${r}">${r}</option>
-                    </c:if>
+                    <!-- 不允许创建 SUPER_ADMIN；作者/审稿人通过注册产生；SYSTEM_ADMIN 仅 SUPER_ADMIN 可创建 -->
+                    <c:choose>
+                        <c:when test="${r == 'SUPER_ADMIN'}"></c:when>
+                        <c:when test="${r == 'AUTHOR'}"></c:when>
+                        <c:when test="${r == 'REVIEWER'}"></c:when>
+                        <c:when test="${r == 'SYSTEM_ADMIN' && sessionScope.currentUser.roleCode != 'SUPER_ADMIN'}"></c:when>
+                        <c:otherwise>
+                            <option value="${r}">${r}</option>
+                        </c:otherwise>
+                    </c:choose>
                 </c:forEach>
             </select>
         </label>

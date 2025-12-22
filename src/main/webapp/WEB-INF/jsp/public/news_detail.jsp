@@ -26,6 +26,12 @@
         <div class="richtext">
             <pre class="pre-wrap"><c:out value="${news.content}"/></pre>
         </div>
+        <c:if test="${not empty news.attachmentPath}">
+            <p style="margin-top: 12px;">
+                附件：
+                <a href="${ctx}/news/attachment?id=${news.newsId}" target="_blank">下载附件</a>
+            </p>
+        </c:if>
     </c:if>
 </div>
 

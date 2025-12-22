@@ -13,6 +13,7 @@ public class News implements Serializable {
     private String content;
     private LocalDateTime publishedAt;
     private Integer authorId;
+    private String attachmentPath;
     private boolean published;
 
     public Integer getNewsId() {
@@ -53,6 +54,14 @@ public class News implements Serializable {
 
     public void setAuthorId(Integer authorId) {
         this.authorId = authorId;
+    }
+
+    public String getAttachmentPath() {
+        return attachmentPath;
+    }
+
+    public void setAttachmentPath(String attachmentPath) {
+        this.attachmentPath = attachmentPath;
     }
 
     public boolean isPublished() {
