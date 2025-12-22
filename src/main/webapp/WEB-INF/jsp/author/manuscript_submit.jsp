@@ -45,13 +45,12 @@
             <div class="form-row">
                 <label>摘要</label>
                 <div>
-                    <div id="abstractEditor" class="rich-editor" contenteditable="true">
-                        <c:if test="${not empty manuscript and not empty manuscript.abstractText}">
-                            <c:out value="${manuscript.abstractText}" escapeXml="false"/>
-                        </c:if>
-                    </div>
+                    <div id="abstractEditor" style="min-height: 200px;"></div>
                     <input type="hidden" id="abstractHidden" name="abstract" />
-                    <div class="help">支持富文本：可粘贴/输入格式化内容；提交时会保存为 HTML。</div>
+                    <c:if test="${not empty manuscript and not empty manuscript.abstractText}">
+                        <input type="hidden" id="savedAbstract" value="<c:out value="${manuscript.abstractText}" escapeXml="false"/>" />
+                    </c:if>
+                    <div class="help">支持富文本：可粘贴/输入格式化内容；支持粗体、斜体、上下标、数学公式等；提交时会保存为 HTML。</div>
                 </div>
             </div>
 
@@ -185,9 +184,9 @@
             <div class="form-row">
                 <label>Cover Letter（富文本，可选）</label>
                 <div>
-                    <div id="coverEditor" class="rich-editor" contenteditable="true"></div>
-                    <input type="hidden" id="coverHidden" name="coverLetterHtml"/>
-                    <div class="help">若同时上传文件与填写富文本，系统将优先以“上传文件”为 Cover Letter，富文本将作为备注保存。</div>
+                    <div id="coverEditor" style="min-height: 200px;"></div>
+                    <input type="hidden" id="coverHidden" name="coverLetterHtml" />
+                    <div class="help">若同时上传文件与填写富文本，系统将优先以"上传文件"为 Cover Letter，富文本将作为备注保存。支持粗体、斜体、上下标、数学公式等。</div>
                 </div>
             </div>
         </fieldset>
@@ -266,7 +265,82 @@
     </form>
 </div>
 
+<!-- Quill 富文本编辑器 -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<style>
+    /* 自定义 Quill 编辑器样式 */
+    #abstractEditor, #coverEditor {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.85);
+    }
+    #abstractEditor .ql-container, #coverEditor .ql-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
+        min-height: 200px;
+    }
+    #abstractEditor .ql-editor, #coverEditor .ql-editor {
+        min-height: 200px;
+    }
+    /* 确保公式显示正确 */
+    #abstractEditor .ql-formula, #coverEditor .ql-formula {
+        display: inline-block;
+        vertical-align: middle;
+    }
+</style>
+<!-- MathJax 用于数学公式渲染 -->
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script>
+    // 配置 MathJax
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+    };
+
+    // 初始化摘要编辑器
+    var abstractEditor = new Quill('#abstractEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'script': 'sub'}, { 'script': 'super'}],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'formula'],
+                ['clean']
+            ]
+        },
+        placeholder: '请输入摘要内容...'
+    });
+
+    // 初始化 Cover Letter 编辑器
+    var coverEditor = new Quill('#coverEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'script': 'sub'}, { 'script': 'super'}],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'formula'],
+                ['clean']
+            ]
+        },
+        placeholder: '请输入 Cover Letter 内容...'
+    });
+
+    // 如果有已保存的内容，设置到编辑器中
+    var savedAbstractEl = document.getElementById('savedAbstract');
+    if (savedAbstractEl && savedAbstractEl.value) {
+        abstractEditor.root.innerHTML = savedAbstractEl.value;
+    }
+
     function removeRow(btn) {
         var tr = btn.closest('tr');
         if (!tr) return;
@@ -328,10 +402,11 @@
     }
 
     document.getElementById('submitForm').addEventListener('submit', function() {
-        var abs = document.getElementById('abstractEditor').innerHTML;
-        document.getElementById('abstractHidden').value = abs;
+        // 获取 Quill 编辑器的 HTML 内容并设置到隐藏字段
+        var abstractHtml = abstractEditor.root.innerHTML;
+        document.getElementById('abstractHidden').value = abstractHtml;
 
-        var coverHtml = document.getElementById('coverEditor').innerHTML;
+        var coverHtml = coverEditor.root.innerHTML;
         document.getElementById('coverHidden').value = coverHtml;
     });
 </script>
