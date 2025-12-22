@@ -121,6 +121,20 @@
         </table>
     </c:if>
 
+	<c:if test="${(sessionScope.currentUser.roleCode == 'EDITOR' 
+               or sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF' 
+               or sessionScope.currentUser.roleCode == 'EO_ADMIN')
+              and not empty chiefAssignment 
+              and not empty chiefAssignment.chiefComment}">
+    	<h3 style="margin-top:14px;">主编给编辑的指示</h3>
+    	<div style="border:1px solid #ccc; background:#fffff0; padding:8px;">
+        	<pre style="white-space:pre-wrap; margin:0;">
+           		 <c:out value="${chiefAssignment.chiefComment}"/>
+        	</pre>
+    	</div>
+	</c:if>
+	
+
     <h3 style="margin-top:14px;">推荐审稿人</h3>
     <c:if test="${empty recommendedReviewers}">
         <p>（未推荐审稿人）</p>

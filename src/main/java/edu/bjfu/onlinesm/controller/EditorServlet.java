@@ -7,6 +7,7 @@ import edu.bjfu.onlinesm.dao.ReviewDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.model.Review;
+import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -35,7 +36,7 @@ public class EditorServlet extends HttpServlet {
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final UserDAO userDAO = new UserDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
-
+    private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -570,6 +571,9 @@ public class EditorServlet extends HttpServlet {
 
         String idStr = req.getParameter("manuscriptId");
         String editorIdStr = req.getParameter("editorId");
+        // 新增：主编给编辑的文字建议
+        String chiefComment = req.getParameter("chiefComment");
+
         if (idStr == null || editorIdStr == null) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
             return;
@@ -578,9 +582,20 @@ public class EditorServlet extends HttpServlet {
         int manuscriptId = Integer.parseInt(idStr);
         int editorId = Integer.parseInt(editorIdStr);
 
+        // 1）保持原有逻辑：更新稿件当前编辑、状态 -> WITH_EDITOR
         manuscriptDAO.assignEditor(manuscriptId, editorId);
+
+        // 2）新增逻辑：记录“主编指派编辑”的建议
+        assignmentDAO.createAssignment(
+                manuscriptId,
+                editorId,
+                current.getUserId(),  // 当前登录用户即主编
+                chiefComment
+        );
+
         resp.sendRedirect(req.getContextPath() + "/editor/toAssign");
     }
+
 
     /**
      * 主编终审：根据 op 参数决定 ACCEPT / REJECT / REVISION。

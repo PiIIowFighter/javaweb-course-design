@@ -47,6 +47,10 @@
                                 </option>
                             </c:forEach>
                         </select>
+                        <br/>
+    					<textarea name="chiefComment" rows="2" cols="40"
+             				 placeholder="写给该编辑的指示/注意事项，仅编辑可见"></textarea>
+                        
                         <button type="submit" name="op" value="assign">
                             指派责任编辑
                         </button>

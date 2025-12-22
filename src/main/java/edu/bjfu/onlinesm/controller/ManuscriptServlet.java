@@ -46,7 +46,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
-
+    private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
     private static final String UPLOAD_BASE_DIR = "D:\\upload";
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
@@ -267,6 +267,13 @@ public class ManuscriptServlet extends HttpServlet {
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
             List<User> reviewerUsers = userDAO.findByRoleCode("REVIEWER");
             req.setAttribute("reviewers", reviewerUsers);
+        }
+        
+        // 3）如果当前用户是编辑（或主编），加载最新一条主编给该编辑的指派建议
+        if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
+            ManuscriptAssignment chiefAssignment =
+                    assignmentDAO.findLatestByManuscriptAndEditor(manuscriptId, current.getUserId());
+            req.setAttribute("chiefAssignment", chiefAssignment);
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
