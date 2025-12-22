@@ -1,0 +1,32 @@
+<%@ page language="java"
+         contentType="text/html; charset=UTF-8"
+         pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ include file="/WEB-INF/jsp/common/header.jsp" %>
+
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title"><c:out value="${news.title}"/></h2>
+            <p class="card-subtitle"><c:out value="${news.publishedAt}"/></p>
+        </div>
+        <div>
+            <a class="btn" style="text-decoration:none;" href="${ctx}/news/list">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <c:if test="${empty news}">
+        <p>未找到新闻内容。</p>
+    </c:if>
+    <c:if test="${not empty news}">
+        <div class="richtext">
+            <pre class="pre-wrap"><c:out value="${news.content}"/></pre>
+        </div>
+    </c:if>
+</div>
+
+<%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
