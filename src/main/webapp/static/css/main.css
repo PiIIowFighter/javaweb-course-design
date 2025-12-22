@@ -287,6 +287,32 @@ small { color: var(--muted); }
 }
 .list-item:last-child { border-bottom: none; }
 
+/* Home menu (homepage structure) */
+.home-menu { padding: 0; overflow: hidden; }
+.home-menu-row {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: center;
+    padding: 18px var(--space-6);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+.home-menu-title {
+    font-weight: 700;
+    color: #2563eb;
+    letter-spacing: 0.01em;
+}
+.home-menu-desc {
+    color: rgba(15, 23, 42, 0.86);
+}
+.home-menu-link { color: rgba(15, 23, 42, 0.9); }
+.home-menu-link-accent { color: #b91c1c; }
+
+@media (max-width: 740px) {
+    .home-menu-row { grid-template-columns: 1fr; gap: var(--space-2); }
+    .home-menu { padding: var(--space-2); }
+}
+
 /* Media blocks */
 .media {
     display: flex;

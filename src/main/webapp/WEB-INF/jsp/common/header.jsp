@@ -33,6 +33,21 @@
                 <span>首页</span>
             </a>
 
+            <a href="${pageContext.request.contextPath}/publish">
+                <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                <span>论文发表</span>
+            </a>
+
+            <a href="${pageContext.request.contextPath}/issues?type=latest">
+                <i class="bi bi-journals" aria-hidden="true"></i>
+                <span>文章与专刊</span>
+            </a>
+
+            <a href="${pageContext.request.contextPath}/guide">
+                <i class="bi bi-book" aria-hidden="true"></i>
+                <span>用户指南</span>
+            </a>
+
             <a href="${pageContext.request.contextPath}/about/aims">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                 <span>关于期刊</span>

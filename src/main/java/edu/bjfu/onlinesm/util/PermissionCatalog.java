@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * 系统内置的“权限点”目录。
  *
- * 说明：课程设计阶段不做细粒度到按钮级别的授权，
+ * 
  * 仅做模块/URL 级别授权（如：用户管理、权限管理、日志管理等）。
  */
 public final class PermissionCatalog {
