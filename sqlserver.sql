@@ -266,6 +266,30 @@ BEGIN
 END;
 GO
 
+/* ============================================================
+   6.x 稿件编辑指派记录表 ManuscriptAssignments
+   ============================================================ */
+IF OBJECT_ID(N'dbo.ManuscriptAssignments', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ManuscriptAssignments (
+        AssignmentId       INT IDENTITY(1,1) PRIMARY KEY,  -- 主键
+        ManuscriptId       INT NOT NULL,                   -- 对应稿件
+        EditorId           INT NOT NULL,                   -- 被指派的编辑
+        AssignedByChiefId  INT NOT NULL,                   -- 指派的主编
+        ChiefComment       NVARCHAR(1000) NULL,            -- 主编给编辑的文字建议
+        AssignedTime       DATETIME2(0) NOT NULL 
+                          DEFAULT SYSUTCDATETIME(),        -- 指派时间（UTC）
+
+        CONSTRAINT FK_MA_Manuscript 
+            FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),
+        CONSTRAINT FK_MA_Editor 
+            FOREIGN KEY(EditorId) REFERENCES dbo.Users(UserId),
+        CONSTRAINT FK_MA_AssignedByChief 
+            FOREIGN KEY(AssignedByChiefId) REFERENCES dbo.Users(UserId)
+    );
+END;
+GO
+
 
 /* ============================================================
    7. 稿件作者表 ManuscriptAuthors
