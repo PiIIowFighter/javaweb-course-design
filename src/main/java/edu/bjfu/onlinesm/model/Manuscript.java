@@ -45,6 +45,15 @@ public class Manuscript implements Serializable {
     /** 最终决策时间：主编给出最终决策的时间点 */
     private LocalDateTime finalDecisionTime;
 
+    /* =========================
+       前台展示用统计字段（dbo.ArticleMetrics）
+       说明：不影响投稿流程，仅用于 Articles 页面排序/展示。
+       ========================= */
+    private Integer viewCount;
+    private Integer downloadCount;
+    private Integer citationCount;
+    private Double popularityScore;
+
     public Integer getManuscriptId() {
         return manuscriptId;
     }
@@ -149,6 +158,38 @@ public class Manuscript implements Serializable {
         this.finalDecisionTime = finalDecisionTime;
     }
 
+    public Integer getViewCount() {
+        return viewCount;
+    }
+
+    public void setViewCount(Integer viewCount) {
+        this.viewCount = viewCount;
+    }
+
+    public Integer getDownloadCount() {
+        return downloadCount;
+    }
+
+    public void setDownloadCount(Integer downloadCount) {
+        this.downloadCount = downloadCount;
+    }
+
+    public Integer getCitationCount() {
+        return citationCount;
+    }
+
+    public void setCitationCount(Integer citationCount) {
+        this.citationCount = citationCount;
+    }
+
+    public Double getPopularityScore() {
+        return popularityScore;
+    }
+
+    public void setPopularityScore(Double popularityScore) {
+        this.popularityScore = popularityScore;
+    }
+
     @Override
     public String toString() {
         return "Manuscript{" +
@@ -159,6 +200,10 @@ public class Manuscript implements Serializable {
                 ", currentStatus='" + currentStatus + '\'' +
                 ", decision='" + decision + '\'' +
                 ", finalDecisionTime=" + finalDecisionTime +
+                ", viewCount=" + viewCount +
+                ", downloadCount=" + downloadCount +
+                ", citationCount=" + citationCount +
+                ", popularityScore=" + popularityScore +
                 '}';
     }
 }

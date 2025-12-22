@@ -38,15 +38,19 @@ public class ManuscriptDAO {
 
     /** 前台详情页：只允许读取 ACCEPTED 状态稿件。 */
     public Manuscript findAcceptedById(int manuscriptId) throws SQLException {
-        String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
-                     "FROM dbo.Manuscripts WHERE ManuscriptId = ? AND Status IN ('ACCEPTED')";
+        // 同时读取 dbo.ArticleMetrics（如果存在）用于详情页展示
+        String sql = "SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime, " +
+                     "am.ViewCount, am.DownloadCount, am.CitationCount, am.PopularityScore " +
+                     "FROM dbo.Manuscripts m " +
+                     "LEFT JOIN dbo.ArticleMetrics am ON am.ManuscriptId = m.ManuscriptId " +
+                     "WHERE m.ManuscriptId = ? AND m.Status IN ('ACCEPTED')";
 
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, manuscriptId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapRow(rs);
+                    return mapRowPublic(rs);
                 }
             }
         }
@@ -400,7 +404,11 @@ public class ManuscriptDAO {
         }
     }
 
-private Manuscript mapRow(ResultSet rs) throws SQLException {
+    /**
+     * 公共映射方法：用于多个 DAO/Servlet 复用。
+     * 兼容：如果 ResultSet 中包含 dbo.ArticleMetrics 的统计列，则一并映射。
+     */
+    public Manuscript mapRowPublic(ResultSet rs) throws SQLException {
         Manuscript m = new Manuscript();
         m.setManuscriptId(rs.getInt("ManuscriptId"));
         int journalId = rs.getInt("JournalId");
@@ -435,6 +443,127 @@ private Manuscript mapRow(ResultSet rs) throws SQLException {
         } catch (SQLException ignored) {
         }
 
+        // 可选统计列（Articles 页面排序/展示）
+        try {
+            if (hasColumn(rs, "ViewCount")) {
+                m.setViewCount((Integer) rs.getObject("ViewCount"));
+            }
+            if (hasColumn(rs, "DownloadCount")) {
+                m.setDownloadCount((Integer) rs.getObject("DownloadCount"));
+            }
+            if (hasColumn(rs, "CitationCount")) {
+                m.setCitationCount((Integer) rs.getObject("CitationCount"));
+            }
+            if (hasColumn(rs, "PopularityScore")) {
+                Object v = rs.getObject("PopularityScore");
+                if (v != null) m.setPopularityScore(((Number) v).doubleValue());
+            }
+        } catch (SQLException ignored) {
+            // ignore
+        }
+
         return m;
+    }
+
+    private Manuscript mapRow(ResultSet rs) throws SQLException {
+        return mapRowPublic(rs);
+    }
+
+    private boolean hasColumn(ResultSet rs, String col) throws SQLException {
+        ResultSetMetaData md = rs.getMetaData();
+        int count = md.getColumnCount();
+        for (int i = 1; i <= count; i++) {
+            String label = md.getColumnLabel(i);
+            if (label == null || label.isEmpty()) label = md.getColumnName(i);
+            if (col.equalsIgnoreCase(label)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 基于 dbo.ArticleMetrics 排序的“已发表论文”（用 ACCEPTED 近似）。
+     */
+    public List<Manuscript> findAcceptedByMetric(String type, int limit) throws SQLException {
+        if (type == null) type = "popular";
+        String metricCol;
+        if ("topcited".equalsIgnoreCase(type)) {
+            metricCol = "ISNULL(am.CitationCount,0)";
+        } else if ("downloaded".equalsIgnoreCase(type)) {
+            metricCol = "ISNULL(am.DownloadCount,0)";
+        } else {
+            metricCol = "ISNULL(am.PopularityScore,0)";
+        }
+
+        String sql = "SELECT TOP " + limit + " " +
+                "m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime, " +
+                "am.ViewCount, am.DownloadCount, am.CitationCount, am.PopularityScore " +
+                "FROM dbo.Manuscripts m " +
+                "LEFT JOIN dbo.ArticleMetrics am ON am.ManuscriptId = m.ManuscriptId " +
+                "WHERE m.IsArchived=0 AND m.IsWithdrawn=0 AND m.Status='ACCEPTED' " +
+                "ORDER BY " + metricCol + " DESC, m.FinalDecisionTime DESC, m.ManuscriptId DESC";
+
+        List<Manuscript> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRowPublic(rs));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 文章详情页浏览计数（若不存在 metrics 记录则自动补一条）。
+     */
+    public void incrementViewCount(int manuscriptId) throws SQLException {
+        String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
+                "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
+        String upd = "UPDATE dbo.ArticleMetrics SET ViewCount = ViewCount + 1, UpdatedAt = SYSUTCDATETIME() WHERE ManuscriptId=?";
+
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps1 = conn.prepareStatement(ensure);
+                 PreparedStatement ps2 = conn.prepareStatement(upd)) {
+                ps1.setInt(1, manuscriptId);
+                ps1.setInt(2, manuscriptId);
+                ps1.executeUpdate();
+
+                ps2.setInt(1, manuscriptId);
+                ps2.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * 下载计数（登录后的 /files/preview 也算一次下载）。
+     */
+    public void incrementDownloadCount(int manuscriptId) throws SQLException {
+        String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
+                "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
+        String upd = "UPDATE dbo.ArticleMetrics SET DownloadCount = DownloadCount + 1, UpdatedAt = SYSUTCDATETIME() WHERE ManuscriptId=?";
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps1 = conn.prepareStatement(ensure);
+                 PreparedStatement ps2 = conn.prepareStatement(upd)) {
+                ps1.setInt(1, manuscriptId);
+                ps1.setInt(2, manuscriptId);
+                ps1.executeUpdate();
+                ps2.setInt(1, manuscriptId);
+                ps2.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
     }
 }

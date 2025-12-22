@@ -711,3 +711,188 @@ GO
 
 PRINT N'? Online_SMSystem4SP full schema + AboutJournal seed initialized (v2025-12-21).';
 GO
+
+/* ============================================================
+   ADD-ON (2025-12-22): Issues + CallForPapers + minimal seeds
+   This section is appended to your original sqlserver.sql.
+   It does NOT modify or delete your original data.
+   It only:
+     - Creates dbo.Issues, dbo.IssueManuscripts, dbo.CallForPapers if missing
+     - Inserts sample rows only if missing
+     - Inserts aims/policies pages ONLY IF they don't exist (no overwrite)
+   ============================================================ */
+
+USE [Online_SMSystem4SP];
+GO
+
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+/* 0) Get JournalId (your original script inserts at least one journal). */
+DECLARE @JournalId INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+IF @JournalId IS NULL
+BEGIN
+    -- Extremely defensive fallback: only if original seed was removed.
+    INSERT INTO dbo.Journals(Name, Description, ImpactFactor, Timeline, ISSN, CreatedBy)
+    VALUES (N'Default Journal', N'Auto-created for Issues/Calls.', NULL, NULL, NULL, NULL);
+    SET @JournalId = SCOPE_IDENTITY();
+END
+GO
+
+/* 1) Issues */
+IF OBJECT_ID(N'dbo.Issues', N'U') IS NULL
+BEGIN
+    PRINT N'Creating dbo.Issues...';
+
+    CREATE TABLE dbo.Issues (
+        IssueId      INT            IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        JournalId    INT            NOT NULL,
+        IssueType    NVARCHAR(20)   NOT NULL, -- LATEST / SPECIAL
+        Title        NVARCHAR(300)  NOT NULL,
+        Volume       INT            NULL,
+        Number       INT            NULL,
+        [Year]       INT            NULL,
+        Description  NVARCHAR(MAX)  NULL,
+        IsPublished  BIT            NOT NULL CONSTRAINT DF_Issues_IsPublished DEFAULT(0),
+        PublishDate  DATE           NULL,
+        CreatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_Issues_CreatedAt DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Issues_Journals FOREIGN KEY (JournalId) REFERENCES dbo.Journals(JournalId),
+        CONSTRAINT CK_Issues_IssueType CHECK (IssueType IN (N'LATEST', N'SPECIAL'))
+    );
+
+    CREATE INDEX IX_Issues_Journal_Type_Published
+        ON dbo.Issues(JournalId, IssueType, IsPublished, PublishDate);
+END
+GO
+
+IF OBJECT_ID(N'dbo.IssueManuscripts', N'U') IS NULL
+BEGIN
+    PRINT N'Creating dbo.IssueManuscripts...';
+
+    IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NULL
+    BEGIN
+        THROW 50001, 'Missing dbo.Manuscripts table (required for IssueManuscripts FK).', 1;
+    END
+
+    CREATE TABLE dbo.IssueManuscripts (
+        IssueId      INT NOT NULL,
+        ManuscriptId INT NOT NULL,
+        OrderNo      INT NOT NULL CONSTRAINT DF_IssueManuscripts_OrderNo DEFAULT(0),
+        AddedAt      DATETIME2(0) NOT NULL CONSTRAINT DF_IssueManuscripts_AddedAt DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_IssueManuscripts PRIMARY KEY (IssueId, ManuscriptId),
+        CONSTRAINT FK_IssueManuscripts_Issues FOREIGN KEY (IssueId) REFERENCES dbo.Issues(IssueId),
+        CONSTRAINT FK_IssueManuscripts_Manuscripts FOREIGN KEY (ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId)
+    );
+
+    CREATE INDEX IX_IssueManuscripts_IssueId ON dbo.IssueManuscripts(IssueId);
+END
+GO
+
+/* Seed issues: only insert if there are no issues for this journal. */
+DECLARE @jid1 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId = @jid1)
+BEGIN
+    PRINT N'Seeding sample Issues...';
+    INSERT INTO dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate)
+    VALUES
+      (@jid1, N'LATEST',  N'Latest Issues - Vol.1 No.1', 1, 1, YEAR(GETDATE()), N'（示例）最新一期', 1, CONVERT(date, DATEADD(day,-21,GETDATE()))),
+      (@jid1, N'SPECIAL', N'Special Issue: AI in Publishing', NULL, NULL, YEAR(GETDATE()), N'（示例）专刊：AI 与学术出版', 1, CONVERT(date, DATEADD(day,-45,GETDATE())));
+END
+GO
+
+/* 2) CallForPapers */
+IF OBJECT_ID(N'dbo.CallForPapers', N'U') IS NULL
+BEGIN
+    PRINT N'Creating dbo.CallForPapers...';
+
+    CREATE TABLE dbo.CallForPapers (
+        CallId      INT           IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        JournalId   INT           NOT NULL,
+        Title       NVARCHAR(300) NOT NULL,
+        Content     NVARCHAR(MAX) NOT NULL, -- HTML allowed
+        StartDate   DATE          NULL,
+        Deadline    DATE          NULL,
+        EndDate     DATE          NULL,
+        IsPublished BIT           NOT NULL CONSTRAINT DF_CallForPapers_IsPublished DEFAULT(1),
+        CreatedAt   DATETIME2(0)  NOT NULL CONSTRAINT DF_CallForPapers_CreatedAt DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_CallForPapers_Journals FOREIGN KEY (JournalId) REFERENCES dbo.Journals(JournalId)
+    );
+
+    CREATE INDEX IX_CallForPapers_Journal_Published
+        ON dbo.CallForPapers(JournalId, IsPublished, EndDate, Deadline);
+END
+GO
+
+/* Seed call: only if none for this journal. */
+DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+IF NOT EXISTS (SELECT 1 FROM dbo.CallForPapers WHERE JournalId = @jid2)
+BEGIN
+    PRINT N'Seeding sample Call for Papers...';
+    INSERT INTO dbo.CallForPapers(JournalId, Title, Content, StartDate, Deadline, EndDate, IsPublished)
+    VALUES
+    (@jid2,
+     N'Call for Papers: Special Issue on AI',
+     N'<p>（示例）欢迎投稿 AI 相关专题。请按作者指南准备材料，并通过系统提交稿件。</p>',
+     CONVERT(date, DATEADD(day,-30,GETDATE())),
+     CONVERT(date, DATEADD(day, 60,GETDATE())),
+     CONVERT(date, DATEADD(day, 90,GETDATE())),
+     1);
+END
+GO
+
+/* 3) JournalPages: Insert aims/policies only if missing (no overwrite). */
+IF OBJECT_ID(N'dbo.JournalPages', N'U') IS NOT NULL
+BEGIN
+    DECLARE @jid3 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.JournalPages WHERE JournalId=@jid3 AND PageKey=N'aims')
+    BEGIN
+        INSERT INTO dbo.JournalPages(JournalId, PageKey, Title, Content)
+        VALUES (@jid3, N'aims', N'About the Journal',
+                N'<h3>About the Journal</h3><p>（示例内容）请在后台维护该页面内容。</p>');
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.JournalPages WHERE JournalId=@jid3 AND PageKey=N'policies')
+    BEGIN
+        INSERT INTO dbo.JournalPages(JournalId, PageKey, Title, Content)
+        VALUES (@jid3, N'policies', N'Ethics and Policies',
+                N'<h3>Ethics and Policies</h3><p>（示例内容）请在后台维护该页面内容。</p>');
+    END
+END
+GO
+
+/* 4) Optional: Permissions (only insert missing, no update). */
+IF OBJECT_ID(N'dbo.Permissions', N'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionCode=N'PUBLIC_ISSUES')
+        INSERT INTO dbo.Permissions(PermissionCode, PermissionName, UrlPattern, Category, IsActive)
+        VALUES (N'PUBLIC_ISSUES', N'访问期刊栏目', N'/issues*', N'PUBLIC', 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionCode=N'PUBLIC_CALLS')
+        INSERT INTO dbo.Permissions(PermissionCode, PermissionName, UrlPattern, Category, IsActive)
+        VALUES (N'PUBLIC_CALLS', N'访问征稿通知', N'/calls*', N'PUBLIC', 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionCode=N'PUBLIC_GUIDE')
+        INSERT INTO dbo.Permissions(PermissionCode, PermissionName, UrlPattern, Category, IsActive)
+        VALUES (N'PUBLIC_GUIDE', N'访问用户指南', N'/guide*', N'PUBLIC', 1);
+END
+GO
+
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL AND OBJECT_ID(N'dbo.Roles', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO dbo.RolePermissions(RoleCode, PermissionCode)
+    SELECT r.RoleCode, p.PermissionCode
+    FROM dbo.Roles r
+    CROSS JOIN (VALUES (N'PUBLIC_ISSUES'), (N'PUBLIC_CALLS'), (N'PUBLIC_GUIDE')) AS p(PermissionCode)
+    WHERE r.RoleCode IN (N'SUPER_ADMIN', N'ADMIN', N'EDITOR_IN_CHIEF', N'EDITOR', N'REVIEWER', N'AUTHOR')
+      AND EXISTS (SELECT 1 FROM dbo.Permissions pp WHERE pp.PermissionCode = p.PermissionCode)
+      AND NOT EXISTS (
+          SELECT 1 FROM dbo.RolePermissions rp
+          WHERE rp.RoleCode = r.RoleCode AND rp.PermissionCode = p.PermissionCode
+      );
+END
+GO
+
+PRINT N'✅ Add-on section executed. Original schema/data preserved; new tables & seeds added.';
+GO

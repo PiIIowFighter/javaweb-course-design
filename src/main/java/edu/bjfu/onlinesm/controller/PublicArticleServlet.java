@@ -45,14 +45,16 @@ public class PublicArticleServlet extends HttpServlet {
         }
         type = type.trim().toLowerCase();
 
-        // 当前数据库中没有 citations/downloads/popularity 的统计字段；先只实现 latest
+        List<Manuscript> list;
         if ("latest".equals(type)) {
-            List<Manuscript> list = manuscriptDAO.findLatestAccepted(50);
-            req.setAttribute("articles", list);
+            list = manuscriptDAO.findLatestAccepted(50);
+        } else if ("topcited".equals(type) || "downloaded".equals(type) || "popular".equals(type)) {
+            list = manuscriptDAO.findAcceptedByMetric(type, 50);
         } else {
-            req.setAttribute("articles", java.util.Collections.emptyList());
-            req.setAttribute("notImplemented", true);
+            list = java.util.Collections.emptyList();
         }
+
+        req.setAttribute("articles", list);
 
         req.setAttribute("type", type);
         req.getRequestDispatcher("/WEB-INF/jsp/public/articles.jsp").forward(req, resp);
@@ -69,6 +71,13 @@ public class PublicArticleServlet extends HttpServlet {
         if (m == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该论文（或该稿件未处于 ACCEPTED 状态）。");
             return;
+        }
+
+        // 记录一次浏览（不影响业务流程；仅用于 Articles 页面排序/展示）
+        try {
+            manuscriptDAO.incrementViewCount(id);
+        } catch (SQLException ignore) {
+            // 不让统计失败影响正常浏览
         }
 
         req.setAttribute("article", m);

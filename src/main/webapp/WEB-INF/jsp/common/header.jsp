@@ -34,12 +34,12 @@
             </a>
 
             <a href="${pageContext.request.contextPath}/publish">
-                <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                <i class="bi bi-journals" aria-hidden="true"></i>
                 <span>论文发表</span>
             </a>
 
             <a href="${pageContext.request.contextPath}/issues?type=latest">
-                <i class="bi bi-journals" aria-hidden="true"></i>
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                 <span>文章与专刊</span>
             </a>
 

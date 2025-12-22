@@ -2,6 +2,7 @@
          contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
@@ -10,30 +11,45 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">征稿通知 (Call for papers)</h2>
-            <p class="card-subtitle">Special issue 列表（当前为占位页）</p>
+            <p class="card-subtitle">Special issue / Call for papers 列表</p>
         </div>
     </div>
 
-    <p>
-        当前项目的数据库与 src 代码中尚未实现 “征稿通知 / 专刊（Special Issues）” 的完整后端。
-        你可以后续新增对应数据表与管理页面后，再将首页与本页面接入真实数据。
-    </p>
+    <c:if test="${empty calls}">
+        <p>暂无已发布征稿通知。</p>
+        <small class="muted">提示：请在数据库 <span class="badge">dbo.CallForPapers</span> 中插入 <span class="badge">IsPublished=1</span> 的记录。</small>
+    </c:if>
 
-    <h3>建议的后端建模（可选）</h3>
-    <ul>
-        <li><span class="badge">dbo.SpecialIssues</span>：IssueId, Title, Scope, Deadline, PublishedAt, IsPublished...</li>
-        <li><span class="badge">dbo.CallForPapers</span>：CfpId, Title, Content, Deadline, IsPublished...</li>
-        <li>管理员端：新增/编辑/发布/下架；前台端：列表与详情页。</li>
-    </ul>
+    <c:if test="${not empty calls}">
+        <ul class="list">
+            <c:forEach var="c" items="${calls}">
+                <li class="list-item">
+                    <span class="avatar" aria-hidden="true"><i class="bi bi-megaphone"></i></span>
+                    <div>
+                        <div class="list-title">
+                            <a style="text-decoration:none;" href="${ctx}/calls?view=detail&id=${c.callId}">
+                                <c:out value="${c.title}"/>
+                            </a>
+                        </div>
+                        <div class="list-meta">
+                            <c:if test="${c.deadline != null}">Deadline：<c:out value="${c.deadline}"/> · </c:if>
+                            <c:if test="${c.startDate != null}">Start：<c:out value="${c.startDate}"/> · </c:if>
+                            <c:if test="${c.endDate != null}">End：<c:out value="${c.endDate}"/></c:if>
+                        </div>
+                    </div>
+                </li>
+            </c:forEach>
+        </ul>
+    </c:if>
 
     <div class="actions">
         <a class="btn-primary" style="text-decoration:none;" href="${ctx}/manuscripts/submit">
             <i class="bi bi-upload" aria-hidden="true"></i>
             Submit your article
         </a>
-        <a style="text-decoration:none;" href="${ctx}/">
-            <i class="bi bi-house" aria-hidden="true"></i>
-            返回首页
+        <a class="btn" style="text-decoration:none;" href="${ctx}/issues?type=latest">
+            <i class="bi bi-journal" aria-hidden="true"></i>
+            Issues
         </a>
     </div>
 </div>

@@ -34,6 +34,12 @@
             <p><span class="badge">研究主题</span> <c:out value="${article.subjectArea}"/></p>
         </c:if>
 
+        <p>
+            <span class="badge">Views</span> <c:out value="${article.viewCount == null ? 0 : article.viewCount}"/>
+            <span class="badge">Downloads</span> <c:out value="${article.downloadCount == null ? 0 : article.downloadCount}"/>
+            <span class="badge">Citations</span> <c:out value="${article.citationCount == null ? 0 : article.citationCount}"/>
+        </p>
+
         <h3>摘要</h3>
         <c:choose>
             <c:when test="${not empty article.abstractText}">

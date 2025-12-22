@@ -30,15 +30,12 @@
         </a>
     </div>
 
-    <c:if test="${notImplemented == true}">
-        <div class="alert">
-            当前栏目尚未实现后端：数据库中缺少“引用次数/下载次数/热度”等统计字段或新表。
-            可以后续补充后端后，再替换本占位逻辑。
-        </div>
-    </c:if>
-
     <c:if test="${empty articles}">
         <p>暂无数据。</p>
+        <small class="muted">
+            说明：当前实现将 <span class="badge">ACCEPTED</span> 状态稿件近似当作已发表论文。
+            如需真实“已发表论文库/卷期”，请使用 <span class="badge">dbo.Issues</span> + <span class="badge">dbo.IssueManuscripts</span>。
+        </small>
     </c:if>
 
     <c:if test="${not empty articles}">
@@ -54,7 +51,12 @@
                         </div>
                         <div class="list-meta">
                             <c:if test="${not empty a.authorList}">作者：<c:out value="${a.authorList}"/> · </c:if>
-                            <c:if test="${a.finalDecisionTime != null}">录用时间：<c:out value="${fn:substring(a.finalDecisionTime, 0, 10)}"/></c:if>
+                            <c:if test="${a.finalDecisionTime != null}">录用：<c:out value="${fn:substring(a.finalDecisionTime, 0, 10)}"/></c:if>
+                        </div>
+                        <div class="list-meta">
+                            <span class="badge">Views</span> <c:out value="${a.viewCount == null ? 0 : a.viewCount}"/>
+                            <span class="badge">Downloads</span> <c:out value="${a.downloadCount == null ? 0 : a.downloadCount}"/>
+                            <span class="badge">Citations</span> <c:out value="${a.citationCount == null ? 0 : a.citationCount}"/>
                         </div>
                     </div>
                 </li>
@@ -62,10 +64,14 @@
         </ul>
     </c:if>
 
-    <small>
-        备注：当前实现将 <span class="badge">ACCEPTED</span> 状态稿件近似当作已发表论文。
-        如需真正的“发表论文库 + 卷期（Issues）”，建议新增对应数据模型。
-    </small>
+    <div class="actions" style="margin-top:16px;">
+        <a class="btn" style="text-decoration:none;" href="${ctx}/issues?type=latest">
+            <i class="bi bi-journal" aria-hidden="true"></i> Issues
+        </a>
+        <a class="btn" style="text-decoration:none;" href="${ctx}/calls">
+            <i class="bi bi-megaphone" aria-hidden="true"></i> Call for papers
+        </a>
+    </div>
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

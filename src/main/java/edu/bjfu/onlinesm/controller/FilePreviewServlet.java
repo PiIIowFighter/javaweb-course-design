@@ -98,6 +98,15 @@ public class FilePreviewServlet extends HttpServlet {
             return;
         }
 
+        // 统计：下载计数（仅对 ACCEPTED 的 manuscript 计数）
+        if ("manuscript".equalsIgnoreCase(type) && "ACCEPTED".equalsIgnoreCase(m.getCurrentStatus())) {
+            try {
+                manuscriptDAO.incrementDownloadCount(manuscriptId);
+            } catch (Exception ignore) {
+                // 不让统计失败影响正常下载
+            }
+        }
+
         // 6) 输出文件流
         String contentType = guessContentType(f.getName());
         resp.setCharacterEncoding("UTF-8");
