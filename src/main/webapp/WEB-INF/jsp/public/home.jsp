@@ -40,6 +40,61 @@
     </div>
 </div>
 
+<!-- 首页结构导航（按需求图中的 4 个模块） -->
+<div class="card home-menu" style="margin-top: var(--space-6);">
+    <div class="home-menu-row">
+        <div class="home-menu-title">
+            <a style="text-decoration:none;" href="${ctx}/publish">论文发表</a>
+        </div>
+        <div class="home-menu-desc">
+            下面提供三个子菜单链接，包括：
+            <a class="home-menu-link-accent" href="${ctx}/manuscripts/submit">Submit your article</a>，
+            <a class="home-menu-link" href="${ctx}/guide">Guide for authors</a>，
+            <a class="home-menu-link" href="${ctx}/calls">Call for papers</a>。
+        </div>
+    </div>
+
+    <div class="home-menu-row">
+        <div class="home-menu-title">
+            <a style="text-decoration:none;" href="${ctx}/issues?type=latest">文章与专刊</a>
+        </div>
+        <div class="home-menu-desc">
+            在期刊上已发表的期刊列表和链接，具体分为
+            <a class="home-menu-link" href="${ctx}/issues?type=latest">Latest Issues</a>、
+            <a class="home-menu-link" href="${ctx}/issues?type=special">Special Issues</a>、
+            <a class="home-menu-link" href="${ctx}/issues?type=all">All Issues</a>
+            三种。进入每个 Issue 后以列表形式展示所包含的文章（当前为占位实现）。
+        </div>
+    </div>
+
+    <div class="home-menu-row">
+        <div class="home-menu-title">
+            <a style="text-decoration:none;" href="${ctx}/guide">用户指南</a>
+        </div>
+        <div class="home-menu-desc">
+            为用户提供详细的期刊介绍和投稿指南，应基本包括
+            <a class="home-menu-link" href="${ctx}/about/aims">About the journal</a>、
+            <a class="home-menu-link" href="${ctx}/about/policies">Ethics and policies</a>、
+            <a class="home-menu-link" href="${ctx}/guide/writing">Writing</a>、
+            <a class="home-menu-link" href="${ctx}/guide/formatting">Writing and formatting</a>
+            等内容（Writing/Formatting 当前为占位页）。
+        </div>
+    </div>
+
+    <div class="home-menu-row" style="border-bottom: 0;">
+        <div class="home-menu-title">
+            <a style="text-decoration:none;" href="${ctx}/auth/login">系统登录/提交论文</a>
+        </div>
+        <div class="home-menu-desc">
+            提供系统登录功能，区分作者、审稿人、编辑、管理员等不同角色。
+            <a class="home-menu-link" href="${ctx}/auth/login">登录</a> /
+            <a class="home-menu-link" href="${ctx}/auth/register">注册</a>，
+            登录后可进入 <a class="home-menu-link" href="${ctx}/dashboard">工作台</a>，并进行
+            <a class="home-menu-link-accent" href="${ctx}/manuscripts/submit">提交论文</a>。
+        </div>
+    </div>
+</div>
+
 <div class="grid grid-2" style="margin-top: var(--space-6);">
 
     <!-- 期刊编委会介绍：编委照片/简介 -->

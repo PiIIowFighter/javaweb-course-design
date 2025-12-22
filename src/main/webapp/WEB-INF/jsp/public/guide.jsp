@@ -10,9 +10,41 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">用户指南 (Guide for authors)</h2>
-            <p class="card-subtitle">作者投稿指南与常见问题（占位页）</p>
+            <p class="card-subtitle">为用户提供期刊介绍、投稿指南与写作/格式要求入口</p>
         </div>
     </div>
+
+    <h3>推荐阅读</h3>
+    <ul class="list">
+        <li class="list-item">
+            <span class="avatar" aria-hidden="true"><i class="bi bi-info-circle"></i></span>
+            <div>
+                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/about/aims">About the journal</a></div>
+                <div class="list-meta">期刊主旨与投稿范围（Aims and scope）</div>
+            </div>
+        </li>
+        <li class="list-item">
+            <span class="avatar" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+            <div>
+                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/about/policies">Ethics and policies</a></div>
+                <div class="list-meta">出版伦理、同行评审政策、版权与许可等</div>
+            </div>
+        </li>
+        <li class="list-item">
+            <span class="avatar" aria-hidden="true"><i class="bi bi-pencil"></i></span>
+            <div>
+                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/guide/writing">Writing</a></div>
+                <div class="list-meta">写作结构建议、引用规范与可复现性建议（占位页）</div>
+            </div>
+        </li>
+        <li class="list-item">
+            <span class="avatar" aria-hidden="true"><i class="bi bi-layout-text-window"></i></span>
+            <div>
+                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/guide/formatting">Writing and formatting</a></div>
+                <div class="list-meta">模板与格式要求、图表/参考文献规范（占位页）</div>
+            </div>
+        </li>
+    </ul>
 
     <h3>投稿前准备</h3>
     <ul>
@@ -30,8 +62,9 @@
     </ol>
 
     <p class="card-subtitle">
-        后端拓展建议：如果你希望此页面从数据库动态读取“作者指南/模板下载/格式要求”，
-        建议后续新增如 dbo.AuthorGuidelines 表，并在管理员端提供富文本编辑与附件上传。
+        后端拓展建议：如果你希望“Writing/Formatting”从数据库动态读取并支持模板下载，
+        可以新增如 <span class="badge">dbo.AuthorGuidelines</span> / <span class="badge">dbo.FileResources</span> 等表，
+        并在管理员端提供富文本编辑与附件上传。
     </p>
 
     <div class="actions">
