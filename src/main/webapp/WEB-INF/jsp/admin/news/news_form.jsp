@@ -17,7 +17,7 @@
 
 <p>通过此表单维护期刊公告、投稿须知等内容。</p>
 
-<form action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
+<form id="newsForm" action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
     <input type="hidden" name="id" value="${news.newsId}"/>
 
     <p>
@@ -28,9 +28,16 @@
     </p>
 
     <p>内容：</p>
-    <p>
-        <textarea name="content" rows="12" cols="80">${news.content}</textarea>
-    </p>
+    <div style="max-width: 840px; margin-bottom: 12px;">
+        <div id="newsContentEditor" style="min-height: 200px;"></div>
+        <input type="hidden" id="newsContentHidden" name="content" />
+        <c:if test="${news != null && not empty news.content}">
+            <textarea id="savedNewsContent" style="display:none;"><c:out value="${news.content}" escapeXml="false"/></textarea>
+        </c:if>
+        <div class="help" style="color:#666; font-size:0.9em; margin-top:4px;">
+            支持富文本：可粘贴/输入格式化内容；支持粗体、斜体、上下标、数学公式等；提交时会保存为 HTML。
+        </div>
+    </div>
     <p>
         <label>
             发布日期：
@@ -56,7 +63,7 @@
         <label>
             <input type="checkbox" name="published" value="true"
                 <c:if test="${news.published}">checked="checked"</c:if> />
-            已发布
+            是否可见
         </label>
     </p>
 
@@ -65,5 +72,69 @@
         <a href="${pageContext.request.contextPath}/admin/news/list">返回列表</a>
     </p>
 </form>
+
+
+<!-- Quill 富文本编辑器：用于新闻 / 公告内容 -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+<style>
+    #newsContentEditor {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.85);
+    }
+    #newsContentEditor .ql-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
+        min-height: 200px;
+    }
+    #newsContentEditor .ql-editor {
+        min-height: 200px;
+    }
+</style>
+
+<script>
+    (function() {
+        var editorEl = document.getElementById('newsContentEditor');
+        if (!editorEl) {
+            return;
+        }
+
+        var newsEditor = new Quill('#newsContentEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'script': 'sub'}, { 'script': 'super'}],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'align': [] }],
+                    ['link', 'formula'],
+                    ['clean']
+                ]
+            },
+            placeholder: '请输入新闻 / 公告内容...'
+        });
+
+        // 如果有已保存的内容，恢复到编辑器
+        var savedEl = document.getElementById('savedNewsContent');
+        if (savedEl && savedEl.value && savedEl.value.trim().length > 0) {
+            newsEditor.root.innerHTML = savedEl.value;
+        }
+
+        // 提交前，将富文本 HTML 写入隐藏字段
+        var form = document.getElementById('newsForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                var hidden = document.getElementById('newsContentHidden');
+                if (hidden) {
+                    hidden.value = newsEditor.root.innerHTML;
+                }
+            });
+        }
+    })();
+</script>
+
 
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

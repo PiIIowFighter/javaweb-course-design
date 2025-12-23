@@ -178,6 +178,27 @@ a:hover { text-decoration-thickness: 2px; }
 
 .content { min-width: 0; }
 
+/* Auth sidebar (logged-in) */
+.sidebar-user { margin-bottom: var(--space-4); }
+.sidebar-user-name {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+.sidebar-user-role {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.sidebar-user-actions {
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+}
+.side-link .bi { margin-right: 10px; opacity: 0.9; }
+
+
 /* Layout helpers */
 .stack > * + * { margin-top: var(--space-4); }
 .stack-lg > * + * { margin-top: var(--space-6); }

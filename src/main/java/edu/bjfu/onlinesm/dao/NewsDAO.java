@@ -150,8 +150,9 @@ public class NewsDAO {
     /**
      * ✅ 解决你报错：NewsAdminServlet 调用 insert(news)
      * 规则：
-     * - isPublished=true：PublishedAt 若 news 未设置，则默认当前时间
-     * - isPublished=false：PublishedAt 写 NULL
+     * - 若显式设置了 PublishedAt，则直接写入（无论是否已发布）；
+     * - 若未设置 PublishedAt 且 isPublished=true，则默认当前时间；
+     * - 若未设置 PublishedAt 且 isPublished=false，则写 NULL。
      */
     public int insert(News news) throws SQLException {
         String sql =
@@ -161,10 +162,18 @@ public class NewsDAO {
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
 
-        Timestamp publishedAt = null;
-        if (isPublished) {
-            LocalDateTime ldt = news.getPublishedAt();
-            publishedAt = (ldt == null) ? nowTs : Timestamp.valueOf(ldt);
+        // 发布时间策略：
+        // - 若调用方显式设置了 news.getPublishedAt()，无论是否已发布，都写入该时间；
+        // - 若未设置发布时间但勾选了“已发布”，则默认使用当前时间；
+        // - 若未设置发布时间且未发布，则写入 NULL。
+        Timestamp publishedAt;
+        LocalDateTime ldt = news.getPublishedAt();
+        if (ldt != null) {
+            publishedAt = Timestamp.valueOf(ldt);
+        } else if (isPublished) {
+            publishedAt = nowTs;
+        } else {
+            publishedAt = null;
         }
 
         try (Connection conn = DbUtil.getConnection();
@@ -199,9 +208,10 @@ public class NewsDAO {
 
     /**
      * ✅ 解决你报错：NewsAdminServlet 调用 update(news)
-     * 规则：
-     * - isPublished=true：PublishedAt 若原本为空则设为当前时间，否则保留
-     * - isPublished=false：PublishedAt 置 NULL
+     * 规则（与 insert 保持一致）：
+     * - 若显式设置了 PublishedAt，则写入该时间；
+     * - 若未设置且 isPublished=true，则默认当前时间；
+     * - 若未设置且 isPublished=false，则写 NULL（通常用于从未发布过的草稿）。
      */
     public void update(News news) throws SQLException {
         if (news.getNewsId() == null) {
@@ -216,10 +226,18 @@ public class NewsDAO {
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
 
-        Timestamp publishedAt = null;
-        if (isPublished) {
-            LocalDateTime ldt = news.getPublishedAt();
-            publishedAt = (ldt == null) ? nowTs : Timestamp.valueOf(ldt);
+        // 发布时间策略：
+        // - 若调用方显式设置了 news.getPublishedAt()，无论是否已发布，都写入该时间；
+        // - 若未设置发布时间但勾选了“已发布”，则默认使用当前时间；
+        // - 若未设置发布时间且未发布，则写入 NULL。
+        Timestamp publishedAt;
+        LocalDateTime ldt = news.getPublishedAt();
+        if (ldt != null) {
+            publishedAt = Timestamp.valueOf(ldt);
+        } else if (isPublished) {
+            publishedAt = nowTs;
+        } else {
+            publishedAt = null;
         }
 
         try (Connection conn = DbUtil.getConnection();

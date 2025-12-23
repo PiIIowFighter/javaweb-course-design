@@ -16,6 +16,7 @@ public final class PermissionCatalog {
     public static final String ADMIN_PERMISSIONS = "ADMIN_PERMISSIONS";
     public static final String ADMIN_LOGS = "ADMIN_LOGS";
     public static final String ADMIN_SYSTEM = "ADMIN_SYSTEM";
+    public static final String ADMIN_DB_MAINTENANCE = "ADMIN_DB_MAINTENANCE";
     public static final String ADMIN_JOURNALS = "ADMIN_JOURNALS";
     public static final String ADMIN_EDITORIAL = "ADMIN_EDITORIAL";
     public static final String ADMIN_NEWS = "ADMIN_NEWS";
@@ -52,6 +53,7 @@ public final class PermissionCatalog {
         list.add(new Item(ADMIN_PERMISSIONS, "权限管理", "为不同角色分配系统访问权限"));
         list.add(new Item(ADMIN_LOGS, "日志管理", "查看系统运行/操作日志"));
         list.add(new Item(ADMIN_SYSTEM, "系统状态", "监控系统运行状态（JVM/DB/时间等）"));
+        list.add(new Item(ADMIN_DB_MAINTENANCE, "数据库维护", "检查/修复关键表结构（RolePermissions、OperationLogs 等）"));
         list.add(new Item(ADMIN_JOURNALS, "期刊管理", "期刊信息维护"));
         list.add(new Item(ADMIN_EDITORIAL, "编委会管理", "编辑委员会维护"));
         list.add(new Item(ADMIN_NEWS, "公告/新闻管理", "发布与维护公告新闻"));

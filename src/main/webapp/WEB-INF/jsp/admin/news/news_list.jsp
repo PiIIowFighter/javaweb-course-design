@@ -53,7 +53,7 @@
                 </td>
                 <td>
                     <c:choose>
-                        <c:when test="${n.published}">已发布</c:when>
+                        <c:when test="${n.published}">可见</c:when>
                         <c:otherwise>草稿</c:otherwise>
                     </c:choose>
                 </td>

@@ -66,6 +66,7 @@ public class AdminAuthzFilter implements Filter {
         if (path.startsWith("/admin/users")) return PermissionCatalog.ADMIN_USERS;
         if (path.startsWith("/admin/permissions")) return PermissionCatalog.ADMIN_PERMISSIONS;
         if (path.startsWith("/admin/logs")) return PermissionCatalog.ADMIN_LOGS;
+        if (path.startsWith("/admin/system/db")) return PermissionCatalog.ADMIN_DB_MAINTENANCE;
         if (path.startsWith("/admin/system")) return PermissionCatalog.ADMIN_SYSTEM;
         // 现有模块（保持一致的权限控制）
         if (path.startsWith("/admin/journals")) return PermissionCatalog.ADMIN_JOURNALS;

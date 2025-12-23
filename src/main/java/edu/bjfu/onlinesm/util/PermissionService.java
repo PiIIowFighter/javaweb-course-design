@@ -56,6 +56,7 @@ public class PermissionService {
                 set.add(PermissionCatalog.ADMIN_PERMISSIONS);
                 set.add(PermissionCatalog.ADMIN_LOGS);
                 set.add(PermissionCatalog.ADMIN_SYSTEM);
+                set.add(PermissionCatalog.ADMIN_DB_MAINTENANCE);
                 set.add(PermissionCatalog.ADMIN_JOURNALS);
                 set.add(PermissionCatalog.ADMIN_EDITORIAL);
                 set.add(PermissionCatalog.ADMIN_NEWS);

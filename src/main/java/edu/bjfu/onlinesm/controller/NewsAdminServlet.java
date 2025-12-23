@@ -212,6 +212,10 @@ public class NewsAdminServlet extends HttpServlet {
         news.setAuthorId(current.getUserId());
         news.setAttachmentPath(attachmentPath);
 
+        // 处理发布时间与可见性：
+        // - 已发布：若表单指定了发布日期，则使用表单值；
+        //           否则沿用原有发布时间；若原来也没有，则交给 DAO 默认当前时间；
+        // - 未发布（不可见）：仍然保留已有发布时间，便于以后重新发布或做记录。
         if (isPublished) {
             if (publishDateTime != null) {
                 // 表单显式指定发布日期：支持“定时发布”
@@ -224,8 +228,16 @@ public class NewsAdminServlet extends HttpServlet {
                 news.setPublishedAt(null);
             }
         } else {
-            // 保存为草稿或撤销发布：不再对外展示
-            news.setPublishedAt(null);
+            if (publishDateTime != null) {
+                // 管理员在不可见状态下手动调整了发布日期，也予以保留
+                news.setPublishedAt(publishDateTime);
+            } else if (existing != null && existing.getPublishedAt() != null) {
+                // 从“可见”切换为“不可见”时，保留之前的发布时间
+                news.setPublishedAt(existing.getPublishedAt());
+            } else {
+                // 从未发布过的草稿且没有指定时间：保持为 null
+                news.setPublishedAt(null);
+            }
         }
 
         if (news.getNewsId() == null) {

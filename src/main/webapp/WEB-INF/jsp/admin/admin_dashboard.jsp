@@ -6,7 +6,8 @@
 <ul>
     <li><a href="${pageContext.request.contextPath}/admin/users/list">用户管理</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/permissions/list">权限管理</a></li>
-    <li><a href="${pageContext.request.contextPath}/admin/system/status">系统维护</a></li>
+    <li><a href="${pageContext.request.contextPath}/admin/system/status">系统状态</a></li>
+    <li><a href="${pageContext.request.contextPath}/admin/system/db">数据库维护</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/logs/list">系统日志查询</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/journals/list">期刊管理</a></li>
     <li><a href="${pageContext.request.contextPath}/admin/editorial/list">编辑委员会管理</a></li>
