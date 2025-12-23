@@ -8,6 +8,7 @@ import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
+import edu.bjfu.onlinesm.util.mail.MailNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -37,7 +38,8 @@ public class EditorServlet extends HttpServlet {
     private final UserDAO userDAO = new UserDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
-    
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -385,7 +387,11 @@ public class EditorServlet extends HttpServlet {
         // 1. 对每个选中的审稿人，插入一条 INVITED 记录
         for (String reviewerIdStr : reviewerIdParams) {
             int reviewerId = Integer.parseInt(reviewerIdStr.trim());
-            reviewDAO.inviteReviewer(manuscriptId, reviewerId, dueAt);
+            int reviewId = reviewDAO.inviteReviewerReturnId(manuscriptId, reviewerId, dueAt);
+            // 2.1 邀请审稿人：发送“审稿邀请邮件”（带摘要与截止日期）
+            if (reviewId > 0) {
+                mailNotifications.onReviewerInvited(reviewId);
+            }
         }
 
         // 2. 如果稿件当前还在 WITH_EDITOR，就顺便把稿件状态改为 UNDER_REVIEW（送外审）
@@ -426,6 +432,8 @@ public class EditorServlet extends HttpServlet {
 
         // 更新 dbo.Reviews.RemindCount / LastRemindedAt
         reviewDAO.remind(reviewId);
+        // 2.2 催审：发送“催促邮件”给审稿人
+        mailNotifications.onReviewerRemind(reviewId);
 
         // 催审后跳回该稿件在送外审列表，可按需改成 detail 页面
         resp.sendRedirect(req.getContextPath()
@@ -513,6 +521,10 @@ public class EditorServlet extends HttpServlet {
             case "return":
                 // SUBMITTED / FORMAL_CHECK -> RETURNED（退回作者修改格式）
                 manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
+                // 1.2 形式审查退回修改：自动邮件通知作者（问题列表/修改指南可选）
+                String issues = req.getParameter("issues");
+                String guideUrl = req.getParameter("guideUrl");
+                mailNotifications.onFormalCheckReturn(manuscriptId, issues, guideUrl);
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -593,6 +605,9 @@ public class EditorServlet extends HttpServlet {
                 chiefComment
         );
 
+        // 3.3 主编指派编辑：通知被指派编辑（按邮件实现）
+        mailNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
+
         resp.sendRedirect(req.getContextPath() + "/editor/toAssign");
     }
 
@@ -643,6 +658,8 @@ public class EditorServlet extends HttpServlet {
                 return;
             }
             manuscriptDAO.retractManuscript(manuscriptId);
+            // 1.5 撤稿后通知作者（按邮件实现）
+            mailNotifications.onRetract(manuscriptId);
             resp.sendRedirect(req.getContextPath() + "/editor/special");
             return;
         }
@@ -669,6 +686,9 @@ public class EditorServlet extends HttpServlet {
         }
 
         manuscriptDAO.updateFinalDecision(manuscriptId, decision, newStatus);
+        // 1.4 主编终审决策：通知作者（同时通知编辑）
+        String decisionText = "accept".equals(op) ? "Accepted" : ("reject".equals(op) ? "Rejected" : "Revision Required");
+        mailNotifications.onFinalDecision(manuscriptId, decisionText);
         resp.sendRedirect(req.getContextPath() + "/editor/finalDecision");
     }
 
@@ -717,6 +737,8 @@ public class EditorServlet extends HttpServlet {
             u.setStatus("PENDING");
 
             userDAO.createUserWithRole(u, "REVIEWER");
+            // 4.1 主编“邀请新审稿人”：发送邀请邮件（含账号信息）
+            mailNotifications.onInviteNewReviewer(u, password);
 
         } else {
             // 审核 / 启用 / 禁用审稿人账号

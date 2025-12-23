@@ -3,6 +3,7 @@ package edu.bjfu.onlinesm.controller;
 import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
 import edu.bjfu.onlinesm.util.DbUtil;
+import edu.bjfu.onlinesm.util.mail.MailNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -38,9 +39,10 @@ import java.util.*;
 @MultipartConfig
 public class ManuscriptServlet extends HttpServlet {
 
+    private final UserDAO userDAO = new UserDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
-    private final UserDAO userDAO = new UserDAO();
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
@@ -448,7 +450,10 @@ public class ManuscriptServlet extends HttpServlet {
             String msg;
             String group;
             if (isFinalSubmit) {
-                msg = "投稿已提交，稿件 ID：" + genManuscriptCode(manuscriptId);
+                String code = genManuscriptCode(manuscriptId);
+                msg = "投稿已提交，稿件 ID：" + code;
+                // 1.1 投稿提交成功：发送“投稿确认邮件”
+                mailNotifications.onSubmissionSuccess(current, m, code);
                 group = "processing";
             } else {
                 msg = "草稿已保存，可随时继续编辑。";

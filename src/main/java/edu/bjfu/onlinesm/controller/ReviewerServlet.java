@@ -2,9 +2,11 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.ReviewDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptDAO;
+import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
+import edu.bjfu.onlinesm.util.mail.MailNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -24,6 +26,8 @@ public class ReviewerServlet extends HttpServlet {
 
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
+    private final UserDAO userDAO = new UserDAO();
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     // ==================== GET：页面展示 ====================
 
@@ -130,6 +134,8 @@ public class ReviewerServlet extends HttpServlet {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
             reviewDAO.acceptInvitation(reviewId, current.getUserId());
+            // 3.1 审稿人接受/拒绝邀请：通知编辑（按邮件实现）
+            mailNotifications.onReviewerResponded(reviewId, true);
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
@@ -156,6 +162,8 @@ public class ReviewerServlet extends HttpServlet {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
             reviewDAO.declineInvitation(reviewId, current.getUserId());
+            // 3.1 审稿人接受/拒绝邀请：通知编辑（按邮件实现）
+            mailNotifications.onReviewerResponded(reviewId, false);
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");

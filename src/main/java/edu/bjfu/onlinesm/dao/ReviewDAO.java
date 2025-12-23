@@ -42,20 +42,91 @@ public class ReviewDAO {
         return null;
     }
 
-    /** 发出审稿邀请。 */
-    public void inviteReviewer(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
+    /** 发出审稿邀请（返回生成的 ReviewId，便于邮件中带“邀请详情链接”）。 */
+    public int inviteReviewerReturnId(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
         String sql = "INSERT INTO dbo.Reviews " +
                 "(ManuscriptId, ReviewerId, Status, InvitedAt, DueAt, RemindCount) " +
                 "VALUES (?,?, 'INVITED', SYSUTCDATETIME(), ?, 0)";
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, manuscriptId);
             ps.setInt(2, reviewerId);
             if (dueAt != null) ps.setTimestamp(3, Timestamp.valueOf(dueAt));
             else ps.setNull(3, Types.TIMESTAMP);
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
         }
+        // 兼容 SQL Server 驱动在 RETURN_GENERATED_KEYS 不生效时：再查一次最新记录
+        String sql2 = "SELECT TOP 1 ReviewId FROM dbo.Reviews WHERE ManuscriptId=? AND ReviewerId=? ORDER BY ReviewId DESC";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql2)) {
+            ps.setInt(1, manuscriptId);
+            ps.setInt(2, reviewerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return 0;
     }
+
+    /** 发出审稿邀请（旧方法兼容）。 */
+    public void inviteReviewer(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
+        inviteReviewerReturnId(manuscriptId, reviewerId, dueAt);
+    }
+    
+    /**
+     * 自动催审查询：找出“逾期”的审稿记录，用于定时任务/监听器自动发送催审邮件。
+     *
+     * 参数说明（为了兼容你 listener 的三参调用，第二/第三个参数不强制顺序）：
+     * - overdueDays：逾期天数（任务书典型为 7）
+     * - p2/p3：一个是 cooldownDays（两次提醒最少间隔天数），另一个是 limit（最多取多少条）
+     *
+     * 返回：需要自动催审的 Review 列表（只包含 Reviews 表字段，够用）
+     */
+    public List<Review> findOverdueForAutoRemind(int overdueDays, int p2, int p3) throws SQLException {
+        int cooldownDays = Math.min(p2, p3);   // 兼容你传 (7,1,50) 或 (7,50,1)
+        int limit = Math.max(p2, p3);
+
+        if (overdueDays < 0) overdueDays = 0;
+        if (cooldownDays < 0) cooldownDays = 0;
+        if (limit <= 0) limit = 50;
+
+        // 逾期规则：
+        // 1) 已接受邀请但未提交：Status='ACCEPTED' 且 DueAt <= 当前时间 - overdueDays
+        // 2) 或者（可选）邀请后长期未响应：Status='INVITED' 且 InvitedAt <= 当前时间 - overdueDays
+        // 3) 避免频繁提醒：LastRemindedAt 为空 或 LastRemindedAt <= 当前时间 - cooldownDays
+        String sql =
+                "SELECT TOP " + limit + " * " +
+                "FROM dbo.Reviews " +
+                "WHERE (" +
+                "   (Status='ACCEPTED' AND DueAt IS NOT NULL AND DueAt <= DATEADD(day, -?, SYSUTCDATETIME())) " +
+                "    OR " +
+                "   (Status='INVITED' AND InvitedAt IS NOT NULL AND InvitedAt <= DATEADD(day, -?, SYSUTCDATETIME()))" +
+                ") " +
+                "AND (LastRemindedAt IS NULL OR LastRemindedAt <= DATEADD(day, -?, SYSUTCDATETIME())) " +
+                "ORDER BY DueAt ASC, InvitedAt ASC, ReviewId ASC";
+
+        List<Review> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, overdueDays);
+            ps.setInt(2, overdueDays);
+            ps.setInt(3, cooldownDays);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
 
     /** 查询某一稿件的全部审稿记录（按邀请时间倒序）。 */
     public List<Review> findByManuscript(int manuscriptId) throws SQLException {

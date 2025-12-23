@@ -186,6 +186,26 @@ public class ManuscriptDAO {
     }
 
     /**
+     * 查询稿件当前责任编辑（dbo.Manuscripts.CurrentEditorId）。
+     * 用于邮件通知“主编终审/审稿人回应”等场景。
+     */
+    public Integer findCurrentEditorId(int manuscriptId) throws SQLException {
+        String sql = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int v = rs.getInt(1);
+                    if (rs.wasNull()) return null;
+                    return v;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 按单一状态查询所有稿件（编辑部视角简单使用）。
      */
     public List<Manuscript> findByStatus(String status) throws SQLException {
