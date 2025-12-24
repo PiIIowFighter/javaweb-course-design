@@ -895,3 +895,78 @@ ELSE
 BEGIN
     PRINT '!! dbo.News 不存在，请先执行原始 sqlserver.sql 初始化数据库。';
 END;
+
+/* ============================================================
+   EXTRA PATCH APPENDED
+   Purpose: Keep original database schema/data exactly the same as sqlserver.sql,
+            then add journal-management board enhancements (cover/attachment columns, guest editors, etc.)
+   Generated: 2025-12-23 13:08:58
+   ============================================================ */
+
+-- Ensure DB exists, then switch context
+IF DB_ID(N'Online_SMSystem4SP') IS NULL
+BEGIN
+    THROW 50000, 'Database Online_SMSystem4SP not found. Run the base script section first.', 1;
+END
+GO
+USE [Online_SMSystem4SP];
+GO
+-- Patch: Journal management board columns (cover/attachment + guest editors)
+-- Safe to run multiple times.
+-- Target DB: SQL Server, schema dbo.
+
+PRINT '== Patch start: journal management board columns ==';
+
+-- JournalPages: add resource columns
+IF COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NULL
+BEGIN
+    ALTER TABLE dbo.JournalPages ADD CoverImagePath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.JournalPages.CoverImagePath';
+END
+ELSE PRINT 'dbo.JournalPages.CoverImagePath already exists';
+
+IF COL_LENGTH('dbo.JournalPages', 'AttachmentPath') IS NULL
+BEGIN
+    ALTER TABLE dbo.JournalPages ADD AttachmentPath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.JournalPages.AttachmentPath';
+END
+ELSE PRINT 'dbo.JournalPages.AttachmentPath already exists';
+
+-- Issues: add GuestEditors + resource columns
+IF COL_LENGTH('dbo.Issues', 'GuestEditors') IS NULL
+BEGIN
+    ALTER TABLE dbo.Issues ADD GuestEditors NVARCHAR(255) NULL;
+    PRINT 'Added dbo.Issues.GuestEditors';
+END
+ELSE PRINT 'dbo.Issues.GuestEditors already exists';
+
+IF COL_LENGTH('dbo.Issues', 'CoverImagePath') IS NULL
+BEGIN
+    ALTER TABLE dbo.Issues ADD CoverImagePath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.Issues.CoverImagePath';
+END
+ELSE PRINT 'dbo.Issues.CoverImagePath already exists';
+
+IF COL_LENGTH('dbo.Issues', 'AttachmentPath') IS NULL
+BEGIN
+    ALTER TABLE dbo.Issues ADD AttachmentPath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.Issues.AttachmentPath';
+END
+ELSE PRINT 'dbo.Issues.AttachmentPath already exists';
+
+-- CallForPapers: add resource columns
+IF COL_LENGTH('dbo.CallForPapers', 'CoverImagePath') IS NULL
+BEGIN
+    ALTER TABLE dbo.CallForPapers ADD CoverImagePath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.CallForPapers.CoverImagePath';
+END
+ELSE PRINT 'dbo.CallForPapers.CoverImagePath already exists';
+
+IF COL_LENGTH('dbo.CallForPapers', 'AttachmentPath') IS NULL
+BEGIN
+    ALTER TABLE dbo.CallForPapers ADD AttachmentPath NVARCHAR(255) NULL;
+    PRINT 'Added dbo.CallForPapers.AttachmentPath';
+END
+ELSE PRINT 'dbo.CallForPapers.AttachmentPath already exists';
+
+PRINT '== Patch end: journal management board columns ==';

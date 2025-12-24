@@ -14,6 +14,11 @@ public class JournalPage implements Serializable {
     private String pageKey;   // aims / policies / ...
     private String title;
     private String content;   // HTML（可包含 <p><ul> 等）
+
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/pages/ 下）
+    private String coverImagePath;
+    private String attachmentPath;
+
     private LocalDateTime updatedAt;
 
     public Integer getPageId() {
@@ -54,6 +59,22 @@ public class JournalPage implements Serializable {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getCoverImagePath() {
+        return coverImagePath;
+    }
+
+    public void setCoverImagePath(String coverImagePath) {
+        this.coverImagePath = coverImagePath;
+    }
+
+    public String getAttachmentPath() {
+        return attachmentPath;
+    }
+
+    public void setAttachmentPath(String attachmentPath) {
+        this.attachmentPath = attachmentPath;
     }
 
     public LocalDateTime getUpdatedAt() {
