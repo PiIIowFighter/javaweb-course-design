@@ -162,6 +162,46 @@ BEGIN
     (N'EO_ADMIN', N'ADMIN_NEWS');
 END
 GO
+-- 追加：为新稿件流程相关角色赋默认权限（保持原有数据不变，只在缺失时补齐）
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+BEGIN
+    -- 作者：提交新稿件
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'AUTHOR' AND PermissionKey = N'MANUSCRIPT_SUBMIT_NEW')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'AUTHOR', N'MANUSCRIPT_SUBMIT_NEW');
+
+    -- 审稿人：填写审稿意见
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'REVIEWER' AND PermissionKey = N'REVIEW_WRITE_OPINION')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'REVIEWER', N'REVIEW_WRITE_OPINION');
+
+    -- 编辑：邀请/指派人员 + 查看审稿人身份
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR', N'MANUSCRIPT_INVITE_ASSIGN');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR' AND PermissionKey = N'MANUSCRIPT_VIEW_REVIEWER_ID')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR', N'MANUSCRIPT_VIEW_REVIEWER_ID');
+
+    -- 主编（EIC）：查看所有稿件 + 邀请/指派 + 查看审稿人身份 + 做出录用/拒稿决定
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'MANUSCRIPT_VIEW_ALL')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'MANUSCRIPT_VIEW_ALL');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'MANUSCRIPT_INVITE_ASSIGN');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'MANUSCRIPT_VIEW_REVIEWER_ID')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'MANUSCRIPT_VIEW_REVIEWER_ID');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'DECISION_MAKE_ACCEPT_REJECT')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'DECISION_MAKE_ACCEPT_REJECT');
+
+    -- 编辑部管理员：查看所有稿件 + 邀请/指派 + 查看审稿人身份 + 修改系统配置
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_VIEW_ALL')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_VIEW_ALL');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_INVITE_ASSIGN');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_VIEW_REVIEWER_ID')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_VIEW_REVIEWER_ID');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'SYSTEM_EDIT_CONFIG')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'SYSTEM_EDIT_CONFIG');
+END
+GO
+
+
 
 
 /* ============================================================
