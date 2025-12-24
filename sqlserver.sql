@@ -254,6 +254,7 @@ BEGIN
         FileAnonymousPath   NVARCHAR(260) NULL,
         FileOriginalPath    NVARCHAR(260) NULL,
         CoverLetterPath     NVARCHAR(260) NULL,
+        CoverLetterHtml     NVARCHAR(MAX) NULL,
         ResponseLetterPath  NVARCHAR(260) NULL,
         CreatedAt           DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
         CreatedBy           INT NOT NULL,
@@ -263,6 +264,13 @@ BEGIN
         CONSTRAINT FK_ManuscriptVersions_Manuscript FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),
         CONSTRAINT FK_ManuscriptVersions_CreatedBy  FOREIGN KEY(CreatedBy)    REFERENCES dbo.Users(UserId)
     );
+END;
+GO
+
+-- 为已存在的表添加 CoverLetterHtml 字段（如果不存在）
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.ManuscriptVersions') AND name = N'CoverLetterHtml')
+BEGIN
+    ALTER TABLE dbo.ManuscriptVersions ADD CoverLetterHtml NVARCHAR(MAX) NULL;
 END;
 GO
 

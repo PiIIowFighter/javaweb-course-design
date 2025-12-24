@@ -153,10 +153,10 @@
 
         <!-- ========== 3) 文件上传 ========== -->
         <fieldset>
-            <legend><b>3. 文件上传</b></legend>
+            <legend><b>3. 稿件与 Cover Letter</b></legend>
 
             <div class="form-row">
-                <label>手稿文件</label>
+                <label>稿件</label>
                 <div>
                     <input type="file" name="manuscriptFile" accept=".pdf,.doc,.docx"/>
                     <c:if test="${not empty currentVersion and (not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath)}">
@@ -169,24 +169,14 @@
             </div>
 
             <div class="form-row">
-                <label>Cover Letter（文件，可选）</label>
-                <div>
-                    <input type="file" name="coverFile" accept=".pdf,.doc,.docx,.html,.htm"/>
-                    <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterPath}">
-                        <div class="help">
-                            当前版本：
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">预览/下载</a>
-                        </div>
-                    </c:if>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <label>Cover Letter（富文本，可选）</label>
+                <label>Cover Letter（可选）</label>
                 <div>
                     <div id="coverEditor" style="min-height: 200px;"></div>
                     <input type="hidden" id="coverHidden" name="coverLetterHtml" />
-                    <div class="help">若同时上传文件与填写富文本，系统将优先以"上传文件"为 Cover Letter，富文本将作为备注保存。支持粗体、斜体、上下标、数学公式等。</div>
+                    <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterHtml}">
+                        <input type="hidden" id="savedCoverLetter" value="<c:out value="${currentVersion.coverLetterHtml}" escapeXml="false"/>" />
+                    </c:if>
+                    <div class="help">支持粗体、斜体、上下标、数学公式等富文本格式。</div>
                 </div>
             </div>
         </fieldset>
@@ -339,6 +329,12 @@
     var savedAbstractEl = document.getElementById('savedAbstract');
     if (savedAbstractEl && savedAbstractEl.value) {
         abstractEditor.root.innerHTML = savedAbstractEl.value;
+    }
+
+    // 如果有已保存的 Cover Letter 内容，设置到编辑器中
+    var savedCoverLetterEl = document.getElementById('savedCoverLetter');
+    if (savedCoverLetterEl && savedCoverLetterEl.value) {
+        coverEditor.root.innerHTML = savedCoverLetterEl.value;
     }
 
     function removeRow(btn) {

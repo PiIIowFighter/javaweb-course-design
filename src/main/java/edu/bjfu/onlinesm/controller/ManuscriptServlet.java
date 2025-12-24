@@ -349,7 +349,6 @@ public class ManuscriptServlet extends HttpServlet {
 
             // 版本文件
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
-            Part coverFile = safeGetPart(req, "coverFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             // 作者列表冗余字段
@@ -401,20 +400,8 @@ public class ManuscriptServlet extends HttpServlet {
                 // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
                 String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
 
-
-                String coverPath = null;
-                String remark = null;
-                if (coverFile != null && coverFile.getSize() > 0) {
-                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
-                }
-                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
-                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
-                    if (coverPath == null) {
-                        coverPath = htmlPath;
-                    } else {
-                        remark = "CoverLetterHtml=" + htmlPath;
-                    }
-                }
+                // Cover Letter 富文本直接存储到数据库字段
+                String coverLetterHtmlToSave = coverLetterHtml;
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -424,22 +411,19 @@ public class ManuscriptServlet extends HttpServlet {
                     if (fileAnonymousPath == null || fileAnonymousPath.trim().isEmpty()) {
                         fileAnonymousPath = prevCurrent.getFileAnonymousPath();
                     }
-                    if (coverPath == null || coverPath.trim().isEmpty()) {
-                        coverPath = prevCurrent.getCoverLetterPath();
+                    // 如果没有新的 Cover Letter 内容，沿用上一版
+                    if (coverLetterHtmlToSave == null || coverLetterHtmlToSave.trim().isEmpty()) {
+                        coverLetterHtmlToSave = prevCurrent.getCoverLetterHtml();
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
                     }
-                    if (remark == null || remark.trim().isEmpty()) {
-                        remark = prevCurrent.getRemark();
-                    }
                 }
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterPath(coverPath);
-                v.setRemark(remark);
+                v.setCoverLetterHtml(coverLetterHtmlToSave);
 
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
@@ -518,7 +502,6 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
-            Part coverFile = safeGetPart(req, "coverFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             try (Connection conn = DbUtil.getConnection()) {
@@ -557,24 +540,12 @@ public class ManuscriptServlet extends HttpServlet {
                 // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
                 String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
 
-                String coverPath = null;
-                String remark = null;
-                if (coverFile != null && coverFile.getSize() > 0) {
-                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
-                }
-                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
-                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
-                    if (coverPath == null) {
-                        coverPath = htmlPath;
-                    } else {
-                        remark = "CoverLetterHtml=" + htmlPath;
-                    }
-                }
+                // Cover Letter 富文本直接存储到数据库字段
+                String coverLetterHtmlToSave = coverLetterHtml;
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterPath(coverPath);
-                v.setRemark(remark);
+                v.setCoverLetterHtml(coverLetterHtmlToSave);
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -584,15 +555,13 @@ public class ManuscriptServlet extends HttpServlet {
                     if (v.getFileAnonymousPath() == null || v.getFileAnonymousPath().trim().isEmpty()) {
                         v.setFileAnonymousPath(prevCurrent.getFileAnonymousPath());
                     }
-                    if (v.getCoverLetterPath() == null || v.getCoverLetterPath().trim().isEmpty()) {
-                        v.setCoverLetterPath(prevCurrent.getCoverLetterPath());
+                    // 如果没有新的 Cover Letter 内容，沿用上一版
+                    if (v.getCoverLetterHtml() == null || v.getCoverLetterHtml().trim().isEmpty()) {
+                        v.setCoverLetterHtml(prevCurrent.getCoverLetterHtml());
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null || v.getResponseLetterPath().trim().isEmpty()) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
-                    }
-                    if (v.getRemark() == null || v.getRemark().trim().isEmpty()) {
-                        v.setRemark(prevCurrent.getRemark());
                     }
                 }
 
