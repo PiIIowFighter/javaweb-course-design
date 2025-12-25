@@ -52,6 +52,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
+    private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
     private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
@@ -85,6 +86,9 @@ public class ManuscriptServlet extends HttpServlet {
                     break;
                 case "/detail":
                     handleDetail(req, resp, current);
+                    break;
+                case "/track":
+                    handleTrackStatus(req, resp, current);
                     break;
                 default:
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -282,6 +286,56 @@ public class ManuscriptServlet extends HttpServlet {
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
+    }
+
+    /**
+     * 追踪稿件状态：显示时间线视图和状态变更历史
+     * GET /manuscripts/track?id=xxx
+     */
+    private void handleTrackStatus(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        Integer manuscriptId = parseInt(req.getParameter("id"));
+        if (manuscriptId == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少稿件 ID 参数。");
+            return;
+        }
+
+        Manuscript m = manuscriptDAO.findById(manuscriptId);
+        if (m == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该稿件。");
+            return;
+        }
+
+        // 作者只能查看自己的稿件状态
+        if ("AUTHOR".equals(current.getRoleCode()) && !Objects.equals(current.getUserId(), m.getSubmitterId())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看他人稿件状态。");
+            return;
+        }
+
+        // 获取状态变更历史
+        List<ManuscriptStatusHistory> historyList = statusHistoryDAO.findByManuscriptId(manuscriptId);
+        
+        // 如果历史记录为空，根据当前状态和提交时间生成基础记录
+        if (historyList.isEmpty() && m.getSubmitTime() != null) {
+            // 创建一个虚拟的初始记录用于显示
+            ManuscriptStatusHistory initial = new ManuscriptStatusHistory();
+            initial.setManuscriptId(manuscriptId);
+            initial.setToStatus(m.getCurrentStatus());
+            initial.setChangeTime(m.getSubmitTime());
+            initial.setEvent("SUBMIT");
+            historyList.add(initial);
+        }
+
+        // 获取预计审稿周期
+        String estimatedCycle = statusHistoryDAO.getEstimatedReviewCycle(m.getCurrentStatus());
+
+        req.setAttribute("manuscript", m);
+        req.setAttribute("historyList", historyList);
+        req.setAttribute("estimatedCycle", estimatedCycle);
+        req.setAttribute("currentStatusDesc", ManuscriptStatusHistory.getStatusDescription(m.getCurrentStatus()));
+
+        req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_track.jsp").forward(req, resp);
     }
 
     /**

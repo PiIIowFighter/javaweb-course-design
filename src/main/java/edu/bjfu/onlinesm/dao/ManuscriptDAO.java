@@ -583,6 +583,51 @@ public class ManuscriptDAO {
     }
 
     /**
+     * 更新稿件状态并记录状态变更历史。
+     * @param manuscriptId 稿件ID
+     * @param newStatus 新状态
+     * @param event 事件类型
+     * @param changedBy 操作者用户ID
+     * @param remark 备注
+     */
+    public void updateStatusWithHistory(int manuscriptId, String newStatus, String event, int changedBy, String remark) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+
+                // 更新状态
+                String updateSql = "UPDATE dbo.Manuscripts SET Status = ?, LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setString(1, newStatus);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                // 记录历史
+                insertStatusHistory(conn, manuscriptId, oldStatus, newStatus, event, changedBy, remark);
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
      * 为稿件分配责任编辑，并将状态变更为 WITH_EDITOR。
      * 由主编在“待指派编辑”列表中调用。
      */
@@ -595,6 +640,46 @@ public class ManuscriptDAO {
             ps.setInt(1, editorUserId);
             ps.setInt(2, manuscriptId);
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 为稿件分配责任编辑并记录状态变更历史。
+     */
+    public void assignEditorWithHistory(int manuscriptId, int editorUserId, int changedBy, String remark) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+
+                // 更新状态和编辑
+                String updateSql = "UPDATE dbo.Manuscripts SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setInt(1, editorUserId);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                // 记录历史
+                insertStatusHistory(conn, manuscriptId, oldStatus, "WITH_EDITOR", "ASSIGN_EDITOR", changedBy, remark);
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
 
