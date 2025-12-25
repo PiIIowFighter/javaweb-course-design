@@ -10,6 +10,7 @@ import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -40,6 +41,7 @@ public class EditorServlet extends HttpServlet {
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -412,6 +414,8 @@ public class EditorServlet extends HttpServlet {
             // 2.1 邀请审稿人：发送“审稿邀请邮件”（带摘要与截止日期）
             if (reviewId > 0) {
                 mailNotifications.onReviewerInvited(reviewId);
+                // 站内通知
+                inAppNotifications.onReviewerInvited(reviewId);
             }
         }
 
@@ -455,6 +459,8 @@ public class EditorServlet extends HttpServlet {
         reviewDAO.remindChecked(reviewId);
         // 2.2 催审：发送“催促邮件”给审稿人
         mailNotifications.onReviewerRemind(reviewId);
+        // 站内通知
+        inAppNotifications.onReviewerRemind(reviewId);
 
         // 催审后跳回该稿件在送外审列表，可按需改成 detail 页面
         resp.sendRedirect(req.getContextPath()
@@ -546,6 +552,8 @@ public class EditorServlet extends HttpServlet {
                 String issues = req.getParameter("issues");
                 String guideUrl = req.getParameter("guideUrl");
                 mailNotifications.onFormalCheckReturn(manuscriptId, issues, guideUrl);
+                // 站内通知
+                inAppNotifications.onFormalCheckReturn(manuscriptId, issues);
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -628,6 +636,8 @@ public class EditorServlet extends HttpServlet {
 
         // 3.3 主编指派编辑：通知被指派编辑（按邮件实现）
         mailNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
+        // 站内通知
+        inAppNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
 
         resp.sendRedirect(req.getContextPath() + "/editor/toAssign");
     }
@@ -691,6 +701,8 @@ public class EditorServlet extends HttpServlet {
         // 1.4 主编终审决策：通知作者（同时通知编辑）
         String decisionText = "accept".equals(op) ? "Accepted" : ("reject".equals(op) ? "Rejected" : "Revision Required");
         mailNotifications.onFinalDecision(manuscriptId, decisionText);
+        // 站内通知
+        inAppNotifications.onFinalDecision(manuscriptId, decisionText);
         resp.sendRedirect(req.getContextPath() + "/editor/finalDecision");
     }
 
@@ -736,11 +748,15 @@ public class EditorServlet extends HttpServlet {
                 // 改判后同步通知作者（可按需要扩展通知编辑/审稿人）
                 String decisionText = "accept".equals(finalOp) ? "Accepted" : ("reject".equals(finalOp) ? "Rejected" : "Revision Required");
                 mailNotifications.onFinalDecision(manuscriptId, decisionText);
+                // 站内通知
+                inAppNotifications.onFinalDecision(manuscriptId, decisionText);
 
             } else if ("retract".equals(op)) {
                 manuscriptDAO.retractPublished(manuscriptId, current.getUserId(), reasonText);
                 OperationLogger.log(req, "EDITOR_CHIEF", "RETRACT_PUBLISHED", "manuscriptId=" + manuscriptId + "; reason=" + reasonText);
                 mailNotifications.onRetract(manuscriptId);
+                // 站内通知
+                inAppNotifications.onRetract(manuscriptId);
 
             } else {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -801,6 +817,8 @@ public class EditorServlet extends HttpServlet {
             userDAO.createUserWithRole(u, "REVIEWER");
             // 4.1 主编“邀请新审稿人”：发送邀请邮件（含账号信息）
             mailNotifications.onInviteNewReviewer(u, password);
+            // 站内通知
+            inAppNotifications.onInviteNewReviewer(u);
 
         } else {
             // 审核 / 启用 / 禁用审稿人账号

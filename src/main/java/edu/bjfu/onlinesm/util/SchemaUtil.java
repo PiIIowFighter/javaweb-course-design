@@ -66,6 +66,35 @@ public final class SchemaUtil {
         exec(sql);
     }
 
+    /**
+     * 站内通知表：dbo.Notifications。
+     *
+     * 说明：
+     * - 只做“单向通知”（无对话串），用于任务书中的“通知中心 / 系统通知”。
+     * - 为避免首次运行缺表导致 500，DAO 会在调用前兜底创建。
+     */
+    public static void ensureNotificationsTable() throws SQLException {
+        String sql = "IF OBJECT_ID('dbo.Notifications', 'U') IS NULL\n" +
+                "BEGIN\n" +
+                "  CREATE TABLE dbo.Notifications(\n" +
+                "    NotificationId INT IDENTITY(1,1) PRIMARY KEY,\n" +
+                "    RecipientUserId INT NOT NULL,\n" +
+                "    CreatedByUserId INT NULL,\n" +
+                "    Type NVARCHAR(20) NOT NULL DEFAULT N'SYSTEM',\n" +
+                "    Category NVARCHAR(50) NULL,\n" +
+                "    Title NVARCHAR(200) NOT NULL,\n" +
+                "    Content NVARCHAR(MAX) NULL,\n" +
+                "    RelatedManuscriptId INT NULL,\n" +
+                "    IsRead BIT NOT NULL DEFAULT 0,\n" +
+                "    ReadAt DATETIME2(0) NULL,\n" +
+                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),\n" +
+                "    CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)\n" +
+                "  );\n" +
+                "  CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);\n" +
+                "END";
+        exec(sql);
+    }
+
     private static void exec(String sql) throws SQLException {
         try (Connection conn = DbUtil.getConnection();
              Statement st = conn.createStatement()) {

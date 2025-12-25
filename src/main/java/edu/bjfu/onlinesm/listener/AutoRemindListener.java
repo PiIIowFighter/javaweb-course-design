@@ -6,6 +6,7 @@ import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.util.mail.MailConfig;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -39,7 +40,10 @@ public class AutoRemindListener implements ServletContextListener {
         }
 
         ReviewDAO reviewDAO = new ReviewDAO();
-        MailNotifications notifications = new MailNotifications(new UserDAO(), new ManuscriptDAO(), reviewDAO);
+        UserDAO userDAO = new UserDAO();
+        ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
+        MailNotifications notifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+        InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
         int overdueDays = cfg.getAutoRemindOverdueDays();
         int minIntervalDays = cfg.getAutoRemindMinIntervalDays();
@@ -60,6 +64,8 @@ public class AutoRemindListener implements ServletContextListener {
                         try {
                             // 1) 先发邮件：成功才算“已提醒”
                             notifications.onReviewerRemind(r.getReviewId());
+                            // 站内通知（失败不影响）
+                            inAppNotifications.onReviewerRemind(r.getReviewId());
 
                             // 2) 发成功后再更新提醒次数/时间
                             reviewDAO.remindChecked(r.getReviewId());

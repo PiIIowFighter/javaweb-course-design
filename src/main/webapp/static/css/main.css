@@ -80,6 +80,12 @@ a:hover { text-decoration-thickness: 2px; }
     padding-bottom: var(--space-4);
 }
 
+.header-right {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
 .brand {
     display: inline-flex;
     align-items: center;
@@ -122,6 +128,50 @@ a:hover { text-decoration-thickness: 2px; }
 }
 
 .nav a .bi { font-size: 15px; opacity: 0.9; }
+
+/* 顶栏右侧通知入口（独立于 nav，确保折叠菜单时也可见） */
+.header-notification {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    text-decoration: none;
+    color: rgba(15, 23, 42, 0.86);
+    position: relative;
+}
+.header-notification:hover {
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+.nav-bell {
+    font-size: 15px;
+    line-height: 1;
+}
+
+/* 徽标在铃铛右上角 */
+.header-notification .nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    margin-left: 0;
+}
+
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    background: #ef4444;
+    color: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+}
 
 .nav-toggle {
     display: none;
@@ -551,6 +601,23 @@ tr:last-child td { border-bottom: none; }
 .alert-success {
     border-color: rgba(47, 111, 109, 0.35);
     background: rgba(47, 111, 109, 0.06);
+}
+
+/* Badges (for status labels) */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: rgba(255, 255, 255, 0.65);
+    color: rgba(15, 23, 42, 0.75);
+}
+.badge-warn {
+    border-color: rgba(217, 119, 6, 0.35);
+    background: rgba(217, 119, 6, 0.08);
+    color: rgba(120, 53, 15, 0.85);
 }
 
 /* Footer */
