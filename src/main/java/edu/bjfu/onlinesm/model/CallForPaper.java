@@ -14,7 +14,7 @@ public class CallForPaper implements Serializable {
     private String title;
     private String content; // HTML allowed
 
-    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/calls/ 下）
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 upload/journal/calls/ 下）
     private String coverImagePath;
     private String attachmentPath;
 

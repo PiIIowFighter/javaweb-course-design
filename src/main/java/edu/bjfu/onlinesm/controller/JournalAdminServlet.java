@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 超级管理员：期刊管理（按板块分组管理 Journals / JournalPages / Issues / CallForPapers）。
@@ -39,7 +40,7 @@ public class JournalAdminServlet extends HttpServlet {
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
     // 与 NewsAdminServlet 保持一致
-    private static final String BASE_UPLOAD_DIR = "D:/upload";
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
     private static final String JOURNAL_SUB_DIR = "journal";
 
     @Override
@@ -158,6 +159,17 @@ public class JournalAdminServlet extends HttpServlet {
         User current = getCurrentUser(req);
 
         Integer journalId = intParam(req, "journalId");
+
+        // 单期刊模式：数据库中只允许维护一个主期刊。
+        // 若已经存在期刊记录，则禁止再通过后台新增其它期刊（但允许编辑现有记录）。
+        if (journalId == null) {
+            List<Journal> existing = journalDAO.listAll();
+            if (existing != null && !existing.isEmpty()) {
+                resp.sendRedirect(req.getContextPath() + "/admin/journals/list?error=onlyOneJournalAllowed");
+                return;
+            }
+        }
+
         String name = req.getParameter("name");
         String issn = req.getParameter("issn");
         String timeline = req.getParameter("timeline");
@@ -191,9 +203,17 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/list");
     }
 
+
     private void handleBasicDelete(HttpServletRequest req, HttpServletResponse resp) throws SQLException, IOException {
         Integer journalId = intParam(req, "journalId");
         if (journalId != null) {
+            List<Journal> all = journalDAO.listAll();
+            if (all != null && all.size() <= 1) {
+                // 至少保留一个期刊记录，禁止删除最后一个。
+                resp.sendRedirect(req.getContextPath() + "/admin/journals/list?error=cannotDeleteLastJournal");
+                return;
+            }
+
             journalDAO.delete(journalId);
             OperationLogger.log(req, "JOURNAL", "删除期刊", "journalId=" + journalId);
         }

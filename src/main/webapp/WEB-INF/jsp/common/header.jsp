@@ -11,11 +11,12 @@
 
     <!-- Icons (Bootstrap Icons) -->
     <!-- 升级版本：避免部分图标类在旧版中不存在导致空白 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/main.css"/>
 </head>
-<body>
+<body class="${not empty sessionScope.currentUser ? 'authed' : ''}">
 <header class="site-header">
     <div class="container header-inner">
         <a class="brand" href="${pageContext.request.contextPath}/" aria-label="返回首页">
@@ -57,34 +58,41 @@
                 <i class="bi bi-newspaper" aria-hidden="true"></i>
                 <span>新闻</span>
             </a>
+
             <c:choose>
                 <c:when test="${not empty sessionScope.currentUser}">
-                                        <c:set var="currentRoleCode" value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
-<a href="${pageContext.request.contextPath}/dashboard">
+                    <c:set var="currentRoleCode"
+                           value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
+
+                    <a href="${pageContext.request.contextPath}/dashboard">
                         <i class="bi bi-grid" aria-hidden="true"></i>
                         <span>工作台</span>
                     </a>
 
-<c:if test="${currentRoleCode == 'AUTHOR'}">
-    <a href="${pageContext.request.contextPath}/manuscripts/submit">
-        <i class="bi bi-upload" aria-hidden="true"></i>
-        <span>提交论文</span>
-    </a>
-</c:if>
-<a href="${pageContext.request.contextPath}/profile">
+                    <c:if test="${currentRoleCode == 'AUTHOR'}">
+                        <a href="${pageContext.request.contextPath}/manuscripts/submit">
+                            <i class="bi bi-upload" aria-hidden="true"></i>
+                            <span>提交论文</span>
+                        </a>
+                    </c:if>
+
+                    <a href="${pageContext.request.contextPath}/profile">
                         <i class="bi bi-person" aria-hidden="true"></i>
                         <span>个人信息</span>
                     </a>
+
                     <a href="${pageContext.request.contextPath}/auth/logout">
                         <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                         <span>退出（${sessionScope.currentUser.username}）</span>
                     </a>
                 </c:when>
+
                 <c:otherwise>
                     <a href="${pageContext.request.contextPath}/auth/login">
                         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                         <span>登录</span>
                     </a>
+
                     <a href="${pageContext.request.contextPath}/auth/register">
                         <i class="bi bi-person-plus" aria-hidden="true"></i>
                         <span>注册</span>
@@ -106,21 +114,5 @@
             <div class="layout">
                 <jsp:include page="/WEB-INF/jsp/common/auth_sidebar.jsp"/>
                 <section class="content">
+                    <div class="content-inner">
         </c:if>
-
-
-<script>
-    function toggleNav() {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        nav.classList.toggle('nav-open');
-    }
-    // Close the menu when clicking outside (mobile)
-    document.addEventListener('click', function (e) {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        var toggle = document.querySelector('.nav-toggle');
-        var clickedInside = nav.contains(e.target) || (toggle && toggle.contains(e.target));
-        if (!clickedInside) nav.classList.remove('nav-open');
-    });
-</script>

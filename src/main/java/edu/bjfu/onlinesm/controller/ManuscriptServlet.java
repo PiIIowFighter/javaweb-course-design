@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 投稿/稿件列表/详情控制器
@@ -50,7 +51,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
-    private static final String UPLOAD_BASE_DIR = "D:\\upload";
+    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
     @Override

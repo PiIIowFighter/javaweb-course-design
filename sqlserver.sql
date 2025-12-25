@@ -127,9 +127,23 @@ BEGIN
     INSERT dbo.Users (Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
     SELECT N'author1', N'password123', N'author1@example.com', N'作者1', N'北京林业大学', N'人工智能', RoleId, N'ACTIVE'
       FROM dbo.Roles WHERE RoleCode = N'AUTHOR';
+
 END;
 GO
 
+/* 确保邮箱在 Users 表中唯一（允许 Email 为空），同一邮箱只能对应一个账号 */
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'UX_Users_Email'
+      AND object_id = OBJECT_ID(N'dbo.Users', N'U')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Users_Email
+        ON dbo.Users(Email)
+        WHERE Email IS NOT NULL;
+END;
+GO
 
 /* ============================================================
    3. 权限映射表 RolePermissions（给后台模块做 URL 级授权）
@@ -1018,3 +1032,24 @@ END
 ELSE PRINT 'dbo.CallForPapers.AttachmentPath already exists';
 
 PRINT '== Patch end: journal management board columns ==';
+PRINT '== Patch begin: unique email constraint on dbo.Users.Email ==';
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'UX_Users_Email'
+      AND object_id = OBJECT_ID(N'dbo.Users')
+)
+BEGIN
+    -- 为 Email 创建唯一索引（仅对非 NULL 值生效），保证同一邮箱只能注册一个账号
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Users_Email
+        ON dbo.Users(Email)
+        WHERE Email IS NOT NULL;
+    PRINT 'Created unique index UX_Users_Email on dbo.Users(Email).';
+END
+ELSE
+    PRINT 'Index UX_Users_Email already exists.';
+
+PRINT '== Patch end: unique email constraint on dbo.Users.Email ==';
+GO
+

@@ -17,6 +17,7 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 个人信息管理：
@@ -38,7 +39,7 @@ import java.sql.SQLException;
 public class ProfileServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
-    private static final String BASE_UPLOAD_DIR = "D:\\upload";   // 根目录
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();   // 根目录（与 src 同级的 upload 目录）
     private static final String PROFILE_SUB_DIR = "profile";       // 子目录
 
 
