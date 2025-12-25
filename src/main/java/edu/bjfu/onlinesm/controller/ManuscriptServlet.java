@@ -3,8 +3,6 @@ package edu.bjfu.onlinesm.controller;
 import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
 import edu.bjfu.onlinesm.util.DbUtil;
-import edu.bjfu.onlinesm.util.mail.MailNotifications;
-import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -23,7 +21,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 投稿/稿件列表/详情控制器
@@ -41,11 +38,9 @@ import edu.bjfu.onlinesm.util.UploadPathUtil;
 @MultipartConfig
 public class ManuscriptServlet extends HttpServlet {
 
-    private final UserDAO userDAO = new UserDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
-    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
-    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final UserDAO userDAO = new UserDAO();
 
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
@@ -53,7 +48,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
-    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
+    private static final String UPLOAD_BASE_DIR = "D:\\upload";
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
     @Override
@@ -352,6 +347,7 @@ public class ManuscriptServlet extends HttpServlet {
 
             // 版本文件
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
+            Part coverFile = safeGetPart(req, "coverFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             // 作者列表冗余字段
@@ -403,8 +399,20 @@ public class ManuscriptServlet extends HttpServlet {
                 // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
                 String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
 
-                // Cover Letter 富文本直接存储到数据库字段
-                String coverLetterHtmlToSave = coverLetterHtml;
+
+                String coverPath = null;
+                String remark = null;
+                if (coverFile != null && coverFile.getSize() > 0) {
+                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
+                }
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
+                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
+                    if (coverPath == null) {
+                        coverPath = htmlPath;
+                    } else {
+                        remark = "CoverLetterHtml=" + htmlPath;
+                    }
+                }
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -414,19 +422,22 @@ public class ManuscriptServlet extends HttpServlet {
                     if (fileAnonymousPath == null || fileAnonymousPath.trim().isEmpty()) {
                         fileAnonymousPath = prevCurrent.getFileAnonymousPath();
                     }
-                    // 如果没有新的 Cover Letter 内容，沿用上一版
-                    if (coverLetterHtmlToSave == null || coverLetterHtmlToSave.trim().isEmpty()) {
-                        coverLetterHtmlToSave = prevCurrent.getCoverLetterHtml();
+                    if (coverPath == null || coverPath.trim().isEmpty()) {
+                        coverPath = prevCurrent.getCoverLetterPath();
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
                     }
+                    if (remark == null || remark.trim().isEmpty()) {
+                        remark = prevCurrent.getRemark();
+                    }
                 }
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterHtml(coverLetterHtmlToSave);
+                v.setCoverLetterPath(coverPath);
+                v.setRemark(remark);
 
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
@@ -437,12 +448,7 @@ public class ManuscriptServlet extends HttpServlet {
             String msg;
             String group;
             if (isFinalSubmit) {
-                String code = genManuscriptCode(manuscriptId);
-                msg = "投稿已提交，稿件 ID：" + code;
-                // 1.1 投稿提交成功：发送“投稿确认邮件”
-                mailNotifications.onSubmissionSuccess(current, m, code);
-                // 站内通知
-                inAppNotifications.onSubmissionSuccess(current, m, code);
+                msg = "投稿已提交，稿件 ID：" + genManuscriptCode(manuscriptId);
                 group = "processing";
             } else {
                 msg = "草稿已保存，可随时继续编辑。";
@@ -507,6 +513,7 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
+            Part coverFile = safeGetPart(req, "coverFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             try (Connection conn = DbUtil.getConnection()) {
@@ -545,12 +552,24 @@ public class ManuscriptServlet extends HttpServlet {
                 // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
                 String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
 
-                // Cover Letter 富文本直接存储到数据库字段
-                String coverLetterHtmlToSave = coverLetterHtml;
+                String coverPath = null;
+                String remark = null;
+                if (coverFile != null && coverFile.getSize() > 0) {
+                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
+                }
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
+                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
+                    if (coverPath == null) {
+                        coverPath = htmlPath;
+                    } else {
+                        remark = "CoverLetterHtml=" + htmlPath;
+                    }
+                }
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterHtml(coverLetterHtmlToSave);
+                v.setCoverLetterPath(coverPath);
+                v.setRemark(remark);
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -560,13 +579,15 @@ public class ManuscriptServlet extends HttpServlet {
                     if (v.getFileAnonymousPath() == null || v.getFileAnonymousPath().trim().isEmpty()) {
                         v.setFileAnonymousPath(prevCurrent.getFileAnonymousPath());
                     }
-                    // 如果没有新的 Cover Letter 内容，沿用上一版
-                    if (v.getCoverLetterHtml() == null || v.getCoverLetterHtml().trim().isEmpty()) {
-                        v.setCoverLetterHtml(prevCurrent.getCoverLetterHtml());
+                    if (v.getCoverLetterPath() == null || v.getCoverLetterPath().trim().isEmpty()) {
+                        v.setCoverLetterPath(prevCurrent.getCoverLetterPath());
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null || v.getResponseLetterPath().trim().isEmpty()) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
+                    }
+                    if (v.getRemark() == null || v.getRemark().trim().isEmpty()) {
+                        v.setRemark(prevCurrent.getRemark());
                     }
                 }
 

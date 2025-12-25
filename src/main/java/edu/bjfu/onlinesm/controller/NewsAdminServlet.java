@@ -18,7 +18,6 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 新闻 / 公告管理模块控制器。
@@ -38,7 +37,7 @@ public class NewsAdminServlet extends HttpServlet {
 
     private final NewsDAO newsDAO = new NewsDAO();
 
-    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
+    private static final String BASE_UPLOAD_DIR = "D:/upload";
     private static final String NEWS_SUB_DIR = "news";
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

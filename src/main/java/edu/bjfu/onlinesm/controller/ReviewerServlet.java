@@ -6,8 +6,7 @@ import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
-import edu.bjfu.onlinesm.util.mail.MailNotifications;
-import edu.bjfu.onlinesm.util.notify.InAppNotifications;
+import edu.bjfu.onlinesm.util.mail.MailNotifications; // 添加导入
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -27,9 +26,6 @@ public class ReviewerServlet extends HttpServlet {
 
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
-    private final UserDAO userDAO = new UserDAO();
-    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
-    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     // ==================== GET：页面展示 ====================
 
@@ -121,7 +117,7 @@ public class ReviewerServlet extends HttpServlet {
     /**
      * 审稿人接受审稿邀请：
      *  - 根据 reviewId 更新 dbo.Reviews.Status = 'ACCEPTED'；
-     *  - 接受后仍然停留在“待评审稿件列表”页面。
+     *  - 接受后仍然停留在"待评审稿件列表"页面。
      */
     private void handleAcceptInvitation(HttpServletRequest req,
                                         HttpServletResponse resp)
@@ -136,10 +132,6 @@ public class ReviewerServlet extends HttpServlet {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
             reviewDAO.acceptInvitation(reviewId, current.getUserId());
-            // 3.1 审稿人接受/拒绝邀请：通知编辑（按邮件实现）
-            mailNotifications.onReviewerResponded(reviewId, true);
-            // 站内通知
-            inAppNotifications.onReviewerResponded(reviewId, true);
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
@@ -151,25 +143,50 @@ public class ReviewerServlet extends HttpServlet {
     /**
      * 审稿人拒绝审稿邀请：
      *  - 根据 reviewId 将 dbo.Reviews.Status 更新为 'DECLINED'；
-     *  - 拒绝后同样返回“待评审稿件列表”，该记录将不再出现。
+     *  - 填写拒绝理由；
+     *  - 拒绝后同样返回"待评审稿件列表"，该记录将不再出现。
      */
     private void handleDeclineInvitation(HttpServletRequest req,
                                          HttpServletResponse resp)
             throws IOException, ServletException {
         String reviewIdStr = req.getParameter("reviewId");
+        String rejectionReason = req.getParameter("rejectionReason");
+        
         if (reviewIdStr == null) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少审稿记录 ID。");
             return;
+        }
+        
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            // 如果没有拒绝理由，可以提供一个默认值
+            rejectionReason = "时间冲突，无法审稿";
         }
 
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
-            reviewDAO.declineInvitation(reviewId, current.getUserId());
-            // 3.1 审稿人接受/拒绝邀请：通知编辑（按邮件实现）
-            mailNotifications.onReviewerResponded(reviewId, false);
-            // 站内通知
-            inAppNotifications.onReviewerResponded(reviewId, false);
+            
+            // 保存拒绝理由到数据库 - 现在传递3个参数
+            reviewDAO.declineInvitation(reviewId, current.getUserId(), rejectionReason.trim());
+            
+            // 发送邮件通知编辑
+            try {
+                // 创建邮件通知实例
+                MailNotifications notifications = new MailNotifications(new UserDAO(), new ManuscriptDAO(), reviewDAO);
+                // 发送拒绝邀请通知给编辑
+                notifications.onReviewerDeclined(reviewId);
+            } catch (Exception e) {
+                // 邮件发送失败不影响主流程，只记录日志
+                System.err.println("Failed to send declined invitation email: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // 简化：不在Servlet中通知编辑，可以改为异步处理或日志记录
+            System.out.println("审稿人 " + current.getFullName() + 
+                             " (ID: " + current.getUserId() + 
+                             ") 拒绝了审稿邀请 " + reviewId + 
+                             "，理由: " + rejectionReason);
+            
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
@@ -248,18 +265,18 @@ public class ReviewerServlet extends HttpServlet {
      * 历史评审记录（Status = SUBMITTED）。
      */
     private void handleHistory(HttpServletRequest req,
-                               HttpServletResponse resp)
-            throws ServletException, IOException {
-
+            HttpServletResponse resp)
+        throws ServletException, IOException {
+        
         User current = getCurrentUser(req);
         try {
-            List<Review> list =
-                    reviewDAO.findHistoryByReviewer(current.getUserId());
-            req.setAttribute("reviews", list);
-            req.getRequestDispatcher("/WEB-INF/jsp/reviewer/review_history.jsp")
-                    .forward(req, resp);
+        List<Review> list =
+         reviewDAO.findHistoryByReviewer(current.getUserId());
+        req.setAttribute("reviews", list);
+        req.getRequestDispatcher("/WEB-INF/jsp/reviewer/review_history.jsp")
+         .forward(req, resp);
         } catch (SQLException e) {
-            throw new ServletException("加载历史评审记录时数据库出错", e);
+        throw new ServletException("加载历史评审记录时数据库出错", e);
         }
     }
 
@@ -315,72 +332,84 @@ public class ReviewerServlet extends HttpServlet {
      * 审稿人提交评审意见。
      */
     private void handleSubmitReview(HttpServletRequest req,
-                                    HttpServletResponse resp)
-            throws ServletException, IOException {
-
+            HttpServletResponse resp)
+        throws ServletException, IOException {
+        
         User current = getCurrentUser(req);
-
+        
         String reviewIdStr = req.getParameter("reviewId");
         String recommendation = req.getParameter("recommendation");
-
-        // 给编辑的意见
+        
+        // 给编辑的意见（富文本）
         String confidentialToEditor = req.getParameter("confidentialToEditor");
+        
+        // 给作者的意见（富文本）
+        String commentsToAuthor = req.getParameter("commentsToAuthor");
+        // 兼容旧字段
+        if (commentsToAuthor == null || commentsToAuthor.trim().isEmpty()) {
+        commentsToAuthor = req.getParameter("content");
+        }
+        
+        // 隐藏的关键评价字段
         String keyEvaluation = req.getParameter("keyEvaluation");
-
-        // 给作者的意见
-        String commentsToAuthor = req.getParameter("content");
-
+        if (keyEvaluation == null) keyEvaluation = "";
+        
         // 多维评分
         String s1 = req.getParameter("scoreOriginality");
         String s2 = req.getParameter("scoreSignificance");
         String s3 = req.getParameter("scoreMethodology");
         String s4 = req.getParameter("scorePresentation");
-
-        if (reviewIdStr == null
-                || recommendation == null || recommendation.trim().isEmpty()
-                || commentsToAuthor == null || commentsToAuthor.trim().isEmpty()
-                || confidentialToEditor == null || confidentialToEditor.trim().isEmpty()
-                || keyEvaluation == null || keyEvaluation.trim().isEmpty()
-                || s1 == null || s2 == null || s3 == null || s4 == null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数（多维评分/给编辑意见/关键评价/给作者意见/推荐结论）。");
-            return;
+        String overallScoreStr = req.getParameter("score");  // 使用自动计算的总体分
+        
+        // 参数验证
+        if (reviewIdStr == null || recommendation == null || 
+        confidentialToEditor == null || commentsToAuthor == null ||
+        s1 == null || s2 == null || s3 == null || s4 == null) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数");
+        return;
         }
-
+        
         try {
-            int reviewId = Integer.parseInt(reviewIdStr);
-            Double scoreOriginality = Double.parseDouble(s1.trim());
-            Double scoreSignificance = Double.parseDouble(s2.trim());
-            Double scoreMethodology = Double.parseDouble(s3.trim());
-            Double scorePresentation = Double.parseDouble(s4.trim());
-
-            // 简单范围校验（前端也限制）：0~10
-            checkScoreRange(scoreOriginality);
-            checkScoreRange(scoreSignificance);
-            checkScoreRange(scoreMethodology);
-            checkScoreRange(scorePresentation);
-
-            Double scoreOverall = (scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation) / 4.0;
-
-            reviewDAO.submitReviewV2(
-                    reviewId,
-                    current.getUserId(),
-                    commentsToAuthor.trim(),
-                    confidentialToEditor.trim(),
-                    keyEvaluation.trim(),
-                    scoreOverall,
-                    scoreOriginality,
-                    scoreSignificance,
-                    scoreMethodology,
-                    scorePresentation,
-                    recommendation.trim());
-
-            resp.sendRedirect(req.getContextPath() + "/reviewer/history");
+        int reviewId = Integer.parseInt(reviewIdStr);
+        Double scoreOriginality = Double.parseDouble(s1.trim());
+        Double scoreSignificance = Double.parseDouble(s2.trim());
+        Double scoreMethodology = Double.parseDouble(s3.trim());
+        Double scorePresentation = Double.parseDouble(s4.trim());
+        Double scoreOverall = overallScoreStr != null ? 
+                 Double.parseDouble(overallScoreStr.trim()) : 
+                 (scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation) / 4.0;
+        
+        // 分数范围校验
+        checkScoreRange(scoreOriginality);
+        checkScoreRange(scoreSignificance);
+        checkScoreRange(scoreMethodology);
+        checkScoreRange(scorePresentation);
+        checkScoreRange(scoreOverall);
+        
+        // 提交评审
+        reviewDAO.submitReviewV2(
+                  reviewId,
+                current.getUserId(),
+                commentsToAuthor.trim(),          // 给作者的意见
+                confidentialToEditor.trim(),      // 给编辑的保密意见
+                keyEvaluation.trim(),             // 关键评价
+                scoreOverall,                     // 总体分
+                scoreOriginality,                 // 原创性评分
+                scoreSignificance,                // 重要性评分
+                scoreMethodology,                 // 方法学评分
+                scorePresentation,                // 呈现质量评分
+                recommendation.trim());           // 推荐结论
+        
+        // 清除本地草稿
+        req.getSession().setAttribute("successMsg", "评审意见已成功提交！");
+        resp.sendRedirect(req.getContextPath() + "/reviewer/history");
+        
         } catch (NumberFormatException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误（reviewId 或评分必须为数字）。");
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误：请确保评分为数字");
         } catch (IllegalArgumentException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         } catch (SQLException e) {
-            throw new ServletException("提交评审意见时数据库出错", e);
+        throw new ServletException("提交评审意见时数据库出错", e);
         }
     }
 

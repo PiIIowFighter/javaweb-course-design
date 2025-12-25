@@ -15,7 +15,7 @@ public class JournalPage implements Serializable {
     private String title;
     private String content;   // HTML（可包含 <p><ul> 等）
 
-    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 upload/journal/pages/ 下）
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/pages/ 下）
     private String coverImagePath;
     private String attachmentPath;
 

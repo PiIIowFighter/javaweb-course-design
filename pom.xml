@@ -87,28 +87,25 @@
     </dependency>
     
     <dependency>
-  	  <groupId>org.springframework.boot</groupId>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
-    
-
 
     <dependency>
         <groupId>org.apache.tomcat.embed</groupId>
         <artifactId>tomcat-embed-el</artifactId>
         <scope>provided</scope>
     </dependency>
-    
-    <!-- JavaMail API -->
-    <dependency>
-        <groupId>com.sun.mail</groupId>
-        <artifactId>javax.mail</artifactId>
-        <version>1.6.2</version>
-    </dependency>
-    
+
+    <!-- 修正：保留一个JavaMail依赖（移除重复，此版本适配JDK8+SpringBoot2.7） -->
+   <!-- 确保scope为compile，强制打包到WEB-INF/lib -->
+<dependency>
+    <groupId>com.sun.mail</groupId>
+    <artifactId>javax.mail</artifactId>
+    <version>1.6.2</version>
+    <scope>compile</scope> <!-- 显式声明，避免默认值被覆盖 -->
+</dependency>
   </dependencies>
-  
-  
 
   <build>
     <plugins>

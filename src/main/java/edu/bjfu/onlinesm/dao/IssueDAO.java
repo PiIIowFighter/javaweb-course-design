@@ -94,7 +94,7 @@ public class IssueDAO {
                 "m.Decision, m.FinalDecisionTime " +
                 "FROM dbo.IssueManuscripts im " +
                 "JOIN dbo.Manuscripts m ON m.ManuscriptId = im.ManuscriptId " +
-                "WHERE im.IssueId = ? AND m.IsArchived=0 AND m.IsWithdrawn=0 " +
+                "WHERE im.IssueId = ? " +
                 "ORDER BY im.OrderNo ASC, m.ManuscriptId DESC";
 
         List<Manuscript> list = new ArrayList<>();

@@ -46,6 +46,16 @@ public class Review implements Serializable {
     private Integer scoreMethodology;
     /** 打分表：表达/结构（0-10） */
     private Integer scorePresentation;
+    /** 打分表：实验设计/实施（0-10） */
+    private Integer scoreExperimentation;
+    /** 打分表：文献综述（0-10） */
+    private Integer scoreLiteratureReview;
+    /** 打分表：结论与讨论（0-10） */
+    private Integer scoreConclusions;
+    /** 打分表：学术诚信（0-10） */
+    private Integer scoreAcademicIntegrity;
+    /** 打分表：实用性/应用价值（0-10） */
+    private Integer scorePracticality;
 
     public int getReviewId() {
         return reviewId;
@@ -199,6 +209,46 @@ public class Review implements Serializable {
         this.scorePresentation = scorePresentation;
     }
 
+    public Integer getScoreExperimentation() {
+        return scoreExperimentation;
+    }
+
+    public void setScoreExperimentation(Integer scoreExperimentation) {
+        this.scoreExperimentation = scoreExperimentation;
+    }
+
+    public Integer getScoreLiteratureReview() {
+        return scoreLiteratureReview;
+    }
+
+    public void setScoreLiteratureReview(Integer scoreLiteratureReview) {
+        this.scoreLiteratureReview = scoreLiteratureReview;
+    }
+
+    public Integer getScoreConclusions() {
+        return scoreConclusions;
+    }
+
+    public void setScoreConclusions(Integer scoreConclusions) {
+        this.scoreConclusions = scoreConclusions;
+    }
+
+    public Integer getScoreAcademicIntegrity() {
+        return scoreAcademicIntegrity;
+    }
+
+    public void setScoreAcademicIntegrity(Integer scoreAcademicIntegrity) {
+        this.scoreAcademicIntegrity = scoreAcademicIntegrity;
+    }
+
+    public Integer getScorePracticality() {
+        return scorePracticality;
+    }
+
+    public void setScorePracticality(Integer scorePracticality) {
+        this.scorePracticality = scorePracticality;
+    }
+
 
     private String reviewerName;
     private String reviewerEmail;
@@ -218,5 +268,38 @@ public class Review implements Serializable {
     public void setReviewerEmail(String reviewerEmail) {
         this.reviewerEmail = reviewerEmail;
     }
+ // 添加稿件标题属性
+    private String manuscriptTitle;
+    
+    public String getManuscriptTitle() {
+        return manuscriptTitle;
+    }
+    
+    public void setManuscriptTitle(String manuscriptTitle) {
+        this.manuscriptTitle = manuscriptTitle;
+    }
+ // ====== 新增字段 ======
+    /** 拒绝理由 */
+    private String rejectionReason;
 
+    /** 拒绝时间 */
+    private LocalDateTime declinedAt;
+
+    // 在现有方法后添加 getter/setter
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public LocalDateTime getDeclinedAt() {
+        return declinedAt;
+    }
+
+    public void setDeclinedAt(LocalDateTime declinedAt) {
+        this.declinedAt = declinedAt;
+    }
 }

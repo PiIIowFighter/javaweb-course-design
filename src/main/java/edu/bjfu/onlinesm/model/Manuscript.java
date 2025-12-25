@@ -1,26 +1,8 @@
-package edu.bjfu.onlinesm.model;
+package edu.bjfu.onlinesm.model; // 必须补充包名
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 与 SQL Server 中 dbo.Manuscripts / dbo.ManuscriptVersions 对应的实体类（简化版）。
- *
- * 当前阶段包含投稿与“我的稿件列表”、审稿与终审决策所需的核心字段：
- *  - ManuscriptId
- *  - JournalId
- *  - SubmitterId
- *  - Title
- *  - Abstract（在 Java 中命名为 abstractText，可存 HTML）
- *  - Keywords
- *  - SubjectArea（研究主题）
- *  - FundingInfo（项目资助情况）
- *  - AuthorList（作者列表冗余字段，详细作者见 dbo.ManuscriptAuthors）
- *  - Status（在 Java 中命名为 currentStatus）
- *  - SubmitTime
- *  - Decision
- *  - FinalDecisionTime
- */
 public class Manuscript implements Serializable {
 
     private Integer manuscriptId;
@@ -54,6 +36,31 @@ public class Manuscript implements Serializable {
     private Integer citationCount;
     private Double popularityScore;
 
+    // ========== 新增兼容方法 ==========
+    /**
+     * 兼容方法：获取用户ID
+     * 返回 submitterId，因为现有代码可能期望这个方法
+     */
+    public Integer getUserId() {
+        return submitterId;
+    }
+    
+    /**
+     * 兼容方法：设置用户ID
+     */
+    public void setUserId(Integer userId) {
+        this.submitterId = userId;
+    }
+    private Integer editorId;
+
+    public Integer getEditorId() {
+        return editorId;
+    }
+
+    public void setEditorId(Integer editorId) {
+        this.editorId = editorId;
+    }
+    // ========== 所有字段的getter/setter ==========
     public Integer getManuscriptId() {
         return manuscriptId;
     }

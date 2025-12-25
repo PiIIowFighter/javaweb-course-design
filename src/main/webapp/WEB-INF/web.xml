@@ -1,150 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
-                             http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
-         version="4.0">
-
-    <!-- Online_SMsystem4SP web.xml -->
-
-    <display-name>Online_SMsystem4SP</display-name>
-
-    <welcome-file-list>
-        <welcome-file>index.jsp</welcome-file>
-    </welcome-file-list>
-
-    <!-- 统一编码过滤器 -->
-    <filter>
-        <filter-name>encodingFilter</filter-name>
-        <filter-class>edu.bjfu.onlinesm.util.EncodingFilter</filter-class>
-    </filter>
-    <filter-mapping>
-        <filter-name>encodingFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-
-    <!-- 操作日志兜底过滤器：自动记录 POST/PUT/DELETE/PATCH 到 dbo.OperationLogs -->
-    <filter>
-        <filter-name>operationLogFilter</filter-name>
-        <filter-class>edu.bjfu.onlinesm.util.OperationLogFilter</filter-class>
-    </filter>
-    <filter-mapping>
-        <filter-name>operationLogFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-
-    <!-- 顶栏未读通知数：为已登录用户写入 requestScope.unreadNotificationCount -->
-    <filter>
-        <filter-name>notificationBadgeFilter</filter-name>
-        <filter-class>edu.bjfu.onlinesm.util.NotificationBadgeFilter</filter-class>
-    </filter>
-    <filter-mapping>
-        <filter-name>notificationBadgeFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-
-    <!-- 登录/注销 -->
-    <servlet>
-        <servlet-name>AuthServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.AuthServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>AuthServlet</servlet-name>
-        <url-pattern>/auth/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- 角色工作台（根据登录用户 roleCode 分发） -->
-    <servlet>
-        <servlet-name>DashboardServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.DashboardServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>DashboardServlet</servlet-name>
-        <url-pattern>/dashboard</url-pattern>
-    </servlet-mapping>
-
-    <!-- 用户管理（管理员/超级管理员） -->
-    <servlet>
-        <servlet-name>UserServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.UserServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>UserServlet</servlet-name>
-        <url-pattern>/admin/users/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- 稿件/投稿流程 -->
-    <servlet>
-        <servlet-name>ManuscriptServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.ManuscriptServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>ManuscriptServlet</servlet-name>
-        <url-pattern>/manuscripts/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- 通知中心（站内通知） -->
-    <servlet>
-        <servlet-name>NotificationServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.NotificationServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>NotificationServlet</servlet-name>
-        <url-pattern>/notifications</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>NotificationServlet</servlet-name>
-        <url-pattern>/notifications/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- 文件预览 -->
-    <servlet>
-        <servlet-name>FilePreviewServlet</servlet-name>
-        <servlet-class>edu.bjfu.onlinesm.controller.FilePreviewServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>FilePreviewServlet</servlet-name>
-        <url-pattern>/files/*</url-pattern>
-    </servlet-mapping>
-
-    <!-- 错误页面 -->
-    <error-page>
-        <error-code>404</error-code>
-        <location>/WEB-INF/jsp/error/404.jsp</location>
-    </error-page>
-    <error-page>
-        <error-code>500</error-code>
-        <location>/WEB-INF/jsp/error/500.jsp</location>
-    </error-page>
-
-    <!-- 静态资源 MIME 映射兜底 -->
-    <mime-mapping>
-        <extension>css</extension>
-        <mime-type>text/css</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>js</extension>
-        <mime-type>application/javascript</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>svg</extension>
-        <mime-type>image/svg+xml</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>woff</extension>
-        <mime-type>font/woff</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>woff2</extension>
-        <mime-type>font/woff2</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>ttf</extension>
-        <mime-type>font/ttf</mime-type>
-    </mime-mapping>
-    <mime-mapping>
-        <extension>eot</extension>
-        <mime-type>application/vnd.ms-fontobject</mime-type>
-    </mime-mapping>
-
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" version="4.0">
+  <display-name>Online_SMsystem4SP</display-name>
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+  <filter>
+    <filter-name>encodingFilter</filter-name>
+    <filter-class>edu.bjfu.onlinesm.util.EncodingFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>encodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <filter>
+    <filter-name>operationLogFilter</filter-name>
+    <filter-class>edu.bjfu.onlinesm.util.OperationLogFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>operationLogFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <servlet>
+    <servlet-name>AuthServlet</servlet-name>
+    <servlet-class>edu.bjfu.onlinesm.controller.AuthServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>AuthServlet</servlet-name>
+    <url-pattern>/auth/*</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>DashboardServlet</servlet-name>
+    <servlet-class>edu.bjfu.onlinesm.controller.DashboardServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>DashboardServlet</servlet-name>
+    <url-pattern>/dashboard</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>UserServlet</servlet-name>
+    <servlet-class>edu.bjfu.onlinesm.controller.UserServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>UserServlet</servlet-name>
+    <url-pattern>/admin/users/*</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>ManuscriptServlet</servlet-name>
+    <servlet-class>edu.bjfu.onlinesm.controller.ManuscriptServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ManuscriptServlet</servlet-name>
+    <url-pattern>/manuscripts/*</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>FilePreviewServlet</servlet-name>
+    <servlet-class>edu.bjfu.onlinesm.controller.FilePreviewServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>FilePreviewServlet</servlet-name>
+    <url-pattern>/files/*</url-pattern>
+  </servlet-mapping>
+  <error-page>
+    <error-code>404</error-code>
+    <location>/WEB-INF/jsp/error/404.jsp</location>
+  </error-page>
+  <error-page>
+    <error-code>500</error-code>
+    <location>/WEB-INF/jsp/error/500.jsp</location>
+  </error-page>
+  <mime-mapping>
+    <extension>css</extension>
+    <mime-type>text/css</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>js</extension>
+    <mime-type>application/javascript</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>svg</extension>
+    <mime-type>image/svg+xml</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>woff</extension>
+    <mime-type>font/woff</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>woff2</extension>
+    <mime-type>font/woff2</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>ttf</extension>
+    <mime-type>font/ttf</mime-type>
+  </mime-mapping>
+  <mime-mapping>
+    <extension>eot</extension>
+    <mime-type>application/vnd.ms-fontobject</mime-type>
+  </mime-mapping>
 </web-app>

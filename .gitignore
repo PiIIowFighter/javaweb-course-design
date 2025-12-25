@@ -23,22 +23,18 @@
 hs_err_pid*
 replay_pid*
 /.metadata/
-
-# ========== 新增忽略规则 ==========
-# Eclipse 工程配置文件/目录
+# Eclipse
 .classpath
 .project
 .settings/
-.metadata/  # 你提到的.metadata目录
 
-# Maven 构建产物目录（核心！避免提交编译后的文件）
+# Maven
 target/
 
-# IDEA 配置（可选，防止后续用IDEA时产生冲突）
-.idea/
-*.iml
-*.iws
-*.ipr
+# OS junk
+.DS_Store
+Thumbs.db
 
-# m2e-jee 自动生成的web资源（你的日志里出现的target/m2e-jee目录）
-target/m2e-jee/
+# Logs
+*.log
+
