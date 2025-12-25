@@ -4,6 +4,7 @@ import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
 import edu.bjfu.onlinesm.util.DbUtil;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -44,6 +45,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
@@ -439,6 +441,8 @@ public class ManuscriptServlet extends HttpServlet {
                 msg = "投稿已提交，稿件 ID：" + code;
                 // 1.1 投稿提交成功：发送“投稿确认邮件”
                 mailNotifications.onSubmissionSuccess(current, m, code);
+                // 站内通知
+                inAppNotifications.onSubmissionSuccess(current, m, code);
                 group = "processing";
             } else {
                 msg = "草稿已保存，可随时继续编辑。";

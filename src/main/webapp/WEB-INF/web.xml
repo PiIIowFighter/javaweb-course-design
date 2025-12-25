@@ -33,6 +33,16 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
+    <!-- 顶栏未读通知数：为已登录用户写入 requestScope.unreadNotificationCount -->
+    <filter>
+        <filter-name>notificationBadgeFilter</filter-name>
+        <filter-class>edu.bjfu.onlinesm.util.NotificationBadgeFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>notificationBadgeFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <!-- 登录/注销 -->
     <servlet>
         <servlet-name>AuthServlet</servlet-name>
@@ -71,6 +81,20 @@
     <servlet-mapping>
         <servlet-name>ManuscriptServlet</servlet-name>
         <url-pattern>/manuscripts/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- 通知中心（站内通知） -->
+    <servlet>
+        <servlet-name>NotificationServlet</servlet-name>
+        <servlet-class>edu.bjfu.onlinesm.controller.NotificationServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>NotificationServlet</servlet-name>
+        <url-pattern>/notifications</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>NotificationServlet</servlet-name>
+        <url-pattern>/notifications/*</url-pattern>
     </servlet-mapping>
 
     <!-- 文件预览 -->

@@ -1032,6 +1032,35 @@ END
 ELSE PRINT 'dbo.CallForPapers.AttachmentPath already exists';
 
 PRINT '== Patch end: journal management board columns ==';
+
+/*
+ * =========================
+ * Patch: Notifications (In-App)
+ * =========================
+ */
+IF OBJECT_ID('dbo.Notifications', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Notifications(
+        NotificationId INT IDENTITY(1,1) PRIMARY KEY,
+        RecipientUserId INT NOT NULL,
+        CreatedByUserId INT NULL,
+        Type NVARCHAR(20) NOT NULL DEFAULT N'SYSTEM',
+        Category NVARCHAR(50) NULL,
+        Title NVARCHAR(200) NOT NULL,
+        Content NVARCHAR(MAX) NULL,
+        RelatedManuscriptId INT NULL,
+        IsRead BIT NOT NULL DEFAULT 0,
+        ReadAt DATETIME2(0) NULL,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)
+    );
+
+    CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);
+    PRINT 'Created dbo.Notifications';
+END
+ELSE PRINT 'dbo.Notifications already exists';
+
+PRINT '== Patch end: notifications ==';
 PRINT '== Patch begin: unique email constraint on dbo.Users.Email ==';
 
 IF NOT EXISTS (
