@@ -18,7 +18,11 @@ public class Issue implements Serializable {
     private Integer year;
 
     private String guestEditors;
-    private String description;
+    private String description; // HTML allowed
+
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 upload/journal/issues/ 下）
+    private String coverImagePath;
+    private String attachmentPath;
 
     private Boolean published;
     private LocalDate publishDate;
@@ -93,6 +97,22 @@ public class Issue implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCoverImagePath() {
+        return coverImagePath;
+    }
+
+    public void setCoverImagePath(String coverImagePath) {
+        this.coverImagePath = coverImagePath;
+    }
+
+    public String getAttachmentPath() {
+        return attachmentPath;
+    }
+
+    public void setAttachmentPath(String attachmentPath) {
+        this.attachmentPath = attachmentPath;
     }
 
     public Boolean getPublished() {

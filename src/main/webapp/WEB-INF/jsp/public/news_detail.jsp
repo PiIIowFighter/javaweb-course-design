@@ -2,6 +2,7 @@
          contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
@@ -10,7 +11,11 @@
     <div class="card-header">
         <div>
             <h2 class="card-title"><c:out value="${news.title}"/></h2>
-            <p class="card-subtitle"><c:out value="${news.publishedAt}"/></p>
+            <p class="card-subtitle">
+                <c:if test="${news.publishedAt != null}">
+                    <c:out value="${fn:substring(news.publishedAt, 0, 10)}"/>
+                </c:if>
+            </p>
         </div>
         <div>
             <a class="btn" style="text-decoration:none;" href="${ctx}/news/list">

@@ -16,6 +16,7 @@ public class ManuscriptVersion implements Serializable {
     private String fileAnonymousPath;
     private String fileOriginalPath;
     private String coverLetterPath;
+    private String coverLetterHtml;
     private String responseLetterPath;
 
     private LocalDateTime createdAt;
@@ -76,6 +77,14 @@ public class ManuscriptVersion implements Serializable {
 
     public void setCoverLetterPath(String coverLetterPath) {
         this.coverLetterPath = coverLetterPath;
+    }
+
+    public String getCoverLetterHtml() {
+        return coverLetterHtml;
+    }
+
+    public void setCoverLetterHtml(String coverLetterHtml) {
+        this.coverLetterHtml = coverLetterHtml;
     }
 
     public String getResponseLetterPath() {

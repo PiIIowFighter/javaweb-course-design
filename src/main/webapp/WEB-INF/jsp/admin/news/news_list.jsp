@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
@@ -53,14 +54,14 @@
                 </td>
                 <td>
                     <c:choose>
-                        <c:when test="${n.published}">可见</c:when>
+                        <c:when test="${n.published}">已发布</c:when>
                         <c:otherwise>草稿</c:otherwise>
                     </c:choose>
                 </td>
                 <td>
                     <c:choose>
                         <c:when test="${n.publishedAt != null}">
-                            ${n.publishedAt}
+                            <c:out value="${fn:substring(n.publishedAt, 0, 10)}"/>
                         </c:when>
                         <c:otherwise>未设置</c:otherwise>
                     </c:choose>

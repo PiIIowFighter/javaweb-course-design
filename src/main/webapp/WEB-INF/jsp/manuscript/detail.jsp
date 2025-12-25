@@ -59,12 +59,12 @@
             <td><c:out value="${manuscript.decision}"/></td>
         </tr>
         <tr>
-            <th>附件</th>
+            <th>稿件</th>
             <td>
                 <c:if test="${not empty currentVersion}">
                     <!-- 手稿：审稿人默认查看匿名稿（由 /files/preview 内部根据角色选择文件路径） -->
                     <c:if test="${not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath}">
-                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">Manuscript 预览/下载</a>
+                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">稿件 预览/下载</a>
                     </c:if>
 
                     <!-- 匿名稿：若系统已生成匿名稿，可额外提供入口（工作人员也可用来核查匿名处理是否到位） -->
@@ -73,12 +73,8 @@
                         <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=anonymous">匿名稿 预览/下载</a>
                     </c:if>
 
-                    <!-- Cover/Response：审稿人通常不应看到 -->
+                    <!-- Response Letter：审稿人通常不应看到 -->
                     <c:if test="${sessionScope.currentUser.roleCode != 'REVIEWER'}">
-                        <c:if test="${not empty currentVersion.coverLetterPath}">
-                            <span style="margin-left:12px;"></span>
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">Cover Letter 预览/下载</a>
-                        </c:if>
                         <c:if test="${not empty currentVersion.responseLetterPath}">
                             <span style="margin-left:12px;"></span>
                             <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=response">Response Letter 预览/下载</a>
@@ -87,6 +83,26 @@
                 </c:if>
                 <c:if test="${empty currentVersion}">
                     暂无版本文件
+                </c:if>
+            </td>
+        </tr>
+        <tr>
+            <th>Cover Letter</th>
+            <td>
+                <c:if test="${sessionScope.currentUser.roleCode != 'REVIEWER'}">
+                    <c:choose>
+                        <c:when test="${not empty currentVersion and not empty currentVersion.coverLetterHtml}">
+                            <div style="border:1px solid #eee; padding:8px; min-height:60px; background:#fafafa;">
+                                <c:out value="${currentVersion.coverLetterHtml}" escapeXml="false"/>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            （未填写 Cover Letter）
+                        </c:otherwise>
+                    </c:choose>
+                </c:if>
+                <c:if test="${sessionScope.currentUser.roleCode == 'REVIEWER'}">
+                    （审稿人不可查看 Cover Letter）
                 </c:if>
             </td>
         </tr>
@@ -288,10 +304,10 @@
         </fieldset>
 
         <fieldset style="margin:12px 0;">
-            <legend><b>3. 文件上传</b></legend>
+            <legend><b>3. 稿件与 Cover Letter</b></legend>
 
             <p>
-                <label>上传修回后的手稿文件（可选）：</label>
+                <label>上传修回后的稿件（可选）：</label>
                 <input type="file" name="manuscriptFile" accept=".pdf,.doc,.docx"/>
                 <c:if test="${not empty currentVersion and not empty currentVersion.fileOriginalPath}">
                     <span style="margin-left:10px;">
@@ -301,19 +317,13 @@
             </p>
 
             <p>
-                <label>上传修回后的 Cover Letter（可选）：</label>
-                <input type="file" name="coverFile" accept=".pdf,.doc,.docx,.html,.htm"/>
-                <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterPath}">
-                    <span style="margin-left:10px;">
-                        当前版本：<a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">预览/下载</a>
-                    </span>
-                </c:if>
-            </p>
-
-            <p>
-                <label>Cover Letter（富文本，可选）：</label>
+                <label>Cover Letter（可选）：</label>
                 <div id="coverEditor2" contenteditable="true"
-                     style="border:1px solid #ccc; padding:8px; min-height:120px; background:#fff;"></div>
+                     style="border:1px solid #ccc; padding:8px; min-height:120px; background:#fff;">
+                    <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterHtml}">
+                        <c:out value="${currentVersion.coverLetterHtml}" escapeXml="false"/>
+                    </c:if>
+                </div>
                 <input type="hidden" id="coverHidden2" name="coverLetterHtml"/>
             </p>
         </fieldset>

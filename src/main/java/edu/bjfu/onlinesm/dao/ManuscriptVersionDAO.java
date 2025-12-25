@@ -16,7 +16,7 @@ public class ManuscriptVersionDAO {
      */
     public ManuscriptVersion findCurrentByManuscriptId(Connection conn, int manuscriptId) throws SQLException {
         String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, " +
-                "FileAnonymousPath, FileOriginalPath, CoverLetterPath, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
+                "FileAnonymousPath, FileOriginalPath, CoverLetterPath, CoverLetterHtml, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
                 "FROM dbo.ManuscriptVersions WHERE ManuscriptId = ? AND IsCurrent = 1 " +
                 "ORDER BY VersionNumber DESC, VersionId DESC";
 
@@ -32,7 +32,7 @@ public class ManuscriptVersionDAO {
     }
 
     public ManuscriptVersion findCurrentByManuscriptId(int manuscriptId) throws SQLException {
-        String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
+        String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, CoverLetterHtml, ResponseLetterPath, CreatedAt, CreatedBy, Remark " +
                 "FROM dbo.ManuscriptVersions WHERE ManuscriptId = ? AND IsCurrent = 1 ORDER BY VersionNumber DESC, VersionId DESC";
 
         try (Connection conn = DbUtil.getConnection();
@@ -57,8 +57,8 @@ public class ManuscriptVersionDAO {
 
     public ManuscriptVersion insert(Connection conn, ManuscriptVersion v) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptVersions " +
-                "(ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, ResponseLetterPath, CreatedAt, CreatedBy, Remark) " +
-                "VALUES (?,?,?,?,?,?,?,SYSUTCDATETIME(),?,?)";
+                "(ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, CoverLetterHtml, ResponseLetterPath, CreatedAt, CreatedBy, Remark) " +
+                "VALUES (?,?,?,?,?,?,?,?,SYSUTCDATETIME(),?,?)";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, v.getManuscriptId());
@@ -67,9 +67,10 @@ public class ManuscriptVersionDAO {
             ps.setString(4, v.getFileAnonymousPath());
             ps.setString(5, v.getFileOriginalPath());
             ps.setString(6, v.getCoverLetterPath());
-            ps.setString(7, v.getResponseLetterPath());
-            ps.setInt(8, v.getCreatedBy());
-            ps.setString(9, v.getRemark());
+            ps.setString(7, v.getCoverLetterHtml());
+            ps.setString(8, v.getResponseLetterPath());
+            ps.setInt(9, v.getCreatedBy());
+            ps.setString(10, v.getRemark());
 
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -90,6 +91,9 @@ public class ManuscriptVersionDAO {
         v.setFileAnonymousPath(rs.getString("FileAnonymousPath"));
         v.setFileOriginalPath(rs.getString("FileOriginalPath"));
         v.setCoverLetterPath(rs.getString("CoverLetterPath"));
+        try {
+            v.setCoverLetterHtml(rs.getString("CoverLetterHtml"));
+        } catch (SQLException ignored) {}
         v.setResponseLetterPath(rs.getString("ResponseLetterPath"));
         try {
             Timestamp ts = rs.getTimestamp("CreatedAt");

@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 @WebServlet(name = "NewsAttachmentServlet", urlPatterns = {"/news/attachment"})
 public class NewsAttachmentServlet extends HttpServlet {
@@ -17,7 +18,7 @@ public class NewsAttachmentServlet extends HttpServlet {
     private final NewsDAO newsDAO = new NewsDAO();
 
     // 与 NewsAdminServlet 中保持一致
-    private static final String BASE_UPLOAD_DIR = "D:/upload";
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
     private static final String NEWS_SUB_DIR = "news";
 
     @Override

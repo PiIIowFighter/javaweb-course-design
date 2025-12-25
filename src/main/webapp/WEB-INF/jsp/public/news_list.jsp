@@ -2,6 +2,7 @@
          contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
@@ -34,7 +35,7 @@
         <ul class="list">
             <c:forEach var="n" items="${newsList}">
                 <li class="list-item">
-                    <div class="muted"><c:out value="${n.publishedAt}"/></div>
+                    <div class="muted"><c:out value="${fn:substring(n.publishedAt, 0, 10)}"/></div>
                     <div>
                         <a href="${ctx}/news/detail?id=${n.newsId}"><c:out value="${n.title}"/></a>
                         <c:if test="${not empty n.attachmentPath}">

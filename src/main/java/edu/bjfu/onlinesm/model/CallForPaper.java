@@ -14,9 +14,14 @@ public class CallForPaper implements Serializable {
     private String title;
     private String content; // HTML allowed
 
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 upload/journal/calls/ 下）
+    private String coverImagePath;
+    private String attachmentPath;
+
     private LocalDate startDate;
     private LocalDate deadline;
     private LocalDate endDate;
+
     private Boolean published;
     private LocalDateTime createdAt;
 
@@ -50,6 +55,22 @@ public class CallForPaper implements Serializable {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getCoverImagePath() {
+        return coverImagePath;
+    }
+
+    public void setCoverImagePath(String coverImagePath) {
+        this.coverImagePath = coverImagePath;
+    }
+
+    public String getAttachmentPath() {
+        return attachmentPath;
+    }
+
+    public void setAttachmentPath(String attachmentPath) {
+        this.attachmentPath = attachmentPath;
     }
 
     public LocalDate getStartDate() {

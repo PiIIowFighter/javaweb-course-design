@@ -11,8 +11,10 @@
 <aside class="sidebar">
     <div class="card mini sidebar-user">
         <div class="media">
-            <div class="avatar" aria-hidden="true">
-                <i class="bi bi-person-circle"></i>
+            <div class="avatar">
+                <img src="${ctx}/profile/avatar"
+                     alt="用户头像"
+                     style="width: 100%; height: 100%; border-radius: 999px; object-fit: cover;"/>
             </div>
             <div>
                 <div class="sidebar-user-name">
