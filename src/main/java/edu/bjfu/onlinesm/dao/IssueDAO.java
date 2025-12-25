@@ -70,7 +70,7 @@ public class IssueDAO {
         String sql = "SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
                 "FROM dbo.IssueManuscripts im " +
                 "JOIN dbo.Manuscripts m ON m.ManuscriptId = im.ManuscriptId " +
-                "WHERE im.IssueId = ? " +
+                "WHERE im.IssueId = ? AND m.IsArchived=0 AND m.IsWithdrawn=0 " +
                 "ORDER BY im.OrderNo ASC, m.ManuscriptId DESC";
 
         List<Manuscript> list = new ArrayList<>();

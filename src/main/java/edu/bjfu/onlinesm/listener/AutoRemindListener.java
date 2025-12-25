@@ -62,7 +62,7 @@ public class AutoRemindListener implements ServletContextListener {
                             notifications.onReviewerRemind(r.getReviewId());
 
                             // 2) 发成功后再更新提醒次数/时间
-                            reviewDAO.remind(r.getReviewId());
+                            reviewDAO.remindChecked(r.getReviewId());
 
                         } catch (Exception e) {
                             System.out.println("[AutoRemind] remind failed reviewId=" + r.getReviewId() + ": " + e.getMessage());
