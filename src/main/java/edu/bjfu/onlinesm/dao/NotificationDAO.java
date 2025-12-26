@@ -73,6 +73,30 @@ public class NotificationDAO {
         return list;
     }
 
+
+    /**
+     * 我发送的通知（用于“已发送”列表）。
+     */
+    public List<Notification> listByCreator(int createdByUserId, int limit) throws SQLException {
+        ensureTable();
+        if (limit <= 0) limit = 50;
+
+        String sql = "SELECT TOP " + limit + " NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt " +
+                "FROM dbo.Notifications WHERE CreatedByUserId=? " +
+                "ORDER BY CreatedAt DESC, NotificationId DESC";
+        List<Notification> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, createdByUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
     public int countUnread(int recipientUserId) throws SQLException {
         ensureTable();
         String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Notifications WHERE RecipientUserId=? AND IsRead=0";
