@@ -50,3 +50,5 @@
         <a href="${pageContext.request.contextPath}/admin/journals/list">返回列表</a>
     </p>
 </form>
+
+<jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

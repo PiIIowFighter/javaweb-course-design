@@ -170,6 +170,7 @@
                 </td>
                 <td>
                     <a href="${ctx}/manuscripts/detail?id=${m.manuscriptId}"><i class="bi bi-eye" aria-hidden="true"></i> 查看详情</a>
+                    <a style="margin-left:6px;" href="${ctx}/manuscripts/track?id=${m.manuscriptId}"><i class="bi bi-clock-history" aria-hidden="true"></i> 追踪状态</a>
                     <c:if test="${m.currentStatus == 'DRAFT'}">
                         <a style="margin-left:6px;" href="${ctx}/manuscripts/edit?id=${m.manuscriptId}"><i class="bi bi-pencil" aria-hidden="true"></i> 继续编辑</a>
                     </c:if>
