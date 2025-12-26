@@ -97,7 +97,22 @@ public class NotificationDAO {
         return list;
     }
 
-    public int countUnread(int recipientUserId) throws SQLException {
+    
+    public Notification findById(int notificationId) throws SQLException {
+        ensureTable();
+        String sql = "SELECT TOP 1 NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt " +
+                     "FROM dbo.Notifications WHERE NotificationId=?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, notificationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapRow(rs);
+            }
+        }
+        return null;
+    }
+
+public int countUnread(int recipientUserId) throws SQLException {
         ensureTable();
         String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Notifications WHERE RecipientUserId=? AND IsRead=0";
         try (Connection conn = DbUtil.getConnection();
