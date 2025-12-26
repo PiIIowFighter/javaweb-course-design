@@ -29,89 +29,90 @@
         </button>
 
         <nav id="primaryNav" class="nav" aria-label="主导航">
-            <a href="${pageContext.request.contextPath}/">
-                <i class="bi bi-house" aria-hidden="true"></i>
-                <span>首页</span>
-            </a>
+            <div class="nav-left">
+                <a href="${pageContext.request.contextPath}/">
+                    <i class="bi bi-house" aria-hidden="true"></i>
+                    <span>首页</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/publish">
-                <i class="bi bi-journals" aria-hidden="true"></i>
-                <span>论文发表</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/publish">
+                    <i class="bi bi-journals" aria-hidden="true"></i>
+                    <span>论文发表</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/issues?type=latest">
-                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-                <span>文章与专刊</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/issues?type=latest">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <span>文章与专刊</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/guide">
-                <i class="bi bi-book" aria-hidden="true"></i>
-                <span>用户指南</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/guide">
+                    <i class="bi bi-book" aria-hidden="true"></i>
+                    <span>用户指南</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/about/aims">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                <span>关于期刊</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/about/aims">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>关于期刊</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/news/list">
-                <i class="bi bi-newspaper" aria-hidden="true"></i>
-                <span>新闻</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/news/list">
+                    <i class="bi bi-newspaper" aria-hidden="true"></i>
+                    <span>新闻</span>
+                </a>
+            </div>
 
-            <c:choose>
-                <c:when test="${not empty sessionScope.currentUser}">
-                    <c:set var="currentRoleCode"
-                           value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
+            <div class="nav-right">
+                <c:choose>
+                    <c:when test="${not empty sessionScope.currentUser}">
+                        <c:set var="currentRoleCode"
+                               value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
 
-                    <a href="${pageContext.request.contextPath}/dashboard">
-                        <i class="bi bi-grid" aria-hidden="true"></i>
-                        <span>工作台</span>
-                    </a>
+                        <a href="${pageContext.request.contextPath}/dashboard">
+                            <i class="bi bi-grid" aria-hidden="true"></i>
+                            <span>工作台</span>
+                        </a>
 
-                    <c:if test="${currentRoleCode == 'AUTHOR'}">
-                        <a href="${pageContext.request.contextPath}/manuscripts/submit">
+                        <c:if test="${currentRoleCode == 'AUTHOR'}">
+                            <a class="nav-cta" href="${pageContext.request.contextPath}/manuscripts/submit">
+                                <i class="bi bi-upload" aria-hidden="true"></i>
+                                <span>提交论文</span>
+                            </a>
+                        </c:if>
+
+                        <a href="${pageContext.request.contextPath}/profile">
+                            <i class="bi bi-person" aria-hidden="true"></i>
+                            <span>个人信息</span>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/notifications"
+                           class="nav-icon-link" title="通知中心">
+                            <i class="bi bi-bell" aria-hidden="true"></i>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/auth/logout">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                            <span>退出（${sessionScope.currentUser.username}）</span>
+                        </a>
+                    </c:when>
+
+                    <c:otherwise>
+                        <a href="${pageContext.request.contextPath}/auth/login">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                            <span>登录</span>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/auth/register">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i>
+                            <span>注册</span>
+                        </a>
+
+                        <a class="nav-cta" href="${pageContext.request.contextPath}/auth/login">
                             <i class="bi bi-upload" aria-hidden="true"></i>
                             <span>提交论文</span>
                         </a>
-                    </c:if>
-
-                    <a href="${pageContext.request.contextPath}/profile">
-                        <i class="bi bi-person" aria-hidden="true"></i>
-                        <span>个人信息</span>
-                    </a>
-
-                    <a href="${pageContext.request.contextPath}/auth/logout">
-                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                        <span>退出（${sessionScope.currentUser.username}）</span>
-                    </a>
-                </c:when>
-
-                <c:otherwise>
-                    <a href="${pageContext.request.contextPath}/auth/login">
-                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                        <span>登录</span>
-                    </a>
-
-                    <a href="${pageContext.request.contextPath}/auth/register">
-                        <i class="bi bi-person-plus" aria-hidden="true"></i>
-                        <span>注册</span>
-                    </a>
-
-                    <a href="${pageContext.request.contextPath}/auth/login">
-                        <i class="bi bi-upload" aria-hidden="true"></i>
-                        <span>提交论文</span>
-                    </a>
-                </c:otherwise>
-            </c:choose>
-
-            <c:if test="${not empty sessionScope.currentUser}">
-    			<a href="${pageContext.request.contextPath}/notifications"
-       				class="nav-icon-link" title="通知中心">
-        				<i class="bi bi-bell" aria-hidden="true"></i>
-    			</a>
-			</c:if>
-
+                    </c:otherwise>
+                </c:choose>
+            </div>
         </nav>
     </div>
 </header>
