@@ -41,25 +41,32 @@
     String currentStatus = ((edu.bjfu.onlinesm.model.Manuscript)request.getAttribute("manuscript")).getCurrentStatus();
     int currentIndex = -1;
     boolean isFinalStatus = false;
+    boolean isReturnedStatus = false;
     
-    for (int i = 0; i < statusFlow.length; i++) {
-        if (statusFlow[i][0].equals(currentStatus)) {
-            currentIndex = i;
-            break;
+    // 检查是否是退回状态（RETURNED需要特殊处理，回退到SUBMITTED阶段）
+    if ("RETURNED".equals(currentStatus)) {
+        isReturnedStatus = true;
+        // RETURNED状态应该回退到SUBMITTED阶段（索引1）
+        currentIndex = 1;
+    } else {
+        // 检查是否在正常流程中
+        for (int i = 0; i < statusFlow.length; i++) {
+            if (statusFlow[i][0].equals(currentStatus)) {
+                currentIndex = i;
+                break;
+            }
         }
-    }
-    
-    // 检查是否是终态
-    for (String[] fs : finalStatuses) {
-        if (fs[0].equals(currentStatus)) {
+        
+        // 检查是否是终态（ACCEPTED, REJECTED, REVISION）
+        if ("ACCEPTED".equals(currentStatus) || "REJECTED".equals(currentStatus) || "REVISION".equals(currentStatus)) {
             isFinalStatus = true;
             currentIndex = statusFlow.length; // 表示已完成所有流程步骤
-            break;
         }
     }
     
     request.setAttribute("currentIndex", currentIndex);
     request.setAttribute("isFinalStatus", isFinalStatus);
+    request.setAttribute("isReturnedStatus", isReturnedStatus);
     request.setAttribute("currentStatusCode", currentStatus);
 %>
 
@@ -327,36 +334,58 @@
 
 /* 标签页 */
 .tab-buttons {
-    display: flex;
-    gap: var(--space-2);
-    margin-bottom: var(--space-5);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0;
+    display: inline-flex;
+    gap: 0;
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 0;
+    background: var(--surface);
+    overflow: visible;
+    position: relative;
+}
+
+.tab-buttons::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border);
+    z-index: 1;
 }
 
 .tab-btn {
-    padding: 12px 16px;
+    padding: 12px 24px;
     border: none;
-    background: none;
+    border-right: 1px solid var(--border);
+    background: transparent;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
     color: var(--muted);
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+    border-radius: 0;
+}
+
+.tab-btn:last-child {
+    border-right: none;
 }
 
 .tab-btn:hover {
-    color: var(--text);
+    color: var(--accent);
+    background: rgba(0, 90, 156, 0.06);
 }
 
 .tab-btn.active {
     color: var(--accent);
-    border-bottom-color: var(--accent);
-    font-weight: 500;
+    background: rgba(0, 90, 156, 0.1);
+    font-weight: 600;
 }
 
 .tab-content {
@@ -498,8 +527,9 @@
             <c:forEach var="step" items="${statusFlow}" varStatus="idx">
                 <div class="timeline-step 
                     <c:choose>
+                        <c:when test="${isReturnedStatus && idx.index >= currentIndex}">pending</c:when>
                         <c:when test="${idx.index < currentIndex}">completed</c:when>
-                        <c:when test="${idx.index == currentIndex && !isFinalStatus}">current</c:when>
+                        <c:when test="${idx.index == currentIndex && !isFinalStatus && !isReturnedStatus}">current</c:when>
                         <c:when test="${isFinalStatus}">completed</c:when>
                         <c:otherwise>pending</c:otherwise>
                     </c:choose>

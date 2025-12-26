@@ -1024,6 +1024,7 @@ public class ManuscriptServlet extends HttpServlet {
                         || "FORMAL_CHECK".equals(status)
                         || "FORMAT_CHECK".equals(status)
                         || "DESK_REVIEW_INITIAL".equals(status)
+                        || "TO_ASSIGN".equals(status)
                         || "WITH_EDITOR".equals(status)
                         || "REVIEWER_ASSIGNED".equals(status)
                         || "UNDER_REVIEW".equals(status)

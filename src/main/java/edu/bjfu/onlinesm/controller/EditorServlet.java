@@ -422,13 +422,7 @@ public class EditorServlet extends HttpServlet {
         // 2. 如果稿件当前还在 WITH_EDITOR，就顺便把稿件状态改为 UNDER_REVIEW（送外审）
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m != null && "WITH_EDITOR".equals(m.getCurrentStatus())) {
-            User current = (User) req.getSession().getAttribute("currentUser");
-            if (current != null) {
-                manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
-            } else {
-                // 如果没有当前用户，使用系统用户ID 1（通常是admin）
-                manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", 1, "送外审");
-            }
+            manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
         }
 
         // 回到“送外审稿件列表”
