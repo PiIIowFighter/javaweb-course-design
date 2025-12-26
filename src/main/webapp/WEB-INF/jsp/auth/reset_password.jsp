@@ -34,7 +34,7 @@
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input id="resetCode" type="text" name="resetCode"
                            value="${param.resetCode}" placeholder="6 位数字" maxlength="6"/>
-                    <button class="btn-secondary" type="submit" name="op" value="sendResetCode">
+                    <button class="btn-secondary otp-btn" type="submit" name="op" value="sendResetCode" data-otp-key="reset_email_code">
                         发送验证码
                     </button>
                     <button class="btn-primary" type="submit" name="op" value="verifyResetCode">

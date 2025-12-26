@@ -422,7 +422,7 @@ public class EditorServlet extends HttpServlet {
         // 2. 如果稿件当前还在 WITH_EDITOR，就顺便把稿件状态改为 UNDER_REVIEW（送外审）
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m != null && "WITH_EDITOR".equals(m.getCurrentStatus())) {
-            manuscriptDAO.updateStatus(manuscriptId, "UNDER_REVIEW");
+            manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
         }
 
         // 回到“送外审稿件列表”
@@ -497,12 +497,12 @@ public class EditorServlet extends HttpServlet {
 
         // 当稿件状态已进入 EDITOR_RECOMMENDATION（外审完成，可提交编辑建议），
         // 编辑提交建议后应推进到 FINAL_DECISION_PENDING，等待主编终审。
-        String sql = "UPDATE dbo.Manuscripts "
-                   + "SET Status = 'FINAL_DECISION_PENDING', "
-                   + "    Decision = ?, "
-                   + "    LastStatusTime = SYSUTCDATETIME() "
-                   + "WHERE ManuscriptId = ? AND Status = 'EDITOR_RECOMMENDATION'";
-
+        // 使用updateStatusWithHistory记录状态变更历史
+        manuscriptDAO.updateStatusWithHistory(manuscriptId, "FINAL_DECISION_PENDING", 
+                "EDITOR_RECOMMENDATION_SUBMIT", current.getUserId(), "编辑提交建议：" + decision);
+        
+        // 更新Decision字段
+        String sql = "UPDATE dbo.Manuscripts SET Decision = ? WHERE ManuscriptId = ?";
         try (java.sql.Connection conn = DbUtil.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, decision);
@@ -539,18 +539,19 @@ public class EditorServlet extends HttpServlet {
         switch (op) {
             case "start":
                 // SUBMITTED -> FORMAL_CHECK
-                manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "FORMAL_CHECK", "FORMAL_CHECK_START", current.getUserId(), "开始形式审查");
                 break;
             case "approve":
                 // FORMAL_CHECK -> DESK_REVIEW_INITIAL
-                manuscriptDAO.updateStatus(manuscriptId, "DESK_REVIEW_INITIAL");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "DESK_REVIEW_INITIAL", "FORMAL_CHECK_APPROVE", current.getUserId(), "形式审查通过");
                 break;
             case "return":
                 // SUBMITTED / FORMAL_CHECK -> RETURNED（退回作者修改格式）
-                manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
-                // 1.2 形式审查退回修改：自动邮件通知作者（问题列表/修改指南可选）
                 String issues = req.getParameter("issues");
                 String guideUrl = req.getParameter("guideUrl");
+                String remark = (issues != null && !issues.trim().isEmpty()) ? "退回原因：" + issues : "形式审查退回";
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "RETURNED", "FORMAL_CHECK_RETURN", current.getUserId(), remark);
+                // 1.2 形式审查退回修改：自动邮件通知作者（问题列表/修改指南可选）
                 mailNotifications.onFormalCheckReturn(manuscriptId, issues, guideUrl);
                 // 站内通知
                 inAppNotifications.onFormalCheckReturn(manuscriptId, issues);
@@ -585,11 +586,12 @@ public class EditorServlet extends HttpServlet {
         switch (op) {
             case "deskAccept":
                 // DESK_REVIEW_INITIAL -> TO_ASSIGN
-                manuscriptDAO.updateStatus(manuscriptId, "TO_ASSIGN");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "TO_ASSIGN", "DESK_REVIEW_ACCEPT", current.getUserId(), "案头初审通过");
                 break;
             case "deskReject":
                 // DESK_REVIEW_INITIAL -> REJECTED
                 manuscriptDAO.deskReject(manuscriptId);
+                // deskReject方法内部已经记录了历史，这里不需要再记录
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
