@@ -5,7 +5,6 @@ import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.sql.*;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 
 /**
  * 稿件阶段时间戳 DAO
@@ -195,53 +194,53 @@ public class ManuscriptStageTimestampsDAO {
         ManuscriptStageTimestamps mst = new ManuscriptStageTimestamps();
         mst.setManuscriptId(rs.getInt("ManuscriptId"));
         
-        // 北京时间时区
-        ZoneId beijingZone = ZoneId.of("Asia/Shanghai");
-        
         Timestamp ts;
         
         ts = rs.getTimestamp("DraftCompletedAt");
-        if (ts != null) mst.setDraftCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setDraftCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("SubmittedAt");
-        if (ts != null) mst.setSubmittedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setSubmittedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("FormalCheckCompletedAt");
-        if (ts != null) mst.setFormalCheckCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setFormalCheckCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("DeskReviewInitialCompletedAt");
-        if (ts != null) mst.setDeskReviewInitialCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setDeskReviewInitialCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("ToAssignCompletedAt");
-        if (ts != null) mst.setToAssignCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setToAssignCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("WithEditorCompletedAt");
-        if (ts != null) mst.setWithEditorCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setWithEditorCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("UnderReviewCompletedAt");
-        if (ts != null) mst.setUnderReviewCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setUnderReviewCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("EditorRecommendationCompletedAt");
-        if (ts != null) mst.setEditorRecommendationCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setEditorRecommendationCompletedAt(convertUtcToBeijing(ts));
         
         ts = rs.getTimestamp("FinalDecisionPendingCompletedAt");
-        if (ts != null) mst.setFinalDecisionPendingCompletedAt(convertUtcToBeijing(ts, beijingZone));
+        if (ts != null) mst.setFinalDecisionPendingCompletedAt(convertUtcToBeijing(ts));
         
         return mst;
     }
     
     /**
      * 将UTC时间戳转换为北京时间的LocalDateTime
-     * @param ts UTC时间戳（从数据库读取，数据库存储的是UTC时间）
-     * @param beijingZone 北京时区
+     * SQL Server存储的是UTC时间，JDBC读取时可能已经转换为本地时区
+     * 这里显式地将时间戳视为UTC时间，然后转换为北京时间
+     * @param ts 时间戳（从数据库读取，数据库存储的是UTC时间）
      * @return 北京时间的LocalDateTime
      */
-    private java.time.LocalDateTime convertUtcToBeijing(Timestamp ts, ZoneId beijingZone) {
-        // Timestamp表示的是UTC时间点，先转换为UTC的ZonedDateTime
-        ZonedDateTime utcZoned = ts.toInstant().atZone(ZoneId.of("UTC"));
-        // 转换为北京时间
-        ZonedDateTime beijingZoned = utcZoned.withZoneSameInstant(beijingZone);
-        // 返回LocalDateTime（不包含时区信息，但已经是北京时间）
-        return beijingZoned.toLocalDateTime();
+    private java.time.LocalDateTime convertUtcToBeijing(Timestamp ts) {
+        // 北京时间时区
+        ZoneId beijingZone = ZoneId.of("Asia/Shanghai");
+        // 将Timestamp转换为Instant（UTC时间点）
+        java.time.Instant instant = ts.toInstant();
+        // 将UTC时间点转换为北京时区的LocalDateTime
+        return instant.atZone(ZoneId.of("UTC"))
+                      .withZoneSameInstant(beijingZone)
+                      .toLocalDateTime();
     }
 }

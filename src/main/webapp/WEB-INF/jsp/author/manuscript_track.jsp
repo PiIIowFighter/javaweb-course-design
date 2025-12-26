@@ -189,8 +189,8 @@
 }
 
 .timeline-step.completed .timeline-node {
-    background: #16a34a;
-    border-color: #16a34a;
+    background: var(--accent);
+    border-color: var(--accent);
     color: #fff;
 }
 
@@ -198,7 +198,22 @@
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
-    box-shadow: 0 0 0 4px rgba(47, 111, 109, 0.2);
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 90, 156, 0.2), 
+                    0 0 0 0 rgba(0, 90, 156, 0.15);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(0, 90, 156, 0.1), 
+                    0 0 0 16px rgba(0, 90, 156, 0.05);
+    }
+    100% {
+        box-shadow: 0 0 0 12px rgba(0, 90, 156, 0), 
+                    0 0 0 24px rgba(0, 90, 156, 0);
+    }
 }
 
 .timeline-step.pending .timeline-node {

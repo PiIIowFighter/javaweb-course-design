@@ -317,30 +317,128 @@ public class ManuscriptServlet extends HttpServlet {
         // 获取状态变更历史
         List<ManuscriptStatusHistory> historyList = statusHistoryDAO.findByManuscriptId(manuscriptId);
         
-        // 如果历史记录为空，根据当前状态和提交时间生成基础记录
-        if (historyList.isEmpty() && m.getSubmitTime() != null) {
-            // 创建一个虚拟的初始记录用于显示
-            ManuscriptStatusHistory initial = new ManuscriptStatusHistory();
-            initial.setManuscriptId(manuscriptId);
-            initial.setToStatus(m.getCurrentStatus());
-            initial.setChangeTime(m.getSubmitTime());
-            initial.setEvent("SUBMIT");
-            historyList.add(initial);
-        }
+        // 获取阶段时间戳数据
+        ManuscriptStageTimestamps stageTimestamps = stageTimestampsDAO.findByManuscriptId(manuscriptId);
+        
+        // 从ManuscriptStageTimestamps生成完整的历史记录
+        List<ManuscriptStatusHistory> completeHistoryList = buildCompleteHistoryList(
+                manuscriptId, historyList, stageTimestamps, m);
+        
+        // 按时间排序
+        completeHistoryList.sort((h1, h2) -> {
+            if (h1.getChangeTime() == null && h2.getChangeTime() == null) return 0;
+            if (h1.getChangeTime() == null) return 1;
+            if (h2.getChangeTime() == null) return -1;
+            return h1.getChangeTime().compareTo(h2.getChangeTime());
+        });
 
         // 获取预计审稿周期
         String estimatedCycle = statusHistoryDAO.getEstimatedReviewCycle(m.getCurrentStatus());
-        
-        // 获取阶段时间戳数据
-        ManuscriptStageTimestamps stageTimestamps = stageTimestampsDAO.findByManuscriptId(manuscriptId);
 
         req.setAttribute("manuscript", m);
-        req.setAttribute("historyList", historyList);
+        req.setAttribute("historyList", completeHistoryList);
         req.setAttribute("estimatedCycle", estimatedCycle);
         req.setAttribute("stageTimestamps", stageTimestamps);
         req.setAttribute("currentStatusDesc", ManuscriptStatusHistory.getStatusDescription(m.getCurrentStatus()));
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_track.jsp").forward(req, resp);
+    }
+    
+    /**
+     * 从ManuscriptStageTimestamps生成完整的历史记录列表
+     * 结合数据库中的历史记录和时间戳数据，生成完整的状态变更历史
+     */
+    private List<ManuscriptStatusHistory> buildCompleteHistoryList(
+            int manuscriptId,
+            List<ManuscriptStatusHistory> dbHistoryList,
+            ManuscriptStageTimestamps stageTimestamps,
+            Manuscript manuscript) {
+        
+        List<ManuscriptStatusHistory> completeList = new ArrayList<>();
+        
+        // 定义状态流程顺序
+        String[] statusFlow = {
+            "DRAFT", "SUBMITTED", "FORMAL_CHECK", "DESK_REVIEW_INITIAL",
+            "TO_ASSIGN", "WITH_EDITOR", "UNDER_REVIEW", 
+            "EDITOR_RECOMMENDATION", "FINAL_DECISION_PENDING"
+        };
+        
+        // 状态到事件类型的映射
+        Map<String, String> statusToEvent = new HashMap<>();
+        statusToEvent.put("DRAFT", "DRAFT_COMPLETED");
+        statusToEvent.put("SUBMITTED", "SUBMIT");
+        statusToEvent.put("FORMAL_CHECK", "FORMAL_CHECK_START");
+        statusToEvent.put("DESK_REVIEW_INITIAL", "FORMAL_CHECK_APPROVE");
+        statusToEvent.put("TO_ASSIGN", "DESK_REVIEW_ACCEPT");
+        statusToEvent.put("WITH_EDITOR", "ASSIGN_EDITOR");
+        statusToEvent.put("UNDER_REVIEW", "SEND_TO_REVIEW");
+        statusToEvent.put("EDITOR_RECOMMENDATION", "REVIEW_COMPLETED");
+        statusToEvent.put("FINAL_DECISION_PENDING", "EDITOR_RECOMMENDATION_SUBMIT");
+        
+        // 从时间戳生成历史记录
+        if (stageTimestamps != null) {
+            for (String status : statusFlow) {
+                LocalDateTime completedAt = stageTimestamps.getCompletedAtByStatus(status);
+                if (completedAt != null) {
+                    ManuscriptStatusHistory history = new ManuscriptStatusHistory();
+                    history.setManuscriptId(manuscriptId);
+                    history.setToStatus(status);
+                    history.setChangeTime(completedAt);
+                    history.setEvent(statusToEvent.getOrDefault(status, "STATUS_CHANGE"));
+                    history.setRemark("阶段完成");
+                    
+                    // 确定fromStatus（上一个状态）
+                    int currentIndex = -1;
+                    for (int i = 0; i < statusFlow.length; i++) {
+                        if (statusFlow[i].equals(status)) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+                    if (currentIndex > 0) {
+                        history.setFromStatus(statusFlow[currentIndex - 1]);
+                    }
+                    
+                    completeList.add(history);
+                }
+            }
+        }
+        
+        // 合并数据库中的历史记录（如果时间戳中没有对应记录）
+        // 使用Map来去重，以时间和状态为key
+        Map<String, ManuscriptStatusHistory> historyMap = new HashMap<>();
+        
+        // 先添加时间戳生成的记录
+        for (ManuscriptStatusHistory h : completeList) {
+            String key = h.getChangeTime() + "_" + h.getToStatus();
+            historyMap.put(key, h);
+        }
+        
+        // 再添加数据库中的记录（如果不存在相同时间和状态的记录）
+        for (ManuscriptStatusHistory h : dbHistoryList) {
+            if (h.getChangeTime() != null) {
+                String key = h.getChangeTime() + "_" + h.getToStatus();
+                if (!historyMap.containsKey(key)) {
+                    historyMap.put(key, h);
+                } else {
+                    // 如果存在，优先使用数据库中的记录（因为它有操作者信息）
+                    historyMap.put(key, h);
+                }
+            }
+        }
+        
+        // 如果没有历史记录，但稿件有提交时间，创建一个初始记录
+        if (historyMap.isEmpty() && manuscript.getSubmitTime() != null) {
+            ManuscriptStatusHistory initial = new ManuscriptStatusHistory();
+            initial.setManuscriptId(manuscriptId);
+            initial.setToStatus(manuscript.getCurrentStatus());
+            initial.setChangeTime(manuscript.getSubmitTime());
+            initial.setEvent("SUBMIT");
+            initial.setRemark("稿件提交");
+            historyMap.put(initial.getChangeTime() + "_" + initial.getToStatus(), initial);
+        }
+        
+        return new ArrayList<>(historyMap.values());
     }
 
     /**
