@@ -4,6 +4,9 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page import="edu.bjfu.onlinesm.model.ManuscriptStatusHistory" %>
+<%@ page import="edu.bjfu.onlinesm.model.ManuscriptStageTimestamps" %>
+<%@ page import="java.time.LocalDateTime" %>
+<%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
@@ -502,18 +505,24 @@
                     <div class="timeline-content">
                         <div class="timeline-title">${step[1]}</div>
                         <div class="timeline-status-code">${step[0]}</div>
-                        <%-- 显示该状态的时间（如果有历史记录） --%>
-                        <c:forEach var="h" items="${historyList}">
-                            <c:if test="${h.toStatus == step[0]}">
-                                <div class="timeline-time">
-                                    <i class="bi bi-calendar-event"></i>
-                                    <c:if test="${h.changeTime != null}">
-                                        <fmt:parseDate value="${h.changeTime}" pattern="yyyy-MM-dd'T'HH:mm" var="parsedTime" type="both"/>
-                                        <fmt:formatDate value="${parsedTime}" pattern="yyyy-MM-dd HH:mm"/>
-                                    </c:if>
-                                </div>
-                            </c:if>
-                        </c:forEach>
+                        <%-- 显示该阶段的完成时间（从 stageTimestamps 获取） --%>
+                        <%
+                            String statusCode = (String)((String[])pageContext.getAttribute("step"))[0];
+                            ManuscriptStageTimestamps timestamps = (ManuscriptStageTimestamps)request.getAttribute("stageTimestamps");
+                            LocalDateTime completedAt = null;
+                            if (timestamps != null) {
+                                completedAt = timestamps.getCompletedAtByStatus(statusCode);
+                            }
+                            if (completedAt != null) {
+                                String formattedTime = completedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                        %>
+                        <div class="timeline-time">
+                            <i class="bi bi-check-circle"></i>
+                            完成于 <%= formattedTime %>
+                        </div>
+                        <%
+                            }
+                        %>
                     </div>
                 </div>
             </c:forEach>

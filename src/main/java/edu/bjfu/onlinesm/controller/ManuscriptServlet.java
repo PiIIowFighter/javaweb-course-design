@@ -53,6 +53,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
+    private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
     private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
@@ -329,10 +330,14 @@ public class ManuscriptServlet extends HttpServlet {
 
         // 获取预计审稿周期
         String estimatedCycle = statusHistoryDAO.getEstimatedReviewCycle(m.getCurrentStatus());
+        
+        // 获取阶段时间戳数据
+        ManuscriptStageTimestamps stageTimestamps = stageTimestampsDAO.findByManuscriptId(manuscriptId);
 
         req.setAttribute("manuscript", m);
         req.setAttribute("historyList", historyList);
         req.setAttribute("estimatedCycle", estimatedCycle);
+        req.setAttribute("stageTimestamps", stageTimestamps);
         req.setAttribute("currentStatusDesc", ManuscriptStatusHistory.getStatusDescription(m.getCurrentStatus()));
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_track.jsp").forward(req, resp);

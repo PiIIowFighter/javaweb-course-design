@@ -1082,3 +1082,38 @@ ELSE
 PRINT '== Patch end: unique email constraint on dbo.Users.Email ==';
 GO
 
+
+/* ============================================================
+   稿件阶段时间戳表 ManuscriptStageTimestamps
+   用于记录每份稿件在各审稿阶段的完成时间
+   Created: 2025-12-26
+   ============================================================ */
+
+PRINT '== Patch begin: ManuscriptStageTimestamps ==';
+
+IF OBJECT_ID(N'dbo.ManuscriptStageTimestamps', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ManuscriptStageTimestamps (
+        ManuscriptId                    INT PRIMARY KEY,
+        DraftCompletedAt                DATETIME2(0) NULL,      -- 草稿编辑完成时间
+        SubmittedAt                     DATETIME2(0) NULL,      -- 已提交待处理完成时间
+        FormalCheckCompletedAt          DATETIME2(0) NULL,      -- 形式审查完成时间
+        DeskReviewInitialCompletedAt    DATETIME2(0) NULL,      -- 案头初筛完成时间
+        ToAssignCompletedAt             DATETIME2(0) NULL,      -- 待分配编辑完成时间
+        WithEditorCompletedAt           DATETIME2(0) NULL,      -- 编辑处理完成时间
+        UnderReviewCompletedAt          DATETIME2(0) NULL,      -- 外审完成时间
+        EditorRecommendationCompletedAt DATETIME2(0) NULL,      -- 编辑推荐意见完成时间
+        FinalDecisionPendingCompletedAt DATETIME2(0) NULL,      -- 待主编终审完成时间
+        
+        CONSTRAINT FK_MST_Manuscript 
+            FOREIGN KEY(ManuscriptId) 
+            REFERENCES dbo.Manuscripts(ManuscriptId)
+    );
+    
+    PRINT 'Created dbo.ManuscriptStageTimestamps';
+END
+ELSE
+    PRINT 'dbo.ManuscriptStageTimestamps already exists';
+
+PRINT '== Patch end: ManuscriptStageTimestamps ==';
+GO
