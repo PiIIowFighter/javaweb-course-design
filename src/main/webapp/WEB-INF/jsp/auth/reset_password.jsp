@@ -24,8 +24,18 @@
                 <input id="username" type="text" name="username" required placeholder="请输入用户名"/>
             </div>
             <div class="form-row">
-                <label for="email">注册邮箱</label>
-                <input id="email" type="email" name="email" placeholder="name@example.com"/>
+                <label for="resetCode">验证码</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="resetCode" type="text" name="resetCode"
+                           value="${param.resetCode}" placeholder="6 位数字" maxlength="6"/>
+                    <button class="btn-secondary otp-btn" type="submit" name="op" value="sendResetCode" data-otp-key="reset_email_code">
+                        发送验证码
+                    </button>
+                    <button class="btn-primary" type="submit" name="op" value="verifyResetCode">
+                        验证并下一步
+                    </button>
+                </div>
+                <small>首先点击“发送验证码”，收到邮件后在此输入验证码，再点击“验证并下一步”。</small>
             </div>
             <div class="actions">
                 <button class="btn-primary" type="submit">

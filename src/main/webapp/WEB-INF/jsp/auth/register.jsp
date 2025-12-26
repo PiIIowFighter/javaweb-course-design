@@ -27,15 +27,24 @@
             </div>
             <div class="form-row">
                 <label for="password">密码</label>
-                <input id="password" type="password" name="password" required placeholder="至少 8 位"/>
+                <input id="password" type="password" name="password"
+                       value="${param.password}" required placeholder="至少 8 位"/>
             </div>
             <div class="form-row">
                 <label for="confirmPassword">确认密码</label>
-                <input id="confirmPassword" type="password" name="confirmPassword" required placeholder="再次输入密码"/>
+                <input id="confirmPassword" type="password" name="confirmPassword"
+                       value="${param.confirmPassword}" required placeholder="再次输入密码"/>
             </div>
             <div class="form-row">
                 <label for="email">邮箱</label>
-                <input id="email" type="email" name="email" placeholder="name@example.com"/>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="email" type="email" name="email"
+                           value="${param.email}" placeholder="name@example.com" required/>
+                    <button class="btn-secondary otp-btn" type="submit" name="op" value="sendCode" data-otp-key="register_email_code">
+                        发送验证码
+                    </button>
+                </div>
+                <small>点击“发送验证码”后，请在 5 分钟内查看邮箱并填写下方验证码。</small>
             </div>
             <div class="form-row">
                 <label for="fullName">姓名</label>
