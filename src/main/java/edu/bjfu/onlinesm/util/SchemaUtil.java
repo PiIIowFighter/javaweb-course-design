@@ -90,7 +90,25 @@ public final class SchemaUtil {
                 "    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),\n" +
                 "    CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)\n" +
                 "  );\n" +
-                "  CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);\n" +
+                "END\n" +
+                "IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL\n" +
+                "BEGIN\n" +
+                "  IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Notifications_Recipient_Read' AND object_id=OBJECT_ID('dbo.Notifications'))\n" +
+                "  BEGIN\n" +
+                "    BEGIN TRY\n" +
+                "      CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);\n" +
+                "    END TRY\n" +
+                "    BEGIN CATCH\n" +
+                "    END CATCH\n" +
+                "  END\n" +
+                "  IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Notifications_CreatedBy' AND object_id=OBJECT_ID('dbo.Notifications'))\n" +
+                "  BEGIN\n" +
+                "    BEGIN TRY\n" +
+                "      CREATE INDEX IX_Notifications_CreatedBy ON dbo.Notifications(CreatedByUserId, CreatedAt DESC, NotificationId DESC);\n" +
+                "    END TRY\n" +
+                "    BEGIN CATCH\n" +
+                "    END CATCH\n" +
+                "  END\n" +
                 "END";
         exec(sql);
     }

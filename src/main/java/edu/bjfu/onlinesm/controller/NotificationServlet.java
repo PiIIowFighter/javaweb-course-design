@@ -6,6 +6,11 @@ import edu.bjfu.onlinesm.model.Notification;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.OperationLogger;
 
+import java.util.HashMap;
+import java.util.Map;
+
+
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -75,18 +80,33 @@ public class NotificationServlet extends HttpServlet {
 
     private void handleList(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException {
+
+        String box = trim(req.getParameter("box"));
+        if (box == null || box.isEmpty()) box = "inbox";
+        box = box.toLowerCase();
+
         try {
-            List<Notification> list = notificationDAO.listByRecipient(current.getUserId(), 80);
             int unread = notificationDAO.countUnread(current.getUserId());
-            req.setAttribute("notifications", list);
             req.setAttribute("unreadCount", unread);
             req.setAttribute("canSend", canSendManual(current));
+            req.setAttribute("box", box);
             req.setAttribute("pageTitle", "通知中心");
+
+            if ("sent".equals(box)) {
+                List<Notification> sent = notificationDAO.listByCreator(current.getUserId(), 80);
+                req.setAttribute("sentNotifications", sent);
+                req.setAttribute("recipientNameMap", buildRecipientNameMap(sent));
+            } else {
+                List<Notification> inbox = notificationDAO.listByRecipient(current.getUserId(), 80);
+                req.setAttribute("inboxNotifications", inbox);
+            }
+
             req.getRequestDispatcher("/WEB-INF/jsp/common/notifications.jsp").forward(req, resp);
         } catch (SQLException e) {
             throw new ServletException("读取通知失败", e);
         }
     }
+    
 
     private void handleMarkRead(HttpServletRequest req, HttpServletResponse resp, User current) throws IOException {
         Integer id = parseInt(req.getParameter("id"));
@@ -141,11 +161,35 @@ public class NotificationServlet extends HttpServlet {
         try {
             notificationDAO.create(recipientId, current.getUserId(), "MANUAL", "ADMIN", title, content, null);
             OperationLogger.log(req, "NOTIFICATION", "SEND_MANUAL", "发送通知给用户ID=" + recipientId + ", 标题=" + title);
-            resp.sendRedirect(req.getContextPath() + "/notifications?msg=" + url("已发送"));
+            resp.sendRedirect(req.getContextPath() + "/notifications?box=sent&msg=" + url("已发送"));
         } catch (SQLException e) {
             throw new ServletException("发送通知失败", e);
         }
     }
+    
+    private Map<Integer, String> buildRecipientNameMap(List<Notification> list) throws SQLException {
+        Map<Integer, String> map = new HashMap<>();
+        if (list == null) return map;
+
+        for (Notification n : list) {
+            if (n == null) continue;
+            Integer rid = n.getRecipientUserId();
+            if (rid == null) continue;
+            if (map.containsKey(rid)) continue;
+
+            User u = userDAO.findById(rid);
+            if (u == null) {
+                map.put(rid, String.valueOf(rid));
+                continue;
+            }
+            String name = u.getFullName();
+            if (name == null || name.trim().isEmpty()) name = u.getUsername();
+            if (name == null || name.trim().isEmpty()) name = String.valueOf(rid);
+            map.put(rid, name);
+        }
+        return map;
+    }
+
 
     private boolean canSendManual(User u) {
         if (u == null) return false;
