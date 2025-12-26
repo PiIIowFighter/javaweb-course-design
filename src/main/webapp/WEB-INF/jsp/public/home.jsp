@@ -217,7 +217,7 @@
                         <span class="avatar" aria-hidden="true"><i class="bi bi-newspaper"></i></span>
                         <div>
                             <div class="list-title">
-                                <a style="text-decoration:none;" href="${ctx}/news?view=detail&id=${n.newsId}">
+                                <a style="text-decoration:none;" href="${ctx}/news/detail?id=${n.newsId}">
                                     <c:out value="${n.title}"/>
                                 </a>
                             </div>

@@ -14,6 +14,7 @@
             <div class="avatar">
                 <img src="${ctx}/profile/avatar"
                      alt="用户头像"
+                     onerror="this.onerror=null;this.src='${ctx}/static/img/default-avatar.svg';"
                      style="width: 100%; height: 100%; border-radius: 999px; object-fit: cover;"/>
             </div>
             <div>

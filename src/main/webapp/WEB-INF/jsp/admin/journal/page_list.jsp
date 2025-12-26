@@ -62,3 +62,5 @@
         </tbody>
     </table>
 </c:if>
+
+<jsp:include page="/WEB-INF/jsp/common/footer.jsp" />
