@@ -118,6 +118,83 @@
         });
     })();
 
+
+
+    // Sidebar active link highlight (client-side, best-match)
+    (function () {
+        function normalizePath(p) {
+            if (!p) return '';
+            p = String(p).split('?')[0].split('#')[0];
+            p = p.replace(/\/+/g, '/');
+            if (p.length > 1) p = p.replace(/\/+$/, '');
+            // treat /list and /index as the same route root
+            p = p.replace(/\/(list|index)$/, '');
+            if (p.length > 1) p = p.replace(/\/+$/, '');
+            return p;
+        }
+
+        function pickBestSidebarLink() {
+            var sidebar = document.querySelector('.sidebar');
+            if (!sidebar) return null;
+
+            var links = sidebar.querySelectorAll('a.side-link[href]');
+            if (!links || links.length === 0) return null;
+
+            var cur = normalizePath(window.location.pathname);
+            var best = null;
+            var bestScore = -1;
+
+            for (var i = 0; i < links.length; i++) {
+                var a = links[i];
+                var href = a.getAttribute('href');
+                if (!href) continue;
+
+                var path = '';
+                try {
+                    path = normalizePath(new URL(href, window.location.origin).pathname);
+                } catch (e) {
+                    continue;
+                }
+                if (!path) continue;
+
+                var score = -1;
+                if (cur === path) {
+                    score = 10000 + path.length;
+                } else if (cur.indexOf(path + '/') === 0) {
+                    score = 5000 + path.length;
+                } else if (path.indexOf(cur + '/') === 0) {
+                    // fallback: current path is shorter than the link (rare)
+                    score = 1000 + cur.length;
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = a;
+                }
+            }
+
+            // only accept a match if we have a meaningful score
+            return bestScore > 0 ? best : null;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var best = pickBestSidebarLink();
+            if (!best) return;
+
+            var sidebar = document.querySelector('.sidebar');
+            if (!sidebar) return;
+
+            // remove "active" from all links to avoid double highlight (e.g. /notifications & /notifications/send)
+            var links = sidebar.querySelectorAll('a.side-link');
+            for (var i = 0; i < links.length; i++) {
+                links[i].classList.remove('active');
+                links[i].removeAttribute('aria-current');
+            }
+            best.classList.add('active');
+            best.setAttribute('aria-current', 'page');
+        });
+    })();
+
 </script>
 </body>
 </html>

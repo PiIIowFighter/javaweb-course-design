@@ -1117,3 +1117,32 @@ ELSE
 
 PRINT '== Patch end: ManuscriptStageTimestamps ==';
 GO
+
+PRINT '== Patch: EditorSuggestions (编辑建议 + 总结报告) ==';
+
+IF OBJECT_ID(N'dbo.EditorSuggestions', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EditorSuggestions (
+        ManuscriptId INT NOT NULL PRIMARY KEY,
+        EditorId INT NOT NULL,
+        Suggestion NVARCHAR(50) NOT NULL,
+        Summary NVARCHAR(MAX) NULL,
+        SubmittedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+
+        CONSTRAINT FK_EditorSuggestions_Manuscript FOREIGN KEY(ManuscriptId)
+            REFERENCES dbo.Manuscripts(ManuscriptId),
+
+        CONSTRAINT FK_EditorSuggestions_Editor FOREIGN KEY(EditorId)
+            REFERENCES dbo.Users(UserId)
+    );
+
+    CREATE INDEX IX_EditorSuggestions_EditorId ON dbo.EditorSuggestions(EditorId);
+
+    PRINT 'Created dbo.EditorSuggestions';
+END
+ELSE
+    PRINT 'dbo.EditorSuggestions already exists';
+
+PRINT '== Patch end: EditorSuggestions ==';
+GO

@@ -4,6 +4,8 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+
 <h2>终审 / 录用与退稿决策列表</h2>
 <p>此页面展示已经完成外审、进入编辑推荐或主编终审阶段的稿件：</p>
 <ul>
@@ -36,7 +38,31 @@
                 <td><c:out value="${m.title}"/></td>
                 <td><c:out value="${m.currentStatus}"/></td>
                 <td>
+                    <c:set var="s" value="${suggestionMap[m.manuscriptId]}"/>
                     <c:choose>
+                        <c:when test="${not empty s}">
+                            <div>
+                                <strong>编辑建议：</strong>
+                                <c:choose>
+                                    <c:when test="${s.suggestion == 'ACCEPT'}">Suggest Acceptance</c:when>
+                                    <c:when test="${s.suggestion == 'MINOR_REVISION'}">Suggest Acceptance after Minor Revision</c:when>
+                                    <c:when test="${s.suggestion == 'MAJOR_REVISION'}">Suggest Major Revision</c:when>
+                                    <c:when test="${s.suggestion == 'REJECT'}">Suggest Reject</c:when>
+                                    <c:otherwise><c:out value="${s.suggestion}"/></c:otherwise>
+                                </c:choose>
+                                <c:if test="${not empty s.editorName}">
+                                    （<c:out value="${s.editorName}"/>）
+                                </c:if>
+                            </div>
+                            <c:if test="${not empty s.summary}">
+                                <div style="max-width: 460px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <strong>总结：</strong><c:out value="${s.summary}"/>
+                                </div>
+                            </c:if>
+                            <div style="margin-top: 4px;">
+                                <a href="${ctx}/editor/recommend?manuscriptId=${m.manuscriptId}">查看编辑建议</a>
+                            </div>
+                        </c:when>
                         <c:when test="${not empty m.decision}">
                             <c:out value="${m.decision}"/>
                         </c:when>

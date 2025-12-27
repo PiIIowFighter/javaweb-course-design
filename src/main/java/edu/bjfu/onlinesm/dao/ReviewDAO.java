@@ -246,6 +246,41 @@ public class ReviewDAO {
         }
     }
 
+    /**
+     * 由编辑/主编解除尚未响应的审稿邀请：
+     * 将 Status 从 INVITED 标记为 DECLINED，便于重新邀请其他审稿人。
+     * （注意：DECLINED/EXPIRED 在流程推进逻辑中被视为“无效邀请”，不会阻塞稿件状态推进。）
+     */
+    public void cancelInvitation(int reviewId) throws SQLException {
+        String sql = "UPDATE dbo.Reviews SET Status = 'DECLINED' WHERE ReviewId = ? AND Status = 'INVITED'";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reviewId);
+            ps.executeUpdate();
+        }
+    }
+
+
+
+
+    /**
+     * 由编辑/主编解除审稿人（已邀请或已接受但未提交）。
+     * - 将 Status 标记为 CANCELED，便于与审稿人主动拒绝（DECLINED）区分；
+     * - 该状态不会阻塞稿件推进（推进逻辑只关注 INVITED/ACCEPTED）。
+     *
+     * @return 实际更新的行数（0=不满足条件或不存在）
+     */
+    public int cancelAssignment(int reviewId) throws SQLException {
+        String sql = "UPDATE dbo.Reviews SET Status = 'CANCELED', DueAt = NULL " +
+                "WHERE ReviewId = ? AND Status IN ('INVITED','ACCEPTED') AND SubmittedAt IS NULL";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reviewId);
+            return ps.executeUpdate();
+        }
+    }
+
+
     // ========================= 提交评审 =========================
 
     /** 基础提交（老功能）。 */

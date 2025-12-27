@@ -272,13 +272,61 @@ public class ManuscriptServlet extends HttpServlet {
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);
         req.setAttribute("reviews", reviewList);
 
-        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库
+        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库（支持搜索与推荐）
         String role = current.getRoleCode();
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
-            List<User> reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+
+            // 2.1 审稿人搜索条件（来自稿件详情页顶部的搜索表单）
+            String reviewerKeyword = req.getParameter("reviewerKeyword");
+            String minCompletedStr = req.getParameter("minCompleted");
+            String minAvgScoreStr  = req.getParameter("minAvgScore");
+
+            Integer minCompleted = null;
+            Integer minAvgScore  = null;
+            try {
+                if (minCompletedStr != null && !minCompletedStr.trim().isEmpty()) {
+                    minCompleted = Integer.parseInt(minCompletedStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+            try {
+                if (minAvgScoreStr != null && !minAvgScoreStr.trim().isEmpty()) {
+                    minAvgScore = Integer.parseInt(minAvgScoreStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+
+            boolean hasSearch = (reviewerKeyword != null && !reviewerKeyword.trim().isEmpty())
+                    || minCompleted != null
+                    || minAvgScore != null;
+
+            List<User> reviewerUsers;
+            if (hasSearch) {
+                // 根据搜索条件过滤审稿人库，最多返回 100 条，避免一次性加载过多
+                reviewerUsers = userDAO.searchReviewerPool(reviewerKeyword, minCompleted, minAvgScore, 100);
+            } else {
+                // 未填写任何搜索条件时，保持原有行为：加载全部 REVIEWER 列表
+                reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+            }
             req.setAttribute("reviewers", reviewerUsers);
+
+            // 2.2 简单推荐算法：根据稿件的研究主题 / 关键词，在 ResearchArea 中做一次关键词匹配
+            String suggestionKeyword = null;
+            if (m.getSubjectArea() != null && !m.getSubjectArea().trim().isEmpty()) {
+                suggestionKeyword = m.getSubjectArea().split("[,;，； ]")[0];
+            } else if (m.getKeywords() != null && !m.getKeywords().trim().isEmpty()) {
+                suggestionKeyword = m.getKeywords().split("[,;，； ]")[0];
+            }
+
+            if (suggestionKeyword != null && !suggestionKeyword.trim().isEmpty()) {
+                List<User> suggested = userDAO.searchReviewerPool(suggestionKeyword, 1, null, 5);
+                req.setAttribute("reviewerSuggestions", suggested);
+                req.setAttribute("reviewerSuggestionKeyword", suggestionKeyword);
+            }
         }
-        
+
         // 3）如果当前用户是编辑（或主编），加载最新一条主编给该编辑的指派建议
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
             ManuscriptAssignment chiefAssignment =
@@ -286,8 +334,43 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("chiefAssignment", chiefAssignment);
         }
 
+
+
+        // 4）与作者沟通历史（时间线）：复用 Notifications 表
+        NotificationDAO notificationDAO = new NotificationDAO();
+        List<Notification> authorMessages;
+        if ("AUTHOR".equals(role)) {
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", current.getUserId(), 200, true);
+        } else {
+            // 编辑/主编/编辑部管理员：查看全部沟通记录（包括抄送主编）
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", null, 200, true);
+        }
+
+        Map<Integer, User> authorMessageUserMap = new HashMap<>();
+        authorMessageUserMap.put(current.getUserId(), current);
+        if (m.getSubmitterId() != null) {
+            User au = userDAO.findById(m.getSubmitterId());
+            if (au != null) authorMessageUserMap.put(au.getUserId(), au);
+        }
+        for (Notification n : authorMessages) {
+            Integer cb = n.getCreatedByUserId();
+            if (cb != null && !authorMessageUserMap.containsKey(cb)) {
+                User u = userDAO.findById(cb);
+                if (u != null) authorMessageUserMap.put(cb, u);
+            }
+            int ru = n.getRecipientUserId();
+            if (!authorMessageUserMap.containsKey(ru)) {
+                User u = userDAO.findById(ru);
+                if (u != null) authorMessageUserMap.put(ru, u);
+            }
+        }
+
+        req.setAttribute("authorMessages", authorMessages);
+        req.setAttribute("authorMessageUserMap", authorMessageUserMap);
+
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
     }
+    
 
     /**
      * 追踪稿件状态：显示时间线视图和状态变更历史
