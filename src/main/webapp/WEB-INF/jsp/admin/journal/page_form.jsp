@@ -115,3 +115,5 @@
         return true;
     }
 </script>
+
+<jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

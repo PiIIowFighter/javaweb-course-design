@@ -7,11 +7,17 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+// 用于记录阶段时间戳
+import edu.bjfu.onlinesm.dao.ManuscriptStageTimestampsDAO;
+
 /**
  * 负责访问 dbo.Manuscripts 的简单 DAO，
  * 实现作者投稿和“我的稿件列表”等基础功能。
  */
 public class ManuscriptDAO {
+
+    // 阶段时间戳 DAO 实例
+    private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
 
     /**
      * 前台“Latest published”列表：用 ACCEPTED 状态近似已发表。
@@ -96,6 +102,10 @@ public class ManuscriptDAO {
         }
 
         m.setCurrentStatus(status);
+        
+        // 创建稿件后立即创建时间戳记录
+        stageTimestampsDAO.create(conn, m.getManuscriptId());
+        
         return m;
     }
 
@@ -107,6 +117,18 @@ public class ManuscriptDAO {
      * @param setSubmitTime 是否写入 SubmitTime（仅当原 SubmitTime 为空时写入）
      */
     public void updateMetadataAndStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
+        // 先获取当前状态，以便记录时间戳
+        String oldStatus = null;
+        String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+        try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+            ps.setInt(1, m.getManuscriptId());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    oldStatus = rs.getString("Status");
+                }
+            }
+        }
+        
         String sql = "UPDATE dbo.Manuscripts SET " +
                 "JournalId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
                 "Status = ?, " +
@@ -133,6 +155,11 @@ public class ManuscriptDAO {
         }
 
         m.setCurrentStatus(status);
+        
+        // 如果状态发生变化，记录时间戳
+        if (oldStatus != null && !oldStatus.equals(status)) {
+            stageTimestampsDAO.ensureAndUpdateStage(conn, m.getManuscriptId(), oldStatus);
+        }
     }
 
     /**
@@ -312,51 +339,500 @@ public class ManuscriptDAO {
     }
 
     /**
-     * 简单更新稿件状态，并刷新 LastStatusTime。
-     * 当前阶段不做复杂的状态机校验，由上层 Servlet 控制调用时机。
+     * 案头初审退稿：DESK_REVIEW_INITIAL -> REJECTED。
+     * 与“终审退稿”区分点：本操作不会写入 FinalDecisionTime。
      */
-    public void updateStatus(int manuscriptId, String newStatus) throws SQLException {
+    public void deskReject(int manuscriptId) throws SQLException {
         String sql = "UPDATE dbo.Manuscripts " +
-                "SET Status = ?, LastStatusTime = SYSUTCDATETIME() " +
-                "WHERE ManuscriptId = ?";
+                "SET Status = 'REJECTED', " +
+                "    Decision = 'REJECT', " +
+                "    FinalDecisionTime = NULL, " +
+                "    CurrentEditorId = NULL, " +
+                "    LastStatusTime = SYSUTCDATETIME() " +
+                "WHERE ManuscriptId = ? AND Status = 'DESK_REVIEW_INITIAL'";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newStatus);
-            ps.setInt(2, manuscriptId);
+            ps.setInt(1, manuscriptId);
             ps.executeUpdate();
         }
     }
 
     /**
+     * 主编特殊权限：更改案头初审决定。
+     * - deskAccept  -> Status=TO_ASSIGN
+     * - deskReject  -> Status=REJECTED (Decision='REJECT')
+     *
+     * 更改后：
+     * - 过期该稿件所有 INVITED/ACCEPTED 审稿记录（避免审稿人继续操作）
+     * - 写入 ManuscriptStatusHistory
+     */
+    public void changeDeskDecision(int manuscriptId, String deskOp, int changedBy, String reason) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                ManuscriptSnapshot snap = lockAndLoadSnapshot(conn, manuscriptId);
+                if (snap == null) {
+                    throw new IllegalStateException("未找到该稿件。");
+                }
+                if (snap.isArchived || snap.isWithdrawn) {
+                    throw new IllegalStateException("该稿件已归档/撤稿，无法更改决定。");
+                }
+                if (snap.finalDecisionTime != null) {
+                    throw new IllegalStateException("该稿件已做出终审决定（FinalDecisionTime 非空），不能按“初审决定”改判。");
+                }
+
+                String fromStatus = snap.status;
+                String toStatus;
+                String decision;
+
+                if ("deskAccept".equalsIgnoreCase(deskOp)) {
+                    toStatus = "TO_ASSIGN";
+                    decision = null;
+                } else if ("deskReject".equalsIgnoreCase(deskOp)) {
+                    toStatus = "REJECTED";
+                    decision = "REJECT";
+                } else {
+                    throw new IllegalStateException("不支持的 deskOp：" + deskOp);
+                }
+
+                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=NULL, CurrentEditorId=NULL, LastStatusTime=SYSUTCDATETIME() " +
+                        "WHERE ManuscriptId=? AND IsArchived=0 AND IsWithdrawn=0";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setString(1, toStatus);
+                    if (decision == null) ps.setNull(2, java.sql.Types.NVARCHAR);
+                    else ps.setString(2, decision);
+                    ps.setInt(3, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                expireActiveReviews(conn, manuscriptId);
+                insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "CHANGE_DESK_DECISION", changedBy, reason);
+                
+                // 记录阶段完成时间戳
+                stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
+
+                conn.commit();
+            } catch (RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * 主编特殊权限：更改终审决定（仅对已做出终审决定的稿件）。
+     * - accept   -> ACCEPTED (Decision='ACCEPT')
+     * - reject   -> REJECTED (Decision='REJECT')
+     * - revision -> REVISION (Decision='REVISION')
+     */
+    public void changeFinalDecision(int manuscriptId, String finalOp, int changedBy, String reason) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                ManuscriptSnapshot snap = lockAndLoadSnapshot(conn, manuscriptId);
+                if (snap == null) {
+                    throw new IllegalStateException("未找到该稿件。");
+                }
+                if (snap.isArchived || snap.isWithdrawn) {
+                    throw new IllegalStateException("该稿件已归档/撤稿，无法更改决定。");
+                }
+                if (snap.finalDecisionTime == null || !("ACCEPTED".equals(snap.status) || "REJECTED".equals(snap.status) || "REVISION".equals(snap.status))) {
+                    throw new IllegalStateException("该稿件尚未形成终审决定，不能使用“更改终审决定”。");
+                }
+
+                String fromStatus = snap.status;
+                String toStatus;
+                String decision;
+
+                if ("accept".equalsIgnoreCase(finalOp)) {
+                    toStatus = "ACCEPTED";
+                    decision = "ACCEPT";
+                } else if ("reject".equalsIgnoreCase(finalOp)) {
+                    toStatus = "REJECTED";
+                    decision = "REJECT";
+                } else if ("revision".equalsIgnoreCase(finalOp)) {
+                    toStatus = "REVISION";
+                    decision = "REVISION";
+                } else {
+                    throw new IllegalStateException("不支持的 finalOp：" + finalOp);
+                }
+
+                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=SYSUTCDATETIME(), CurrentEditorId=NULL, LastStatusTime=SYSUTCDATETIME() " +
+                        "WHERE ManuscriptId=? AND IsArchived=0 AND IsWithdrawn=0";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setString(1, toStatus);
+                    ps.setString(2, decision);
+                    ps.setInt(3, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                expireActiveReviews(conn, manuscriptId);
+                insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "CHANGE_FINAL_DECISION", changedBy, reason);
+                
+                // 记录阶段完成时间戳
+                stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
+
+                conn.commit();
+            } catch (RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * 主编特殊权限：撤稿（课程口径：ACCEPTED 即视为已发表）。
+     *
+     * 说明：原本可按 Issues.IsPublished=1 + IssueManuscripts 关联判定“已发表”，
+     * 但本课程要求/系统口径调整为：Manuscripts.Status='ACCEPTED' 即视为已发表。
+     */
+    public void retractPublished(int manuscriptId, int changedBy, String reason) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                ManuscriptSnapshot snap = lockAndLoadSnapshot(conn, manuscriptId);
+                if (snap == null) {
+                    throw new IllegalStateException("未找到该稿件。");
+                }
+                if (snap.isArchived || snap.isWithdrawn) {
+                    throw new IllegalStateException("该稿件已归档/撤稿，不能重复撤稿。");
+                }
+                if (!"ACCEPTED".equalsIgnoreCase(snap.status)) {
+                    throw new IllegalStateException("仅已发表（ACCEPTED）稿件允许撤稿。");
+                }
+
+                String fromStatus = snap.status;
+                String toStatus = "ARCHIVED";
+
+                String updateSql = "UPDATE dbo.Manuscripts SET IsWithdrawn=1, IsArchived=1, Status='ARCHIVED', LastStatusTime=SYSUTCDATETIME() WHERE ManuscriptId=?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setInt(1, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                expireActiveReviews(conn, manuscriptId);
+                insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "RETRACT_PUBLISHED", changedBy, reason);
+                
+                // 记录阶段完成时间戳
+                stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
+
+                conn.commit();
+            } catch (RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    // ======== helpers (transaction scoped) ========
+
+    private static class ManuscriptSnapshot {
+        final String status;
+        final boolean isArchived;
+        final boolean isWithdrawn;
+        final Timestamp finalDecisionTime;
+
+        ManuscriptSnapshot(String status, boolean isArchived, boolean isWithdrawn, Timestamp finalDecisionTime) {
+            this.status = status;
+            this.isArchived = isArchived;
+            this.isWithdrawn = isWithdrawn;
+            this.finalDecisionTime = finalDecisionTime;
+        }
+    }
+
+    private ManuscriptSnapshot lockAndLoadSnapshot(Connection conn, int manuscriptId) throws SQLException {
+        String sql = "SELECT Status, IsArchived, IsWithdrawn, FinalDecisionTime FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ManuscriptSnapshot(
+                        rs.getString("Status"),
+                        rs.getBoolean("IsArchived"),
+                        rs.getBoolean("IsWithdrawn"),
+                        rs.getTimestamp("FinalDecisionTime")
+                );
+            }
+        }
+    }
+
+    private void expireActiveReviews(Connection conn, int manuscriptId) throws SQLException {
+        String sql = "UPDATE dbo.Reviews SET Status='EXPIRED' WHERE ManuscriptId=? AND Status IN ('INVITED','ACCEPTED')";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.executeUpdate();
+        }
+    }
+
+    private boolean isPublished(Connection conn, int manuscriptId) throws SQLException {
+        String sql = "SELECT TOP 1 1 FROM dbo.IssueManuscripts im JOIN dbo.Issues i ON i.IssueId = im.IssueId WHERE im.ManuscriptId = ? AND i.IsPublished = 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private void insertStatusHistory(Connection conn, int manuscriptId, String fromStatus, String toStatus, String event, int changedBy, String remark) throws SQLException {
+        String sql = "INSERT INTO dbo.ManuscriptStatusHistory (ManuscriptId, FromStatus, ToStatus, Event, ChangedBy, Remark) VALUES (?,?,?,?,?,?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.setString(2, fromStatus);
+            ps.setString(3, toStatus);
+            ps.setString(4, event);
+            ps.setInt(5, changedBy);
+            ps.setString(6, remark);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 简单更新稿件状态，并刷新 LastStatusTime。
+     * 当前阶段不做复杂的状态机校验，由上层 Servlet 控制调用时机。
+     * 同时记录阶段完成时间戳。
+     */
+    public void updateStatus(int manuscriptId, String newStatus) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+                
+                // 更新状态
+                String sql = "UPDATE dbo.Manuscripts " +
+                        "SET Status = ?, LastStatusTime = SYSUTCDATETIME() " +
+                        "WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, newStatus);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+                
+                // 如果状态发生变化，记录时间戳
+                if (oldStatus != null && !oldStatus.equals(newStatus)) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * 更新稿件状态并记录状态变更历史。
+     * @param manuscriptId 稿件ID
+     * @param newStatus 新状态
+     * @param event 事件类型
+     * @param changedBy 操作者用户ID
+     * @param remark 备注
+     */
+    public void updateStatusWithHistory(int manuscriptId, String newStatus, String event, int changedBy, String remark) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+
+                // 更新状态
+                String updateSql = "UPDATE dbo.Manuscripts SET Status = ?, LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setString(1, newStatus);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                // 记录历史
+                insertStatusHistory(conn, manuscriptId, oldStatus, newStatus, event, changedBy, remark);
+                
+                // 记录阶段完成时间戳
+                if (oldStatus != null) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
      * 为稿件分配责任编辑，并将状态变更为 WITH_EDITOR。
-     * 由主编在“待指派编辑”列表中调用。
+     * 由主编在"待指派编辑"列表中调用。
+     * 同时记录阶段完成时间戳。
      */
     public void assignEditor(int manuscriptId, int editorUserId) throws SQLException {
-        String sql = "UPDATE dbo.Manuscripts " +
-                "SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() " +
-                "WHERE ManuscriptId = ?";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, editorUserId);
-            ps.setInt(2, manuscriptId);
-            ps.executeUpdate();
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+                
+                // 更新状态和编辑
+                String sql = "UPDATE dbo.Manuscripts " +
+                        "SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() " +
+                        "WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, editorUserId);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+                
+                // 如果状态发生变化，记录时间戳
+                if (oldStatus != null && !oldStatus.equals("WITH_EDITOR")) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * 为稿件分配责任编辑并记录状态变更历史。
+     */
+    public void assignEditorWithHistory(int manuscriptId, int editorUserId, int changedBy, String remark) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+
+                // 更新状态和编辑
+                String updateSql = "UPDATE dbo.Manuscripts SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setInt(1, editorUserId);
+                    ps.setInt(2, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                // 记录历史
+                insertStatusHistory(conn, manuscriptId, oldStatus, "WITH_EDITOR", "ASSIGN_EDITOR", changedBy, remark);
+                
+                // 记录阶段完成时间戳
+                if (oldStatus != null) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
 
     /**
      * 更新终审决策：录用 / 退稿 / 修回。
      * 同时写入 Decision 字段，便于后续统计。
+     * 同时记录阶段完成时间戳。
      */
     public void updateFinalDecision(int manuscriptId, String decision, String newStatus) throws SQLException {
-        String sql = "UPDATE dbo.Manuscripts " +
-                "SET Status = ?, Decision = ?, FinalDecisionTime = SYSUTCDATETIME(), LastStatusTime = SYSUTCDATETIME() " +
-                "WHERE ManuscriptId = ?";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newStatus);
-            ps.setString(2, decision);
-            ps.setInt(3, manuscriptId);
-            ps.executeUpdate();
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            oldStatus = rs.getString("Status");
+                        }
+                    }
+                }
+                
+                // 更新状态
+                String sql = "UPDATE dbo.Manuscripts " +
+                        "SET Status = ?, Decision = ?, FinalDecisionTime = SYSUTCDATETIME(), LastStatusTime = SYSUTCDATETIME() " +
+                        "WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, newStatus);
+                    ps.setString(2, decision);
+                    ps.setInt(3, manuscriptId);
+                    ps.executeUpdate();
+                }
+                
+                // 如果状态发生变化，记录时间戳
+                if (oldStatus != null && !oldStatus.equals(newStatus)) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
 
@@ -413,6 +889,9 @@ public class ManuscriptDAO {
             ps.setInt(idx, m.getManuscriptId());
             ps.executeUpdate();
         }
+        
+        // 记录原状态的完成时间戳
+        stageTimestampsDAO.ensureAndUpdateStage(conn, m.getManuscriptId(), fromStatus);
     }
 
     /**

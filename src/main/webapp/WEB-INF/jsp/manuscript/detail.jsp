@@ -241,7 +241,6 @@
                 <button type="button" onclick="performAutoCheck()">执行自动检查</button>
                 <button type="button" onclick="autoDetermineResult()">自动判定结果</button>
                 <button type="submit" onclick="return confirm('确认提交形式审查结果？');">提交审查结果</button>
-                <button type="button" onclick="returnForRevision()">退回修改</button>
             </div>
         </form>
         

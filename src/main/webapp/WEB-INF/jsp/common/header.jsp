@@ -11,11 +11,12 @@
 
     <!-- Icons (Bootstrap Icons) -->
     <!-- 升级版本：避免部分图标类在旧版中不存在导致空白 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/main.css"/>
 </head>
-<body>
+<body class="${not empty sessionScope.currentUser ? 'authed' : ''}">
 <header class="site-header">
     <div class="container header-inner">
         <a class="brand" href="${pageContext.request.contextPath}/" aria-label="返回首页">
@@ -28,74 +29,90 @@
         </button>
 
         <nav id="primaryNav" class="nav" aria-label="主导航">
-            <a href="${pageContext.request.contextPath}/">
-                <i class="bi bi-house" aria-hidden="true"></i>
-                <span>首页</span>
-            </a>
+            <div class="nav-left">
+                <a href="${pageContext.request.contextPath}/">
+                    <i class="bi bi-house" aria-hidden="true"></i>
+                    <span>首页</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/publish">
-                <i class="bi bi-journals" aria-hidden="true"></i>
-                <span>论文发表</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/publish">
+                    <i class="bi bi-journals" aria-hidden="true"></i>
+                    <span>论文发表</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/issues?type=latest">
-                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-                <span>文章与专刊</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/issues?type=latest">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <span>文章与专刊</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/guide">
-                <i class="bi bi-book" aria-hidden="true"></i>
-                <span>用户指南</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/guide">
+                    <i class="bi bi-book" aria-hidden="true"></i>
+                    <span>用户指南</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/about/aims">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                <span>关于期刊</span>
-            </a>
+                <a href="${pageContext.request.contextPath}/about/aims">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>关于期刊</span>
+                </a>
 
-            <a href="${pageContext.request.contextPath}/news/list">
-                <i class="bi bi-newspaper" aria-hidden="true"></i>
-                <span>新闻</span>
-            </a>
-            <c:choose>
-                <c:when test="${not empty sessionScope.currentUser}">
-                                        <c:set var="currentRoleCode" value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
-<a href="${pageContext.request.contextPath}/dashboard">
-                        <i class="bi bi-grid" aria-hidden="true"></i>
-                        <span>工作台</span>
-                    </a>
+                <a href="${pageContext.request.contextPath}/news/list">
+                    <i class="bi bi-newspaper" aria-hidden="true"></i>
+                    <span>新闻</span>
+                </a>
+            </div>
 
-<c:if test="${currentRoleCode == 'AUTHOR'}">
-    <a href="${pageContext.request.contextPath}/manuscripts/submit">
-        <i class="bi bi-upload" aria-hidden="true"></i>
-        <span>提交论文</span>
-    </a>
-</c:if>
-<a href="${pageContext.request.contextPath}/profile">
-                        <i class="bi bi-person" aria-hidden="true"></i>
-                        <span>个人信息</span>
-                    </a>
-                    <a href="${pageContext.request.contextPath}/auth/logout">
-                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                        <span>退出（${sessionScope.currentUser.username}）</span>
-                    </a>
-                </c:when>
-                <c:otherwise>
-                    <a href="${pageContext.request.contextPath}/auth/login">
-                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                        <span>登录</span>
-                    </a>
-                    <a href="${pageContext.request.contextPath}/auth/register">
-                        <i class="bi bi-person-plus" aria-hidden="true"></i>
-                        <span>注册</span>
-                    </a>
+            <div class="nav-right">
+                <c:choose>
+                    <c:when test="${not empty sessionScope.currentUser}">
+                        <c:set var="currentRoleCode"
+                               value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
 
-                    <a href="${pageContext.request.contextPath}/auth/login">
-                        <i class="bi bi-upload" aria-hidden="true"></i>
-                        <span>提交论文</span>
-                    </a>
-                </c:otherwise>
-            </c:choose>
+                        <a href="${pageContext.request.contextPath}/dashboard">
+                            <i class="bi bi-grid" aria-hidden="true"></i>
+                            <span>工作台</span>
+                        </a>
+
+                        <c:if test="${currentRoleCode == 'AUTHOR'}">
+                            <a class="nav-cta" href="${pageContext.request.contextPath}/manuscripts/submit">
+                                <i class="bi bi-upload" aria-hidden="true"></i>
+                                <span>提交论文</span>
+                            </a>
+                        </c:if>
+
+                        <a href="${pageContext.request.contextPath}/profile">
+                            <i class="bi bi-person" aria-hidden="true"></i>
+                            <span>个人信息</span>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/notifications"
+                           class="nav-icon-link" title="通知中心">
+                            <i class="bi bi-bell" aria-hidden="true"></i>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/auth/logout">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                            <span>退出（${sessionScope.currentUser.username}）</span>
+                        </a>
+                    </c:when>
+
+                    <c:otherwise>
+                        <a href="${pageContext.request.contextPath}/auth/login">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                            <span>登录</span>
+                        </a>
+
+                        <a href="${pageContext.request.contextPath}/auth/register">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i>
+                            <span>注册</span>
+                        </a>
+
+                        <a class="nav-cta" href="${pageContext.request.contextPath}/auth/login">
+                            <i class="bi bi-upload" aria-hidden="true"></i>
+                            <span>提交论文</span>
+                        </a>
+                    </c:otherwise>
+                </c:choose>
+            </div>
         </nav>
     </div>
 </header>
@@ -106,21 +123,5 @@
             <div class="layout">
                 <jsp:include page="/WEB-INF/jsp/common/auth_sidebar.jsp"/>
                 <section class="content">
+                    <div class="content-inner">
         </c:if>
-
-
-<script>
-    function toggleNav() {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        nav.classList.toggle('nav-open');
-    }
-    // Close the menu when clicking outside (mobile)
-    document.addEventListener('click', function (e) {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        var toggle = document.querySelector('.nav-toggle');
-        var clickedInside = nav.contains(e.target) || (toggle && toggle.contains(e.target));
-        if (!clickedInside) nav.classList.remove('nav-open');
-    });
-</script>

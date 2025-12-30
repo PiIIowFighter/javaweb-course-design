@@ -9,10 +9,12 @@ import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.FormalCheckResult;
-import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
-import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.service.FormalCheckService;
 import edu.bjfu.onlinesm.service.PlagiarismCheckService;
+import edu.bjfu.onlinesm.util.OperationLogger;
+import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
+import edu.bjfu.onlinesm.util.mail.MailNotifications;
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -45,8 +47,9 @@ public class EditorServlet extends HttpServlet {
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
-    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
     private final FormalCheckService formalCheckService = new FormalCheckService();
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -266,12 +269,16 @@ public class EditorServlet extends HttpServlet {
 
         // 只展示与“决策/撤稿”相关的稿件，避免列表过大
         List<Manuscript> list = manuscriptDAO.findByStatuses(
-                "EDITOR_RECOMMENDATION",
-                "FINAL_DECISION_PENDING",
-                "REVISION",
-                "ACCEPTED",
-                "REJECTED"
-        );
+                        "DESK_REVIEW_INITIAL",
+                        "TO_ASSIGN",
+                        "WITH_EDITOR",
+                        "UNDER_REVIEW",
+                        "EDITOR_RECOMMENDATION",
+                        "FINAL_DECISION_PENDING",
+                        "REVISION",
+                        "ACCEPTED",
+                        "REJECTED"
+                );
         req.setAttribute("manuscripts", list);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_special.jsp")
                 .forward(req, resp);
@@ -321,6 +328,11 @@ public class EditorServlet extends HttpServlet {
                 case "/finalDecision":
                     // 主编终审：录用 / 退稿 / 要求修回
                     handleFinalDecisionPost(req, resp, current);
+                    break;
+
+                case "/special":
+                    // 主编特殊权限：更改初审/终审决定、撤稿（仅已发表）
+                    handleChiefSpecialPost(req, resp, current);
                     break;
 
                 case "/reviewers":
@@ -393,6 +405,17 @@ public class EditorServlet extends HttpServlet {
             dueAt = d.atTime(23, 59, 59);
         }
 
+        // 0. 基本状态校验：仅允许对 WITH_EDITOR 的稿件发起外审邀请
+        Manuscript mm = manuscriptDAO.findById(manuscriptId);
+        if (mm == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该稿件。");
+            return;
+        }
+        if (!"WITH_EDITOR".equals(mm.getCurrentStatus())) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该稿件当前状态不允许邀请审稿人（仅 WITH_EDITOR 可邀请）。");
+            return;
+        }
+
         // 1. 对每个选中的审稿人，插入一条 INVITED 记录
         for (String reviewerIdStr : reviewerIdParams) {
             int reviewerId = Integer.parseInt(reviewerIdStr.trim());
@@ -400,13 +423,15 @@ public class EditorServlet extends HttpServlet {
             // 2.1 邀请审稿人：发送“审稿邀请邮件”（带摘要与截止日期）
             if (reviewId > 0) {
                 mailNotifications.onReviewerInvited(reviewId);
+                // 站内通知
+                inAppNotifications.onReviewerInvited(reviewId);
             }
         }
 
         // 2. 如果稿件当前还在 WITH_EDITOR，就顺便把稿件状态改为 UNDER_REVIEW（送外审）
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m != null && "WITH_EDITOR".equals(m.getCurrentStatus())) {
-            manuscriptDAO.updateStatus(manuscriptId, "UNDER_REVIEW");
+            manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
         }
 
         // 回到“送外审稿件列表”
@@ -440,9 +465,11 @@ public class EditorServlet extends HttpServlet {
         int manuscriptId = Integer.parseInt(manuscriptIdStr);
 
         // 更新 dbo.Reviews.RemindCount / LastRemindedAt
-        reviewDAO.remind(reviewId);
+        reviewDAO.remindChecked(reviewId);
         // 2.2 催审：发送“催促邮件”给审稿人
         mailNotifications.onReviewerRemind(reviewId);
+        // 站内通知
+        inAppNotifications.onReviewerRemind(reviewId);
 
         // 催审后跳回该稿件在送外审列表，可按需改成 detail 页面
         resp.sendRedirect(req.getContextPath()
@@ -479,12 +506,12 @@ public class EditorServlet extends HttpServlet {
 
         // 当稿件状态已进入 EDITOR_RECOMMENDATION（外审完成，可提交编辑建议），
         // 编辑提交建议后应推进到 FINAL_DECISION_PENDING，等待主编终审。
-        String sql = "UPDATE dbo.Manuscripts "
-                   + "SET Status = 'FINAL_DECISION_PENDING', "
-                   + "    Decision = ?, "
-                   + "    LastStatusTime = SYSUTCDATETIME() "
-                   + "WHERE ManuscriptId = ?";
-
+        // 使用updateStatusWithHistory记录状态变更历史
+        manuscriptDAO.updateStatusWithHistory(manuscriptId, "FINAL_DECISION_PENDING", 
+                "EDITOR_RECOMMENDATION_SUBMIT", current.getUserId(), "编辑提交建议：" + decision);
+        
+        // 更新Decision字段
+        String sql = "UPDATE dbo.Manuscripts SET Decision = ? WHERE ManuscriptId = ?";
         try (java.sql.Connection conn = DbUtil.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, decision);
@@ -804,11 +831,12 @@ public class EditorServlet extends HttpServlet {
         switch (op) {
             case "deskAccept":
                 // DESK_REVIEW_INITIAL -> TO_ASSIGN
-                manuscriptDAO.updateStatus(manuscriptId, "TO_ASSIGN");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "TO_ASSIGN", "DESK_REVIEW_ACCEPT", current.getUserId(), "案头初审通过");
                 break;
             case "deskReject":
                 // DESK_REVIEW_INITIAL -> REJECTED
-                manuscriptDAO.updateFinalDecision(manuscriptId, "REJECT", "REJECTED");
+                manuscriptDAO.deskReject(manuscriptId);
+                // deskReject方法内部已经记录了历史，这里不需要再记录
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -855,6 +883,8 @@ public class EditorServlet extends HttpServlet {
 
         // 3.3 主编指派编辑：通知被指派编辑（按邮件实现）
         mailNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
+        // 站内通知
+        inAppNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
 
         resp.sendRedirect(req.getContextPath() + "/editor/toAssign");
     }
@@ -878,41 +908,22 @@ public class EditorServlet extends HttpServlet {
             return;
         }
 
-        int manuscriptId = Integer.parseInt(idStr);
+        int manuscriptId = Integer.parseInt(idStr.trim());
 
-        // 特殊权限操作需要读取当前状态做最基本校验
         Manuscript currentManuscript = manuscriptDAO.findById(manuscriptId);
         if (currentManuscript == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该稿件。");
             return;
         }
 
-        if ("rescind".equals(op)) {
-            // 撤销终审决定：仅允许对已做出最终决定的稿件操作
-            String st = currentManuscript.getCurrentStatus();
-            if (!"ACCEPTED".equals(st) && !"REJECTED".equals(st) && !"REVISION".equals(st)) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "只有已做出最终决定的稿件才可以撤销决策。");
-                return;
-            }
-            manuscriptDAO.rescindDecision(manuscriptId);
-            resp.sendRedirect(req.getContextPath() + "/editor/special");
+        // 终审列表页仅允许对待终审稿件作出终审决定。
+        // 改判/撤稿等“回滚/更改”行为统一走 /editor/special。
+        String st = currentManuscript.getCurrentStatus();
+        if (!("FINAL_DECISION_PENDING".equals(st) || "EDITOR_RECOMMENDATION".equals(st))) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该稿件当前状态不允许在终审列表页操作；如需改判/撤稿请到“主编特殊权限”页面。");
             return;
         }
 
-        if ("retract".equals(op)) {
-            // 撤稿：主编可对任意非归档稿件执行撤稿（归档 + 标记撤稿）
-            if ("ARCHIVED".equals(currentManuscript.getCurrentStatus())) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该稿件已经归档/撤稿，无需重复操作。");
-                return;
-            }
-            manuscriptDAO.retractManuscript(manuscriptId);
-            // 1.5 撤稿后通知作者（按邮件实现）
-            mailNotifications.onRetract(manuscriptId);
-            resp.sendRedirect(req.getContextPath() + "/editor/special");
-            return;
-        }
-
-        // 常规终审决策：Accept / Reject / Revision
         String decision;
         String newStatus;
         switch (op) {
@@ -937,7 +948,73 @@ public class EditorServlet extends HttpServlet {
         // 1.4 主编终审决策：通知作者（同时通知编辑）
         String decisionText = "accept".equals(op) ? "Accepted" : ("reject".equals(op) ? "Rejected" : "Revision Required");
         mailNotifications.onFinalDecision(manuscriptId, decisionText);
+        // 站内通知
+        inAppNotifications.onFinalDecision(manuscriptId, decisionText);
         resp.sendRedirect(req.getContextPath() + "/editor/finalDecision");
+    }
+
+    private void handleChiefSpecialPost(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws SQLException, IOException {
+
+        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以执行该操作。");
+            return;
+        }
+
+        String idStr = req.getParameter("manuscriptId");
+        String op = req.getParameter("op");
+        String reason = req.getParameter("reason");
+
+        if (idStr == null || op == null || reason == null || reason.trim().isEmpty()) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数（manuscriptId/op/reason）。");
+            return;
+        }
+
+        int manuscriptId = Integer.parseInt(idStr.trim());
+        String reasonText = reason.trim();
+
+        try {
+            if ("changeDesk".equals(op)) {
+                String deskOp = req.getParameter("deskOp");
+                if (deskOp == null || deskOp.trim().isEmpty()) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 deskOp 参数。");
+                    return;
+                }
+                manuscriptDAO.changeDeskDecision(manuscriptId, deskOp.trim(), current.getUserId(), reasonText);
+                OperationLogger.log(req, "EDITOR_CHIEF", "CHANGE_DESK_DECISION", "manuscriptId=" + manuscriptId + "; deskOp=" + deskOp + "; reason=" + reasonText);
+
+            } else if ("changeFinal".equals(op)) {
+                String finalOp = req.getParameter("finalOp");
+                if (finalOp == null || finalOp.trim().isEmpty()) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 finalOp 参数。");
+                    return;
+                }
+                manuscriptDAO.changeFinalDecision(manuscriptId, finalOp.trim(), current.getUserId(), reasonText);
+                OperationLogger.log(req, "EDITOR_CHIEF", "CHANGE_FINAL_DECISION", "manuscriptId=" + manuscriptId + "; finalOp=" + finalOp + "; reason=" + reasonText);
+
+                // 改判后同步通知作者（可按需要扩展通知编辑/审稿人）
+                String decisionText = "accept".equals(finalOp) ? "Accepted" : ("reject".equals(finalOp) ? "Rejected" : "Revision Required");
+                mailNotifications.onFinalDecision(manuscriptId, decisionText);
+                // 站内通知
+                inAppNotifications.onFinalDecision(manuscriptId, decisionText);
+
+            } else if ("retract".equals(op)) {
+                manuscriptDAO.retractPublished(manuscriptId, current.getUserId(), reasonText);
+                OperationLogger.log(req, "EDITOR_CHIEF", "RETRACT_PUBLISHED", "manuscriptId=" + manuscriptId + "; reason=" + reasonText);
+                mailNotifications.onRetract(manuscriptId);
+                // 站内通知
+                inAppNotifications.onRetract(manuscriptId);
+
+            } else {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
+                return;
+            }
+        } catch (IllegalStateException ex) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
+            return;
+        }
+
+        resp.sendRedirect(req.getContextPath() + "/editor/special");
     }
 
     /**
@@ -987,6 +1064,8 @@ public class EditorServlet extends HttpServlet {
             userDAO.createUserWithRole(u, "REVIEWER");
             // 4.1 主编“邀请新审稿人”：发送邀请邮件（含账号信息）
             mailNotifications.onInviteNewReviewer(u, password);
+            // 站内通知
+            inAppNotifications.onInviteNewReviewer(u);
 
         } else {
             // 审核 / 启用 / 禁用审稿人账号

@@ -39,6 +39,28 @@ public class UserDAO {
         return null;
     }
 
+
+    /**
+     * 按邮箱精确查询用户（用于“忘记密码”与注册时检查邮箱唯一性）。
+     */
+    public User findByEmail(String email) throws SQLException {
+        String sql = "SELECT u.UserId, u.Username, u.PasswordHash, u.Email, u.FullName, " +
+                     "u.Affiliation, u.ResearchArea, u.Status, r.RoleCode " +
+                     "FROM dbo.Users u JOIN dbo.Roles r ON u.RoleId = r.RoleId " +
+                     "WHERE u.Email = ?";
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * 查询所有用户，按 UserId 升序排列。
      */

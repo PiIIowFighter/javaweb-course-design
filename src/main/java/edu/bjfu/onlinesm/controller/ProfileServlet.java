@@ -5,6 +5,7 @@ import edu.bjfu.onlinesm.model.User;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import javax.servlet.ServletException;
@@ -17,6 +18,7 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 个人信息管理：
@@ -38,7 +40,7 @@ import java.sql.SQLException;
 public class ProfileServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
-    private static final String BASE_UPLOAD_DIR = "D:\\upload";   // 根目录
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();   // 根目录（与 src 同级的 upload 目录）
     private static final String PROFILE_SUB_DIR = "profile";       // 子目录
 
 
@@ -174,7 +176,8 @@ public class ProfileServlet extends HttpServlet {
         File dir = new File(BASE_UPLOAD_DIR, PROFILE_SUB_DIR);
         File file = findFileWithPrefix(dir, "user_" + current.getUserId() + "_avatar");
         if (file == null || !file.exists()) {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+            // 没有上传头像：返回默认头像（避免 <img> 显示 alt 文本“用户头像”）
+            streamDefaultAvatar(req, resp);
             return;
         }
 
@@ -198,7 +201,29 @@ public class ProfileServlet extends HttpServlet {
         }
     }
 
-    private void streamResume(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    
+    private void streamDefaultAvatar(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        resp.setContentType("image/svg+xml; charset=UTF-8");
+        // 避免浏览器缓存旧的 404 结果
+        resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        resp.setHeader("Pragma", "no-cache");
+        resp.setDateHeader("Expires", 0);
+
+        try (InputStream in = req.getServletContext().getResourceAsStream("/static/img/default-avatar.svg");
+             OutputStream out = resp.getOutputStream()) {
+            if (in == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) != -1) {
+                out.write(buf, 0, len);
+            }
+        }
+    }
+
+private void streamResume(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         User current = getCurrentUser(req);
         if (current == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
