@@ -40,7 +40,7 @@ public class JournalAdminServlet extends HttpServlet {
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
     // 与 NewsAdminServlet 保持一致
-    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String JOURNAL_SUB_DIR = "journal";
 
     @Override

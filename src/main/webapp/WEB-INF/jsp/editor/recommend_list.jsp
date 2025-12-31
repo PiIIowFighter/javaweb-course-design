@@ -4,21 +4,17 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>外审阶段稿件列表</h2>
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<p>
-    此页面仅展示 <strong>UNDER_REVIEW</strong>（外审进行中）的稿件。
-    已完成外审并进入 <strong>EDITOR_RECOMMENDATION</strong> 的稿件请到“提出建议”模块查看。
-</p>
+<h2>提出建议（编辑）</h2>
+<p>当稿件状态进入 <strong>EDITOR_RECOMMENDATION</strong> 后，责任编辑可查看审稿意见汇总并向主编提交处理建议（无最终决策权）。</p>
 
-<h3>外审进行中（UNDER_REVIEW）</h3>
-
-<c:if test="${empty underReviewList}">
-    <p>当前没有外审进行中的稿件。</p>
+<c:if test="${empty readyList}">
+    <p style="color:#d00;">当前没有可提交建议的稿件。</p>
 </c:if>
 
-<c:if test="${not empty underReviewList}">
-    <table border="1" cellpadding="4" cellspacing="0">
+<c:if test="${not empty readyList}">
+    <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; max-width: 1100px;">
         <thead>
         <tr>
             <th>稿件编号</th>
@@ -29,7 +25,7 @@
         </tr>
         </thead>
         <tbody>
-        <c:forEach items="${underReviewList}" var="m">
+        <c:forEach items="${readyList}" var="m">
             <tr>
                 <td><c:out value="${m.manuscriptId}"/></td>
                 <td><c:out value="${m.title}"/></td>
@@ -43,9 +39,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
-                    &nbsp;|&nbsp;
-                    <a href="${pageContext.request.contextPath}/editor/review/monitor">进入催审面板</a>
+                    <a href="${ctx}/editor/recommend?manuscriptId=${m.manuscriptId}">进入提出建议</a>
                 </td>
             </tr>
         </c:forEach>

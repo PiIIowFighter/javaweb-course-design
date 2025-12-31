@@ -150,8 +150,8 @@ public class ReviewerServlet extends HttpServlet {
 
     /**
      * 审稿人拒绝审稿邀请：
-     *  - 根据 reviewId 将 dbo.Reviews.Status 更新为 'DECLINED'；
-     *  - 拒绝后同样返回“待评审稿件列表”，该记录将不再出现。
+     *  - 先通知编辑（邮件/站内），再移除该邀请记录（不写入额外状态），因此后续可再次邀请；
+     *  - 拒绝后返回“待评审稿件列表”，该记录将不再出现。
      */
     private void handleDeclineInvitation(HttpServletRequest req,
                                          HttpServletResponse resp)
@@ -165,11 +165,12 @@ public class ReviewerServlet extends HttpServlet {
         try {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
-            reviewDAO.declineInvitation(reviewId, current.getUserId());
-            // 3.1 审稿人接受/拒绝邀请：通知编辑（按邮件实现）
+
+            // 先通知编辑（邮件/站内），再移除邀请记录（拒绝后允许再次邀请）
             mailNotifications.onReviewerResponded(reviewId, false);
-            // 站内通知
             inAppNotifications.onReviewerResponded(reviewId, false);
+
+            reviewDAO.declineInvitation(reviewId, current.getUserId());
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");

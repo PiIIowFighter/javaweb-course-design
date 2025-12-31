@@ -278,6 +278,53 @@ public class ManuscriptDAO {
     }
 
     /**
+     * 根据状态和当前指定的责任编辑筛选稿件列表。
+     * 仅返回 IsArchived = 0 且 IsWithdrawn = 0 的记录。
+     *
+     * 说明：
+     *  - 主要用于编辑“我的稿件”列表，保证编辑只能看到主编指派给自己的稿件；
+     *  - 这里通过 Manuscripts.CurrentEditorId 做过滤，不直接依赖历史指派记录。
+     */
+    public List<Manuscript> findByStatusesForEditor(int editorUserId, String... statuses) throws SQLException {
+        if (statuses == null || statuses.length == 0) {
+            throw new IllegalArgumentException("statuses 不能为空");
+        }
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, " +
+                "       SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
+                "FROM dbo.Manuscripts WHERE IsArchived = 0 AND IsWithdrawn = 0 " +
+                "  AND CurrentEditorId = ? AND Status IN ("
+        );
+        for (int i = 0; i < statuses.length; i++) {
+            if (i > 0) {
+                sql.append(',');
+            }
+            sql.append('?');
+        }
+        sql.append(") ORDER BY ISNULL(SubmitTime, LastStatusTime) DESC, ManuscriptId DESC");
+
+        List<Manuscript> list = new java.util.ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int idx = 1;
+            ps.setInt(idx++, editorUserId);
+            for (String s : statuses) {
+                ps.setString(idx++, s);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+
+    /**
      * 主编“全览权限”使用：查询系统内全部稿件（包含已归档/已撤稿/草稿等）。
      *
      * 说明：当前项目未单独维护“稿件状态历史表”，因此这里的“历史入口”

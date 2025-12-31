@@ -15,8 +15,6 @@ public class ManuscriptAssignment implements Serializable {
     private String chiefComment;
     private LocalDateTime assignedTime;
 
-    // ===== Getter / Setter =====
-
     public Integer getAssignmentId() {
         return assignmentId;
     }
@@ -63,5 +61,17 @@ public class ManuscriptAssignment implements Serializable {
 
     public void setAssignedTime(LocalDateTime assignedTime) {
         this.assignedTime = assignedTime;
+    }
+
+    @Override
+    public String toString() {
+        return "ManuscriptAssignment{" +
+                "assignmentId=" + assignmentId +
+                ", manuscriptId=" + manuscriptId +
+                ", editorId=" + editorId +
+                ", assignedByChiefId=" + assignedByChiefId +
+                ", chiefComment='" + chiefComment + '\'' +
+                ", assignedTime=" + assignedTime +
+                '}';
     }
 }

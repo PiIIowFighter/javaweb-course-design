@@ -118,6 +118,40 @@ public final class MailTemplates {
         return new MailMessage().subject(subject).htmlBody(wrap(body));
     }
 
+
+    public static MailMessage reviewerRemindCustom(MailConfig cfg,
+                                                   User reviewer,
+                                                   Manuscript m,
+                                                   Review r,
+                                                   String extraText) {
+        String subject = "催审提醒：稿件 #" + m.getManuscriptId();
+        String inviteUrl = link(cfg.baseUrl(), "/reviewer/invitation?id=" + r.getReviewId());
+
+        StringBuilder body = new StringBuilder();
+        body.append("<p>尊敬的审稿人 <b>").append(h(reviewer.getFullName())).append("</b>：</p>");
+
+        if (extraText != null && !extraText.trim().isEmpty()) {
+            body.append("<p>").append(h(extraText.trim())).append("</p>");
+        } else {
+            body.append("<p>这是对您审稿任务的提醒：</p>");
+        }
+
+        body.append("<p><b>标题：</b>").append(h(m.getTitle())).append("</p>");
+        if (r.getDueAt() != null) {
+            body.append("<p><b>截止日期：</b>").append(h(fmt(r.getDueAt()))).append("</p>");
+        }
+        if (!inviteUrl.isEmpty()) {
+            body.append("<p>进入系统提交意见：<a href=\"")
+                    .append(h(inviteUrl))
+                    .append("\">")
+                    .append(h(inviteUrl))
+                    .append("</a></p>");
+        }
+        body.append("<p>感谢您的支持！此邮件由系统自动发送，请勿直接回复。</p>");
+
+        return new MailMessage().subject(subject).htmlBody(wrap(body.toString()));
+    }
+
     public static MailMessage reviewerResponseToEditor(MailConfig cfg, User editor, User reviewer, Manuscript m, boolean accepted) {
         String subject = "审稿邀请回应：" + (accepted ? "已接受" : "已拒绝") + "（稿件 #" + m.getManuscriptId() + "）";
         String body = "<p>编辑 <b>" + h(editor.getFullName()) + "</b>：</p>" +

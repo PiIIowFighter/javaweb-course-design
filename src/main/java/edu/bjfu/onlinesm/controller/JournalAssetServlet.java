@@ -34,7 +34,7 @@ public class JournalAssetServlet extends HttpServlet {
     private final IssueDAO issueDAO = new IssueDAO();
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
-    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String JOURNAL_SUB_DIR = "journal";
 
     @Override

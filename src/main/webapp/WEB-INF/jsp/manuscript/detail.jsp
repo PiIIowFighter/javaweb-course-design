@@ -13,6 +13,13 @@
 </c:if>
 
 <c:if test="${not empty manuscript}">
+<c:set var="backToUrl" value="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}#inviteReviewers"/>
+
+<c:if test="${not empty param.cancelMsg}">
+    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
+        <c:out value="${param.cancelMsg}"/>
+    </div>
+</c:if>
     <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
         <tr>
             <th>稿件编号</th>
@@ -803,6 +810,7 @@
             </thead>
             <tbody>
             <c:forEach items="${reviews}" var="r">
+                <c:if test="${r.status != 'DECLINED'}">
                 <tr>
                     <td>
                         <c:choose>
@@ -855,51 +863,72 @@
                         </c:if>
                     </td>
                     <td>
-                        <c:if test="${r.status != 'SUBMITTED'}">
-                            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">催审</button>
-                            </form>
-                        </c:if>
-                    </td>
+    <c:choose>
+        <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
+            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <button type="submit">催审</button>
+            </form>
+            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认撤回该审稿人分配？')">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <input type="hidden" name="backTo" value="${backToUrl}"/>
+                <button type="submit">撤回分配</button>
+            </form>
+        </c:when>
+        <c:otherwise>
+            -
+        </c:otherwise>
+    </c:choose>
+</td>
                 </tr>
+                </c:if>
             </c:forEach>
             </tbody>
         </table>
     </c:if>
 
     <h3 id="inviteReviewers">邀请新的审稿人</h3>
-    <c:if test="${empty reviewers}">
-        <p>当前审稿人库为空，请先由主编在“审稿人库管理”中添加审稿人。</p>
+    <p>
+        <a href="${ctx}/editor/review/select?manuscriptId=${manuscript.manuscriptId}">
+            进入审稿人选择页面
+        </a>
+    </p>
+
+<h3>与作者沟通</h3>
+    <p>
+        <a href="${ctx}/editor/author/message?manuscriptId=${manuscript.manuscriptId}">发送消息给作者</a>
+        <span style="margin-left:8px; color:#666;">支持站内消息/邮件，可抄送主编；下方按时间线展示沟通历史。</span>
+    </p>
+
+    <c:if test="${empty authorMessages}">
+        <p>暂无沟通记录。</p>
     </c:if>
-    <c:if test="${not empty reviewers}">
-        <form method="post" action="${ctx}/editor/review/invite">
-            <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-
-            <label>选择审稿人（可多选，按 Ctrl/Shift 多选）：
-                <select name="reviewerIds" multiple="multiple" size="5" required>
-                    <option value="">-- 请选择 --</option>
-                    <c:forEach items="${reviewers}" var="u">
-                        <option value="${u.userId}">
-                            <c:out value="${u.fullName}"/>
-                            （用户名：<c:out value="${u.username}"/>）
-                        </option>
-                    </c:forEach>
-                </select>
-            </label>
-
-            <label>截止日期（可选）：
-                <input type="date" name="dueDate"/>
-            </label>
-
-            <button type="submit">发出审稿邀请</button>
-        </form>
+    <c:if test="${not empty authorMessages}">
+        <div style="border-left:3px solid #ddd; padding-left:12px; margin: 8px 0 16px 0;">
+            <c:forEach items="${authorMessages}" var="msg">
+                <div style="margin: 10px 0;">
+                    <div style="color:#666; font-size:12px;">
+                        <c:out value="${msg.createdAt}"/>
+                        <span style="margin:0 6px;">·</span>
+                        <strong>
+                            <c:out value="${authorMessageUserMap[msg.createdByUserId].fullName}"/>
+                        </strong>
+                        <span style="margin:0 6px;">→</span>
+                        <strong>
+                            <c:out value="${authorMessageUserMap[msg.recipientUserId].fullName}"/>
+                        </strong>
+                        <span style="margin-left:8px;">[<c:out value="${msg.category}"/>/<c:out value="${msg.type}"/>]</span>
+                    </div>
+                    <div style="margin-top:4px;">
+                        <div><strong><c:out value="${msg.title}"/></strong></div>
+                        <div style="white-space:pre-wrap;"> <c:out value="${msg.content}"/></div>
+                    </div>
+                </div>
+            </c:forEach>
+        </div>
     </c:if>
-
-    <h3>与作者和审稿人沟通（备注说明）</h3>
-    <p>未实现真实邮件发送，可在操作时通过“备注 / 日志”记录沟通要点，
-        数据库中的 Logs / ManuscriptStatusHistory 表可了解沟通情况。</p>
 </c:if>
 
 <!-- ====================== 作者查看：仅展示给作者的意见（Content） ====================== -->

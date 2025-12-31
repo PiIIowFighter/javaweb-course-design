@@ -98,6 +98,28 @@ public class MailNotifications {
         }
     }
 
+
+    /**
+     * 自定义内容的催审邮件（审稿监控页面中使用）。
+     */
+    public void onReviewerRemindCustom(int reviewId, String extraText) {
+        if (!cfg.enabled()) return;
+        try {
+            Review r = reviewDAO.findById(reviewId);
+            if (r == null) return;
+            Manuscript m = manuscriptDAO.findById(r.getManuscriptId());
+            if (m == null) return;
+            User reviewer = userDAO.findById(r.getReviewerId());
+            if (reviewer == null || reviewer.getEmail() == null || reviewer.getEmail().trim().isEmpty()) return;
+
+            MailMessage msg = MailTemplates.reviewerRemindCustom(cfg, reviewer, m, r, extraText)
+                    .addTo(reviewer.getEmail());
+            mailer.send(msg);
+        } catch (Exception e) {
+            log("催审邮件发送失败（自定义模板）", e);
+        }
+    }
+
     /** 审稿人接受/拒绝邀请：通知编辑。 */
     public void onReviewerResponded(int reviewId, boolean accepted) {
         if (!cfg.enabled()) return;
