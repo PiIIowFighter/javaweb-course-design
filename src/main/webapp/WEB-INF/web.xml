@@ -83,6 +83,16 @@
         <url-pattern>/files/*</url-pattern>
     </servlet-mapping>
 
+    <!-- 通知中心（消息中心）& 发送通知 -->
+    <servlet>
+        <servlet-name>NotificationServlet</servlet-name>
+        <servlet-class>edu.bjfu.onlinesm.controller.NotificationServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>NotificationServlet</servlet-name>
+        <url-pattern>/notifications/*</url-pattern>
+    </servlet-mapping>
+
     <!-- 错误页面 -->
     <error-page>
         <error-code>404</error-code>
