@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  *  - Content
  *  - Score
  *  - Recommendation
- *  - Status (INVITED / ACCEPTED / DECLINED / SUBMITTED / EXPIRED)
+ *  - Status (INVITED / ACCEPTED / SUBMITTED / EXPIRED)
  *  - InvitedAt / AcceptedAt / SubmittedAt / DueAt
  *  - RemindCount / LastRemindedAt
  */

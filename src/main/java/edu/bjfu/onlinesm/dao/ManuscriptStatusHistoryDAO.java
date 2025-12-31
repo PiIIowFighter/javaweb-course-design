@@ -4,6 +4,7 @@ import edu.bjfu.onlinesm.model.ManuscriptStatusHistory;
 import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.sql.*;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -163,7 +164,8 @@ public class ManuscriptStatusHistoryDAO {
         
         Timestamp ts = rs.getTimestamp("ChangeTime");
         if (ts != null) {
-            h.setChangeTime(ts.toLocalDateTime());
+            // 将UTC时间转换为北京时间
+            h.setChangeTime(convertUtcToBeijing(ts));
         }
         
         h.setRemark(rs.getString("Remark"));
@@ -171,5 +173,21 @@ public class ManuscriptStatusHistoryDAO {
         h.setChangedByFullName(rs.getString("ChangedByFullName"));
         
         return h;
+    }
+    
+    /**
+     * 将UTC时间戳转换为北京时间的LocalDateTime
+     * @param ts 时间戳（从数据库读取，数据库存储的是UTC时间）
+     * @return 北京时间的LocalDateTime
+     */
+    private java.time.LocalDateTime convertUtcToBeijing(Timestamp ts) {
+        // 北京时间时区
+        ZoneId beijingZone = ZoneId.of("Asia/Shanghai");
+        // 将Timestamp转换为Instant（UTC时间点）
+        java.time.Instant instant = ts.toInstant();
+        // 将UTC时间点转换为北京时区的LocalDateTime
+        return instant.atZone(ZoneId.of("UTC"))
+                      .withZoneSameInstant(beijingZone)
+                      .toLocalDateTime();
     }
 }

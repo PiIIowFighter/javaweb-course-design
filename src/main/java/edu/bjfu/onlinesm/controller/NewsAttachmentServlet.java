@@ -17,7 +17,7 @@ public class NewsAttachmentServlet extends HttpServlet {
     private final NewsDAO newsDAO = new NewsDAO();
 
     // 与 NewsAdminServlet 中保持一致
-    private static final String BASE_UPLOAD_DIR = "D:/upload";
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String NEWS_SUB_DIR = "news";
 
     @Override

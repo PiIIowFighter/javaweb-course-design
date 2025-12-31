@@ -111,6 +111,84 @@ public class UserDAO {
         return list;
     }
 
+    /**
+     * 审稿人库搜索：按关键词 / 过往绩效筛选 REVIEWER 用户。
+     *
+     * @param keyword       关键词（可为空），在 FullName / Username / Affiliation / ResearchArea 中模糊匹配
+     * @param minCompleted  最低完成评审次数（可为空），基于 Reviews.Status = 'SUBMITTED' 的记录计数
+     * @param minAvgScore   最低平均评分（0-10，可为空），基于 Reviews.Score 的平均值
+     * @param limit         最多返回多少条记录（可为空或 <=0 表示不限制）
+     */
+    public List<User> searchReviewerPool(String keyword,
+                                         Integer minCompleted,
+                                         Integer minAvgScore,
+                                         Integer limit) throws SQLException {
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ");
+        if (limit != null && limit > 0) {
+            sql.append("TOP ").append(limit).append(" ");
+        }
+        sql.append("u.UserId, u.Username, u.PasswordHash, u.Email, u.FullName, ")
+           .append("u.Affiliation, u.ResearchArea, u.Status, r.RoleCode ")
+           .append("FROM dbo.Users u ")
+           .append("JOIN dbo.Roles r ON u.RoleId = r.RoleId ")
+           .append("LEFT JOIN ( ")
+           .append("    SELECT ReviewerId, COUNT(*) AS CompletedCount, AVG(CAST(Score AS FLOAT)) AS AvgScore ")
+           .append("    FROM dbo.Reviews ")
+           .append("    WHERE Status = 'SUBMITTED' ")
+           .append("    GROUP BY ReviewerId ")
+           .append(") s ON s.ReviewerId = u.UserId ")
+           .append("WHERE r.RoleCode = 'REVIEWER' AND u.Status = 'ACTIVE' ");
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = "%" + keyword.trim() + "%";
+            sql.append("AND (u.FullName LIKE ? OR u.Username LIKE ? OR u.Affiliation LIKE ? OR u.ResearchArea LIKE ?) ");
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (minCompleted != null) {
+            sql.append("AND ISNULL(s.CompletedCount, 0) >= ? ");
+            params.add(minCompleted);
+        }
+
+        if (minAvgScore != null) {
+            sql.append("AND ISNULL(s.AvgScore, 0) >= ? ");
+            params.add(minAvgScore);
+        }
+
+        sql.append("ORDER BY ISNULL(s.AvgScore, 0) DESC, ISNULL(s.CompletedCount, 0) DESC, u.UserId ASC");
+
+        List<User> list = new ArrayList<>();
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof String) {
+                    ps.setString(i + 1, (String) p);
+                } else if (p instanceof Integer) {
+                    ps.setInt(i + 1, (Integer) p);
+                } else {
+                    ps.setObject(i + 1, p);
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+
 
 
     /**

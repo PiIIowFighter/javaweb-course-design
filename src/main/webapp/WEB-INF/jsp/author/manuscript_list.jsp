@@ -175,13 +175,7 @@
                         <a style="margin-left:6px;" href="${ctx}/manuscripts/edit?id=${m.manuscriptId}"><i class="bi bi-pencil" aria-hidden="true"></i> 继续编辑</a>
                     </c:if>
                     <c:if test="${m.currentStatus == 'RETURNED' or m.currentStatus == 'REVISION'}">
-                        <!-- “待修改”按钮：引导作者进入详情页编辑并重新提交 -->
-                        <form method="get"
-                              action="${ctx}/manuscripts/detail"
-                              style="display:inline;">
-                            <input type="hidden" name="id" value="${m.manuscriptId}"/>
-                            <button type="submit" class="btn-primary"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 待修改</button>
-                        </form>
+                        <a style="margin-left:6px;" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 进入修改</a>
                     </c:if>
                 </td>
             </tr>

@@ -37,7 +37,7 @@ public class NewsAdminServlet extends HttpServlet {
 
     private final NewsDAO newsDAO = new NewsDAO();
 
-    private static final String BASE_UPLOAD_DIR = "D:/upload";
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String NEWS_SUB_DIR = "news";
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

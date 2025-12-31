@@ -970,3 +970,117 @@ END
 ELSE PRINT 'dbo.CallForPapers.AttachmentPath already exists';
 
 PRINT '== Patch end: journal management board columns ==';
+
+/*
+ * =========================
+ * Patch: Notifications (In-App)
+ * =========================
+ */
+IF OBJECT_ID('dbo.Notifications', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Notifications(
+        NotificationId INT IDENTITY(1,1) PRIMARY KEY,
+        RecipientUserId INT NOT NULL,
+        CreatedByUserId INT NULL,
+        Type NVARCHAR(20) NOT NULL DEFAULT N'SYSTEM',
+        Category NVARCHAR(50) NULL,
+        Title NVARCHAR(200) NOT NULL,
+        Content NVARCHAR(MAX) NULL,
+        RelatedManuscriptId INT NULL,
+        IsRead BIT NOT NULL DEFAULT 0,
+        ReadAt DATETIME2(0) NULL,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)
+    );
+
+    CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);
+    PRINT 'Created dbo.Notifications';
+END
+ELSE PRINT 'dbo.Notifications already exists';
+
+PRINT '== Patch end: notifications ==';
+PRINT '== Patch begin: unique email constraint on dbo.Users.Email ==';
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'UX_Users_Email'
+      AND object_id = OBJECT_ID(N'dbo.Users')
+)
+BEGIN
+    -- 为 Email 创建唯一索引（仅对非 NULL 值生效），保证同一邮箱只能注册一个账号
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Users_Email
+        ON dbo.Users(Email)
+        WHERE Email IS NOT NULL;
+    PRINT 'Created unique index UX_Users_Email on dbo.Users(Email).';
+END
+ELSE
+    PRINT 'Index UX_Users_Email already exists.';
+
+PRINT '== Patch end: unique email constraint on dbo.Users.Email ==';
+GO
+
+
+/* ============================================================
+   稿件阶段时间戳表 ManuscriptStageTimestamps
+   用于记录每份稿件在各审稿阶段的完成时间
+   Created: 2025-12-26
+   ============================================================ */
+
+PRINT '== Patch begin: ManuscriptStageTimestamps ==';
+
+IF OBJECT_ID(N'dbo.ManuscriptStageTimestamps', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ManuscriptStageTimestamps (
+        ManuscriptId                    INT PRIMARY KEY,
+        DraftCompletedAt                DATETIME2(0) NULL,      -- 草稿编辑完成时间
+        SubmittedAt                     DATETIME2(0) NULL,      -- 已提交待处理完成时间
+        FormalCheckCompletedAt          DATETIME2(0) NULL,      -- 形式审查完成时间
+        DeskReviewInitialCompletedAt    DATETIME2(0) NULL,      -- 案头初筛完成时间
+        ToAssignCompletedAt             DATETIME2(0) NULL,      -- 待分配编辑完成时间
+        WithEditorCompletedAt           DATETIME2(0) NULL,      -- 编辑处理完成时间
+        UnderReviewCompletedAt          DATETIME2(0) NULL,      -- 外审完成时间
+        EditorRecommendationCompletedAt DATETIME2(0) NULL,      -- 编辑推荐意见完成时间
+        FinalDecisionPendingCompletedAt DATETIME2(0) NULL,      -- 待主编终审完成时间
+        
+        CONSTRAINT FK_MST_Manuscript 
+            FOREIGN KEY(ManuscriptId) 
+            REFERENCES dbo.Manuscripts(ManuscriptId)
+    );
+    
+    PRINT 'Created dbo.ManuscriptStageTimestamps';
+END
+ELSE
+    PRINT 'dbo.ManuscriptStageTimestamps already exists';
+
+PRINT '== Patch end: ManuscriptStageTimestamps ==';
+GO
+
+PRINT '== Patch: EditorSuggestions (编辑建议 + 总结报告) ==';
+
+IF OBJECT_ID(N'dbo.EditorSuggestions', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EditorSuggestions (
+        ManuscriptId INT NOT NULL PRIMARY KEY,
+        EditorId INT NOT NULL,
+        Suggestion NVARCHAR(50) NOT NULL,
+        Summary NVARCHAR(MAX) NULL,
+        SubmittedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+
+        CONSTRAINT FK_EditorSuggestions_Manuscript FOREIGN KEY(ManuscriptId)
+            REFERENCES dbo.Manuscripts(ManuscriptId),
+
+        CONSTRAINT FK_EditorSuggestions_Editor FOREIGN KEY(EditorId)
+            REFERENCES dbo.Users(UserId)
+    );
+
+    CREATE INDEX IX_EditorSuggestions_EditorId ON dbo.EditorSuggestions(EditorId);
+
+    PRINT 'Created dbo.EditorSuggestions';
+END
+ELSE
+    PRINT 'dbo.EditorSuggestions already exists';
+
+PRINT '== Patch end: EditorSuggestions ==';
+GO

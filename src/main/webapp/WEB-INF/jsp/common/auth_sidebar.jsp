@@ -68,6 +68,15 @@
                 <a class="side-link ${fn:contains(uri, '/editor/underReview') ? 'active' : ''}" href="${ctx}/editor/underReview">
                     <i class="bi bi-hourglass-split" aria-hidden="true"></i> 审稿中
                 </a>
+                <a class="side-link ${fn:contains(uri, '/editor/recommend') ? 'active' : ''}" href="${ctx}/editor/recommend">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> 提出建议
+                </a>
+                <a class="side-link ${fn:contains(uri, '/editor/review/monitor') ? 'active' : ''}" href="${ctx}/editor/review/monitor">
+                    <i class="bi bi-bell" aria-hidden="true"></i> 审稿监控 / 催审
+                </a>
+                <a class="side-link ${fn:contains(uri, '/editor/authorComm') ? 'active' : ''}" href="${ctx}/editor/authorComm">
+                    <i class="bi bi-chat-dots" aria-hidden="true"></i> 与作者沟通
+                </a>
                 <a class="side-link ${fn:contains(uri, '/editor/finalDecision') ? 'active' : ''}" href="${ctx}/editor/finalDecision">
                     <i class="bi bi-check2-circle" aria-hidden="true"></i> 终审决策
                 </a>

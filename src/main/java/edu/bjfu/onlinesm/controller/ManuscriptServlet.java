@@ -47,9 +47,12 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
-    private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
+    private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
-    private static final String UPLOAD_BASE_DIR = "D:\\upload";
+    private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
+    private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
+    /** 与 ProfileServlet 保持一致的上传根目录 */
+    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
     @Override
@@ -262,17 +265,68 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
 
+        FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+        req.setAttribute("formalCheckResult", formalCheckResult);
+
         // 1）加载审稿记录，供“当前审稿记录”表格使用
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);
         req.setAttribute("reviews", reviewList);
 
-        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库
+        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库（支持搜索与推荐）
         String role = current.getRoleCode();
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
-            List<User> reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+
+            // 2.1 审稿人搜索条件（来自稿件详情页顶部的搜索表单）
+            String reviewerKeyword = req.getParameter("reviewerKeyword");
+            String minCompletedStr = req.getParameter("minCompleted");
+            String minAvgScoreStr  = req.getParameter("minAvgScore");
+
+            Integer minCompleted = null;
+            Integer minAvgScore  = null;
+            try {
+                if (minCompletedStr != null && !minCompletedStr.trim().isEmpty()) {
+                    minCompleted = Integer.parseInt(minCompletedStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+            try {
+                if (minAvgScoreStr != null && !minAvgScoreStr.trim().isEmpty()) {
+                    minAvgScore = Integer.parseInt(minAvgScoreStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+
+            boolean hasSearch = (reviewerKeyword != null && !reviewerKeyword.trim().isEmpty())
+                    || minCompleted != null
+                    || minAvgScore != null;
+
+            List<User> reviewerUsers;
+            if (hasSearch) {
+                // 根据搜索条件过滤审稿人库，最多返回 100 条，避免一次性加载过多
+                reviewerUsers = userDAO.searchReviewerPool(reviewerKeyword, minCompleted, minAvgScore, 100);
+            } else {
+                // 未填写任何搜索条件时，保持原有行为：加载全部 REVIEWER 列表
+                reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+            }
             req.setAttribute("reviewers", reviewerUsers);
+
+            // 2.2 简单推荐算法：根据稿件的研究主题 / 关键词，在 ResearchArea 中做一次关键词匹配
+            String suggestionKeyword = null;
+            if (m.getSubjectArea() != null && !m.getSubjectArea().trim().isEmpty()) {
+                suggestionKeyword = m.getSubjectArea().split("[,;，； ]")[0];
+            } else if (m.getKeywords() != null && !m.getKeywords().trim().isEmpty()) {
+                suggestionKeyword = m.getKeywords().split("[,;，； ]")[0];
+            }
+
+            if (suggestionKeyword != null && !suggestionKeyword.trim().isEmpty()) {
+                List<User> suggested = userDAO.searchReviewerPool(suggestionKeyword, 1, null, 5);
+                req.setAttribute("reviewerSuggestions", suggested);
+                req.setAttribute("reviewerSuggestionKeyword", suggestionKeyword);
+            }
         }
-        
+
         // 3）如果当前用户是编辑（或主编），加载最新一条主编给该编辑的指派建议
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
             ManuscriptAssignment chiefAssignment =
@@ -280,8 +334,43 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("chiefAssignment", chiefAssignment);
         }
 
+
+
+        // 4）与作者沟通历史（时间线）：复用 Notifications 表
+        NotificationDAO notificationDAO = new NotificationDAO();
+        List<Notification> authorMessages;
+        if ("AUTHOR".equals(role)) {
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", current.getUserId(), 200, true);
+        } else {
+            // 编辑/主编/编辑部管理员：查看全部沟通记录（包括抄送主编）
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", null, 200, true);
+        }
+
+        Map<Integer, User> authorMessageUserMap = new HashMap<>();
+        authorMessageUserMap.put(current.getUserId(), current);
+        if (m.getSubmitterId() != null) {
+            User au = userDAO.findById(m.getSubmitterId());
+            if (au != null) authorMessageUserMap.put(au.getUserId(), au);
+        }
+        for (Notification n : authorMessages) {
+            Integer cb = n.getCreatedByUserId();
+            if (cb != null && !authorMessageUserMap.containsKey(cb)) {
+                User u = userDAO.findById(cb);
+                if (u != null) authorMessageUserMap.put(cb, u);
+            }
+            int ru = n.getRecipientUserId();
+            if (!authorMessageUserMap.containsKey(ru)) {
+                User u = userDAO.findById(ru);
+                if (u != null) authorMessageUserMap.put(ru, u);
+            }
+        }
+
+        req.setAttribute("authorMessages", authorMessages);
+        req.setAttribute("authorMessageUserMap", authorMessageUserMap);
+
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
     }
+    
 
     /**
      * 追踪稿件状态：显示时间线视图和状态变更历史
@@ -311,26 +400,128 @@ public class ManuscriptServlet extends HttpServlet {
         // 获取状态变更历史
         List<ManuscriptStatusHistory> historyList = statusHistoryDAO.findByManuscriptId(manuscriptId);
         
-        // 如果历史记录为空，根据当前状态和提交时间生成基础记录
-        if (historyList.isEmpty() && m.getSubmitTime() != null) {
-            // 创建一个虚拟的初始记录用于显示
-            ManuscriptStatusHistory initial = new ManuscriptStatusHistory();
-            initial.setManuscriptId(manuscriptId);
-            initial.setToStatus(m.getCurrentStatus());
-            initial.setChangeTime(m.getSubmitTime());
-            initial.setEvent("SUBMIT");
-            historyList.add(initial);
-        }
+        // 获取阶段时间戳数据
+        ManuscriptStageTimestamps stageTimestamps = stageTimestampsDAO.findByManuscriptId(manuscriptId);
+        
+        // 从ManuscriptStageTimestamps生成完整的历史记录
+        List<ManuscriptStatusHistory> completeHistoryList = buildCompleteHistoryList(
+                manuscriptId, historyList, stageTimestamps, m);
+        
+        // 按时间排序
+        completeHistoryList.sort((h1, h2) -> {
+            if (h1.getChangeTime() == null && h2.getChangeTime() == null) return 0;
+            if (h1.getChangeTime() == null) return 1;
+            if (h2.getChangeTime() == null) return -1;
+            return h1.getChangeTime().compareTo(h2.getChangeTime());
+        });
 
         // 获取预计审稿周期
         String estimatedCycle = statusHistoryDAO.getEstimatedReviewCycle(m.getCurrentStatus());
 
         req.setAttribute("manuscript", m);
-        req.setAttribute("historyList", historyList);
+        req.setAttribute("historyList", completeHistoryList);
         req.setAttribute("estimatedCycle", estimatedCycle);
+        req.setAttribute("stageTimestamps", stageTimestamps);
         req.setAttribute("currentStatusDesc", ManuscriptStatusHistory.getStatusDescription(m.getCurrentStatus()));
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_track.jsp").forward(req, resp);
+    }
+    
+    /**
+     * 从ManuscriptStageTimestamps生成完整的历史记录列表
+     * 结合数据库中的历史记录和时间戳数据，生成完整的状态变更历史
+     */
+    private List<ManuscriptStatusHistory> buildCompleteHistoryList(
+            int manuscriptId,
+            List<ManuscriptStatusHistory> dbHistoryList,
+            ManuscriptStageTimestamps stageTimestamps,
+            Manuscript manuscript) {
+        
+        List<ManuscriptStatusHistory> completeList = new ArrayList<>();
+        
+        // 定义状态流程顺序
+        String[] statusFlow = {
+            "DRAFT", "SUBMITTED", "FORMAL_CHECK", "DESK_REVIEW_INITIAL",
+            "TO_ASSIGN", "WITH_EDITOR", "UNDER_REVIEW", 
+            "EDITOR_RECOMMENDATION", "FINAL_DECISION_PENDING"
+        };
+        
+        // 状态到事件类型的映射
+        Map<String, String> statusToEvent = new HashMap<>();
+        statusToEvent.put("DRAFT", "DRAFT_COMPLETED");
+        statusToEvent.put("SUBMITTED", "SUBMIT");
+        statusToEvent.put("FORMAL_CHECK", "FORMAL_CHECK_START");
+        statusToEvent.put("DESK_REVIEW_INITIAL", "FORMAL_CHECK_APPROVE");
+        statusToEvent.put("TO_ASSIGN", "DESK_REVIEW_ACCEPT");
+        statusToEvent.put("WITH_EDITOR", "ASSIGN_EDITOR");
+        statusToEvent.put("UNDER_REVIEW", "SEND_TO_REVIEW");
+        statusToEvent.put("EDITOR_RECOMMENDATION", "REVIEW_COMPLETED");
+        statusToEvent.put("FINAL_DECISION_PENDING", "EDITOR_RECOMMENDATION_SUBMIT");
+        
+        // 从时间戳生成历史记录
+        if (stageTimestamps != null) {
+            for (String status : statusFlow) {
+                LocalDateTime completedAt = stageTimestamps.getCompletedAtByStatus(status);
+                if (completedAt != null) {
+                    ManuscriptStatusHistory history = new ManuscriptStatusHistory();
+                    history.setManuscriptId(manuscriptId);
+                    history.setToStatus(status);
+                    history.setChangeTime(completedAt);
+                    history.setEvent(statusToEvent.getOrDefault(status, "STATUS_CHANGE"));
+                    history.setRemark("阶段完成");
+                    
+                    // 确定fromStatus（上一个状态）
+                    int currentIndex = -1;
+                    for (int i = 0; i < statusFlow.length; i++) {
+                        if (statusFlow[i].equals(status)) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+                    if (currentIndex > 0) {
+                        history.setFromStatus(statusFlow[currentIndex - 1]);
+                    }
+                    
+                    completeList.add(history);
+                }
+            }
+        }
+        
+        // 合并数据库中的历史记录（如果时间戳中没有对应记录）
+        // 使用Map来去重，以时间和状态为key
+        Map<String, ManuscriptStatusHistory> historyMap = new HashMap<>();
+        
+        // 先添加时间戳生成的记录
+        for (ManuscriptStatusHistory h : completeList) {
+            String key = h.getChangeTime() + "_" + h.getToStatus();
+            historyMap.put(key, h);
+        }
+        
+        // 再添加数据库中的记录（如果不存在相同时间和状态的记录）
+        for (ManuscriptStatusHistory h : dbHistoryList) {
+            if (h.getChangeTime() != null) {
+                String key = h.getChangeTime() + "_" + h.getToStatus();
+                if (!historyMap.containsKey(key)) {
+                    historyMap.put(key, h);
+                } else {
+                    // 如果存在，优先使用数据库中的记录（因为它有操作者信息）
+                    historyMap.put(key, h);
+                }
+            }
+        }
+        
+        // 如果没有历史记录，但稿件有提交时间，创建一个初始记录
+        if (historyMap.isEmpty() && manuscript.getSubmitTime() != null) {
+            ManuscriptStatusHistory initial = new ManuscriptStatusHistory();
+            initial.setManuscriptId(manuscriptId);
+            initial.setToStatus(manuscript.getCurrentStatus());
+            initial.setChangeTime(manuscript.getSubmitTime());
+            initial.setEvent("SUBMIT");
+            initial.setRemark("稿件提交");
+            historyMap.put(initial.getChangeTime() + "_" + initial.getToStatus(), initial);
+        }
+        
+        return new ArrayList<>(historyMap.values());
     }
 
     /**
@@ -942,6 +1133,7 @@ public class ManuscriptServlet extends HttpServlet {
                         || "FORMAL_CHECK".equals(status)
                         || "FORMAT_CHECK".equals(status)
                         || "DESK_REVIEW_INITIAL".equals(status)
+                        || "TO_ASSIGN".equals(status)
                         || "WITH_EDITOR".equals(status)
                         || "REVIEWER_ASSIGNED".equals(status)
                         || "UNDER_REVIEW".equals(status)
