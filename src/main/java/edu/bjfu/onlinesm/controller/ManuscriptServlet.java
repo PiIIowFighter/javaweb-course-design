@@ -55,7 +55,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
-    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
+    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
     @Override

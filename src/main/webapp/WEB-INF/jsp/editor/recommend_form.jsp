@@ -26,6 +26,9 @@
         </div>
         <div class="card-body">
             <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
+            <p style="margin-top: 10px;">
+                <a href="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}">查看稿件详情</a>
+            </p>
         </div>
     </div>
 
@@ -53,6 +56,7 @@
                 <th>关键评价</th>
                 <th>给编辑的保密意见</th>
                 <th>提交时间</th>
+                <th>操作</th>
             </tr>
             </thead>
             <tbody>
@@ -64,6 +68,9 @@
                     <td style="max-width: 340px;"><c:out value="${r.keyEvaluation}"/></td>
                     <td style="max-width: 340px;"><c:out value="${r.confidentialToEditor}"/></td>
                     <td><c:out value="${r.submittedAt}"/></td>
+                    <td>
+                        <a href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">查看详细评价</a>
+                    </td>
                 </tr>
             </c:forEach>
             </tbody>

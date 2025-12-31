@@ -9,6 +9,18 @@
 
 <h2>为稿件选择审稿人</h2>
 
+<c:set var="backToUrl" value="${pageContext.request.requestURI}"/>
+<c:if test="${not empty pageContext.request.queryString}">
+    <c:set var="backToUrl" value="${backToUrl}?${pageContext.request.queryString}"/>
+</c:if>
+
+<c:if test="${not empty param.cancelMsg}">
+    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
+        <c:out value="${param.cancelMsg}"/>
+    </div>
+</c:if>
+
+
 <c:if test="${empty manuscript}">
     <p>未找到稿件记录。</p>
 </c:if>
@@ -47,7 +59,7 @@
     
 
     <c:if test="${not empty currentReviews}">
-        <h3 style="margin-top:16px;">已邀请/已接受的审稿人</h3>
+        <h3 style="margin-top:16px;">已邀请/已接受/已提交的审稿人</h3>
         <table border="1" cellpadding="4" cellspacing="0" style="background:#fff; max-width:960px;">
             <thead>
             <tr>
@@ -74,20 +86,25 @@
                     <td><c:out value="${r.invitedAt}"/></td>
                     <td><c:out value="${r.dueAt}"/></td>
                     <td>
-                        <c:if test="${r.status != 'SUBMITTED'}">
-                            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">催审</button>
-                            </form>
-                            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认解除该审稿人？')">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">解除</button>
-                            </form>
-                        </c:if>
-                        <c:if test="${r.status == 'SUBMITTED'}">-</c:if>
-                    </td>
+    <c:choose>
+        <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
+            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <button type="submit">催审</button>
+            </form>
+            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认解除该审稿人？')">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <input type="hidden" name="backTo" value="${backToUrl}"/>
+                <button type="submit">撤回分配</button>
+            </form>
+        </c:when>
+        <c:otherwise>
+            -
+        </c:otherwise>
+    </c:choose>
+</td>
                 </tr>
             </c:forEach>
             </tbody>
@@ -154,7 +171,11 @@
                 <c:forEach items="${reviewers}" var="u">
                     <tr>
                         <td style="text-align:center;">
-                            <input type="checkbox" name="reviewerIds" value="${u.userId}"/>
+                            <input type="checkbox" name="reviewerIds" value="${u.userId}"
+                                   <c:if test="${assignedReviewerIds contains u.userId}">disabled="disabled"</c:if> />
+                            <c:if test="${assignedReviewerIds contains u.userId}">
+                                <span style="color:#999; font-size:12px;">已分配</span>
+                            </c:if>
                         </td>
                         <td><c:out value="${u.fullName}"/></td>
                         <td><c:out value="${u.username}"/></td>

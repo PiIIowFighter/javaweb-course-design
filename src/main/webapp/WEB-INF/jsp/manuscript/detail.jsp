@@ -13,6 +13,13 @@
 </c:if>
 
 <c:if test="${not empty manuscript}">
+<c:set var="backToUrl" value="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}#inviteReviewers"/>
+
+<c:if test="${not empty param.cancelMsg}">
+    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
+        <c:out value="${param.cancelMsg}"/>
+    </div>
+</c:if>
     <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
         <tr>
             <th>稿件编号</th>
@@ -478,6 +485,7 @@
             </thead>
             <tbody>
             <c:forEach items="${reviews}" var="r">
+                <c:if test="${r.status != 'DECLINED'}">
                 <tr>
                     <td>
                         <c:choose>
@@ -530,20 +538,27 @@
                         </c:if>
                     </td>
                     <td>
-                        <c:if test="${r.status != 'SUBMITTED'}">
-                            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">催审</button>
-                            </form>
-                            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认解除该审稿人？')">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">解除</button>
-                            </form>
-                        </c:if>
-                    </td>
+    <c:choose>
+        <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
+            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <button type="submit">催审</button>
+            </form>
+            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认撤回该审稿人分配？')">
+                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                <input type="hidden" name="backTo" value="${backToUrl}"/>
+                <button type="submit">撤回分配</button>
+            </form>
+        </c:when>
+        <c:otherwise>
+            -
+        </c:otherwise>
+    </c:choose>
+</td>
                 </tr>
+                </c:if>
             </c:forEach>
             </tbody>
         </table>
