@@ -52,6 +52,8 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
+    private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
+    /** 与 ProfileServlet 保持一致的上传根目录 */
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
@@ -267,6 +269,9 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
+
+        FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+        req.setAttribute("formalCheckResult", formalCheckResult);
 
         // 1）加载审稿记录，供“当前审稿记录”表格使用
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);

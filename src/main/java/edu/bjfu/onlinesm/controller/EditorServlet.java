@@ -1,7 +1,6 @@
 package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.util.DbUtil;
-import edu.bjfu.onlinesm.util.OperationLogger;
 import edu.bjfu.onlinesm.dao.ManuscriptDAO;
 import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.dao.ReviewDAO;
@@ -12,6 +11,11 @@ import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.Notification;
 import edu.bjfu.onlinesm.model.EditorSuggestion;
+import edu.bjfu.onlinesm.dao.FormalCheckResultDAO;
+import edu.bjfu.onlinesm.model.FormalCheckResult;
+import edu.bjfu.onlinesm.service.FormalCheckService;
+import edu.bjfu.onlinesm.service.PlagiarismCheckService;
+import edu.bjfu.onlinesm.util.OperationLogger;
 import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.util.mail.MailService;
@@ -23,6 +27,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +40,8 @@ import java.util.HashMap;
 
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import org.json.JSONObject;
+
 /**
  * 编辑部 / 编辑视角的稿件与审稿工作台。
  * 供：EDITOR_IN_CHIEF / EDITOR / EO_ADMIN 使用。
@@ -54,6 +61,8 @@ public class EditorServlet extends HttpServlet {
     private final NotificationDAO notificationDAO = new NotificationDAO();
     private final EditorSuggestionDAO editorSuggestionDAO = new EditorSuggestionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
+    private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
+    private final FormalCheckService formalCheckService = new FormalCheckService();
     private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
     private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
@@ -458,6 +467,7 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         try {
             switch (path) {
                 case "/formalCheck":
+                case "/formalCheck/autoCheck":
                     // 编辑部管理员执行形式审查 / 格式检查
                     handleFormalCheckPost(req, resp, current);
                     break;
@@ -1014,23 +1024,28 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
 
         switch (op) {
             case "start":
-                // SUBMITTED -> FORMAL_CHECK
-                manuscriptDAO.updateStatusWithHistory(manuscriptId, "FORMAL_CHECK", "FORMAL_CHECK_START", current.getUserId(), "开始形式审查");
+                manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
                 break;
+            case "autoCheck":
+                handleAutoCheck(req, resp, manuscriptId);
+                return;
+            case "plagiarismCheck":
+                handlePlagiarismCheck(req, resp, manuscriptId);
+                return;
+            case "submit":
+                handleSubmitFormalCheck(req, resp, current, manuscriptId);
+                return;
+            case "returnForRevision":
+                handleReturnForRevision(req, resp, current, manuscriptId);
+                return;
             case "approve":
-                // FORMAL_CHECK -> DESK_REVIEW_INITIAL
-                manuscriptDAO.updateStatusWithHistory(manuscriptId, "DESK_REVIEW_INITIAL", "FORMAL_CHECK_APPROVE", current.getUserId(), "形式审查通过");
+                manuscriptDAO.updateStatus(manuscriptId, "DESK_REVIEW_INITIAL");
                 break;
             case "return":
-                // SUBMITTED / FORMAL_CHECK -> RETURNED（退回作者修改格式）
+                manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
                 String issues = req.getParameter("issues");
                 String guideUrl = req.getParameter("guideUrl");
-                String remark = (issues != null && !issues.trim().isEmpty()) ? "退回原因：" + issues : "形式审查退回";
-                manuscriptDAO.updateStatusWithHistory(manuscriptId, "RETURNED", "FORMAL_CHECK_RETURN", current.getUserId(), remark);
-                // 1.2 形式审查退回修改：自动邮件通知作者（问题列表/修改指南可选）
                 mailNotifications.onFormalCheckReturn(manuscriptId, issues, guideUrl);
-                // 站内通知
-                inAppNotifications.onFormalCheckReturn(manuscriptId, issues);
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -1038,6 +1053,237 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         }
 
         resp.sendRedirect(req.getContextPath() + "/editor/formalCheck");
+    }
+
+    private void handleAutoCheck(HttpServletRequest req, HttpServletResponse resp, int manuscriptId)
+            throws SQLException, IOException {
+        
+        resp.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = resp.getWriter();
+        JSONObject jsonResponse = new JSONObject();
+
+        try {
+            Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+            if (manuscript == null) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "稿件不存在");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
+            FormalCheckResult result = formalCheckService.performAutomaticChecks(manuscript, null);
+            
+            jsonResponse.put("success", true);
+            jsonResponse.put("authorInfoValid", result.getAuthorInfoValid() != null ? result.getAuthorInfoValid().toString() : "");
+            jsonResponse.put("abstractWordCountValid", result.getAbstractWordCountValid() != null ? result.getAbstractWordCountValid().toString() : "");
+            jsonResponse.put("bodyWordCountValid", result.getBodyWordCountValid() != null ? result.getBodyWordCountValid().toString() : "");
+            jsonResponse.put("keywordsValid", result.getKeywordsValid() != null ? result.getKeywordsValid().toString() : "");
+            jsonResponse.put("message", "正文字数检查需要从附件文件中读取，请人工检查");
+            
+        } catch (Exception e) {
+            jsonResponse.put("success", false);
+            jsonResponse.put("message", "自动检查失败：" + e.getMessage());
+        }
+
+        out.print(jsonResponse.toString());
+    }
+
+    private void handlePlagiarismCheck(HttpServletRequest req, HttpServletResponse resp, int manuscriptId)
+            throws SQLException, IOException {
+        
+        resp.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = resp.getWriter();
+        JSONObject jsonResponse = new JSONObject();
+
+        try {
+            Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+            if (manuscript == null) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "稿件不存在");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
+            PlagiarismCheckService.PlagiarismReport plagiarismReport = 
+                formalCheckService.performPlagiarismCheck(manuscript, null);
+            
+            jsonResponse.put("success", true);
+            jsonResponse.put("similarityScore", plagiarismReport.getSimilarityScore());
+            jsonResponse.put("highSimilarity", plagiarismReport.isHighSimilarity());
+            jsonResponse.put("reportUrl", plagiarismReport.getReportUrl());
+            jsonResponse.put("message", "查重完成");
+            
+        } catch (Exception e) {
+            jsonResponse.put("success", false);
+            jsonResponse.put("message", "查重失败：" + e.getMessage());
+        }
+
+        out.print(jsonResponse.toString());
+    }
+
+    private void handleSubmitFormalCheck(HttpServletRequest req, HttpServletResponse resp, User current, int manuscriptId)
+            throws SQLException, IOException {
+        
+        resp.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = resp.getWriter();
+        JSONObject jsonResponse = new JSONObject();
+
+        try {
+            Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+            if (manuscript == null) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "稿件不存在");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
+            FormalCheckResult result = new FormalCheckResult();
+            result.setManuscriptId(manuscriptId);
+            result.setReviewerId(current.getUserId());
+            result.setCheckTime(LocalDateTime.now());
+
+            String authorInfoValidStr = req.getParameter("authorInfoValid");
+            if (authorInfoValidStr != null && !authorInfoValidStr.isEmpty()) {
+                result.setAuthorInfoValid(Boolean.valueOf(authorInfoValidStr));
+            }
+
+            String abstractWordCountValidStr = req.getParameter("abstractWordCountValid");
+            if (abstractWordCountValidStr != null && !abstractWordCountValidStr.isEmpty()) {
+                result.setAbstractWordCountValid(Boolean.valueOf(abstractWordCountValidStr));
+            }
+
+            String bodyWordCountValidStr = req.getParameter("bodyWordCountValid");
+            if (bodyWordCountValidStr != null && !bodyWordCountValidStr.isEmpty()) {
+                result.setBodyWordCountValid(Boolean.valueOf(bodyWordCountValidStr));
+            }
+
+            String keywordsValidStr = req.getParameter("keywordsValid");
+            if (keywordsValidStr != null && !keywordsValidStr.isEmpty()) {
+                result.setKeywordsValid(Boolean.valueOf(keywordsValidStr));
+            }
+
+            String footnoteNumberingValidStr = req.getParameter("footnoteNumberingValid");
+            if (footnoteNumberingValidStr != null && !footnoteNumberingValidStr.isEmpty()) {
+                result.setFootnoteNumberingValid(Boolean.valueOf(footnoteNumberingValidStr));
+            }
+
+            String figureTableFormatValidStr = req.getParameter("figureTableFormatValid");
+            if (figureTableFormatValidStr != null && !figureTableFormatValidStr.isEmpty()) {
+                result.setFigureTableFormatValid(Boolean.valueOf(figureTableFormatValidStr));
+            }
+
+            String referenceFormatValidStr = req.getParameter("referenceFormatValid");
+            if (referenceFormatValidStr != null && !referenceFormatValidStr.isEmpty()) {
+                result.setReferenceFormatValid(Boolean.valueOf(referenceFormatValidStr));
+            }
+
+            String checkResult = req.getParameter("checkResult");
+            
+            boolean hasInvalid = false;
+            if (result.getAuthorInfoValid() != null && !result.getAuthorInfoValid()) {
+                hasInvalid = true;
+            }
+            if (result.getAbstractWordCountValid() != null && !result.getAbstractWordCountValid()) {
+                hasInvalid = true;
+            }
+            if (result.getBodyWordCountValid() != null && !result.getBodyWordCountValid()) {
+                hasInvalid = true;
+            }
+            if (result.getKeywordsValid() != null && !result.getKeywordsValid()) {
+                hasInvalid = true;
+            }
+            if (result.getFootnoteNumberingValid() != null && !result.getFootnoteNumberingValid()) {
+                hasInvalid = true;
+            }
+            if (result.getFigureTableFormatValid() != null && !result.getFigureTableFormatValid()) {
+                hasInvalid = true;
+            }
+            if (result.getReferenceFormatValid() != null && !result.getReferenceFormatValid()) {
+                hasInvalid = true;
+            }
+            
+            if (hasInvalid) {
+                checkResult = "FAIL";
+            }
+            
+            result.setCheckResult(checkResult);
+
+            String feedback = req.getParameter("feedback");
+            if (feedback == null || feedback.trim().isEmpty()) {
+                feedback = formalCheckService.generateFeedback(result);
+            }
+            result.setFeedback(feedback);
+
+            formalCheckResultDAO.save(result);
+
+            manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
+
+            if ("PASS".equals(checkResult)) {
+                manuscriptDAO.updateStatus(manuscriptId, "DESK_REVIEW_INITIAL");
+            } else if ("FAIL".equals(checkResult)) {
+                manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
+                String guideUrl = req.getContextPath() + "/static/guides/format_guide.pdf";
+                mailNotifications.onFormalCheckReturn(manuscriptId, feedback, guideUrl);
+            }
+
+            jsonResponse.put("success", true);
+            jsonResponse.put("message", "形式审查结果已提交");
+            
+        } catch (Exception e) {
+            jsonResponse.put("success", false);
+            jsonResponse.put("message", "提交失败：" + e.getMessage());
+        }
+
+        out.print(jsonResponse.toString());
+    }
+
+    private void handleReturnForRevision(HttpServletRequest req, HttpServletResponse resp, User current, int manuscriptId)
+            throws SQLException, IOException {
+        
+        resp.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = resp.getWriter();
+        JSONObject jsonResponse = new JSONObject();
+
+        try {
+            Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+            if (manuscript == null) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "稿件不存在");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
+            String feedback = req.getParameter("feedback");
+            if (feedback == null || feedback.trim().isEmpty()) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "请填写反馈意见");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
+            FormalCheckResult result = new FormalCheckResult();
+            result.setManuscriptId(manuscriptId);
+            result.setReviewerId(current.getUserId());
+            result.setCheckTime(LocalDateTime.now());
+            result.setCheckResult("FAIL");
+            result.setFeedback(feedback);
+
+            formalCheckResultDAO.save(result);
+
+            manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
+
+            String guideUrl = req.getContextPath() + "/static/guides/format_guide.pdf";
+            mailNotifications.onFormalCheckReturn(manuscriptId, feedback, guideUrl);
+
+            jsonResponse.put("success", true);
+            jsonResponse.put("message", "已退回修改，邮件已发送给作者");
+            
+        } catch (Exception e) {
+            jsonResponse.put("success", false);
+            jsonResponse.put("message", "操作失败：" + e.getMessage());
+        }
+
+        out.print(jsonResponse.toString());
     }
 
     /**
