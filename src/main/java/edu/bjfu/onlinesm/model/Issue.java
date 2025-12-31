@@ -20,7 +20,7 @@ public class Issue implements Serializable {
     private String guestEditors;
     private String description; // HTML allowed
 
-    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 upload/journal/issues/ 下）
+    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/issues/ 下）
     private String coverImagePath;
     private String attachmentPath;
 

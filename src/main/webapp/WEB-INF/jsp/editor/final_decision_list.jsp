@@ -112,6 +112,23 @@
                                 </button>
                             </form>
                         </c:if>
+
+                        <!-- 特殊权限：撤销终审决定 / 撤稿 -->
+                        <form method="post" action="${pageContext.request.contextPath}/editor/finalDecision" style="display:inline">
+                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
+
+                            <c:if test="${m.currentStatus == 'ACCEPTED' or m.currentStatus == 'REJECTED' or m.currentStatus == 'REVISION'}">
+                                <button type="submit" name="op" value="rescind"
+                                        onclick="return confirm('确认撤销该稿件的终审决定？将回退到 FINAL_DECISION_PENDING。');">
+                                    撤销决策
+                                </button>
+                            </c:if>
+
+                            <button type="submit" name="op" value="retract"
+                                    onclick="return confirm('确认撤稿并归档该稿件？该操作通常不可逆。');">
+                                撤稿
+                            </button>
+                        </form>
                     </c:if>
                 </td>
             </tr>

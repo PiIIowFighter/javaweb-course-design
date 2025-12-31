@@ -42,10 +42,6 @@
             <i class="bi bi-grid" aria-hidden="true"></i> 工作台
         </a>
 
-        <a class="side-link ${fn:contains(uri, '/notifications') ? 'active' : ''}" href="${ctx}/notifications">
-            <i class="bi bi-bell" aria-hidden="true"></i> 通知中心
-        </a>
-
 	    <c:choose>
             <c:when test="${roleCode == 'AUTHOR'}">
                 <a class="side-link ${fn:contains(uri, '/manuscripts/list') ? 'active' : ''}" href="${ctx}/manuscripts/list">
@@ -105,9 +101,6 @@
                 <a class="side-link ${fn:contains(uri, '/editor/special') ? 'active' : ''}" href="${ctx}/editor/special">
                     <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> 特殊权限操作
                 </a>
-                <a class="side-link ${fn:contains(uri, '/notifications/send') ? 'active' : ''}" href="${ctx}/notifications/send">
-                    <i class="bi bi-send" aria-hidden="true"></i> 发送通知
-                </a>
             </c:when>
 
             <c:when test="${roleCode == 'EO_ADMIN'}">
@@ -119,9 +112,6 @@
                 </a>
                 <a class="side-link ${fn:contains(uri, '/admin/news') ? 'active' : ''}" href="${ctx}/admin/news/list">
                     <i class="bi bi-megaphone" aria-hidden="true"></i> 新闻 / 公告管理
-                </a>
-                <a class="side-link ${fn:contains(uri, '/notifications/send') ? 'active' : ''}" href="${ctx}/notifications/send">
-                    <i class="bi bi-send" aria-hidden="true"></i> 发送通知
                 </a>
             </c:when>
 
@@ -149,9 +139,6 @@
                 </a>
                 <a class="side-link ${fn:contains(uri, '/admin/news') ? 'active' : ''}" href="${ctx}/admin/news/list">
                     <i class="bi bi-megaphone" aria-hidden="true"></i> 公告 / 新闻
-                </a>
-                <a class="side-link ${fn:contains(uri, '/notifications/send') ? 'active' : ''}" href="${ctx}/notifications/send">
-                    <i class="bi bi-send" aria-hidden="true"></i> 发送通知
                 </a>
             </c:when>
 

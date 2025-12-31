@@ -18,7 +18,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 个人信息管理：

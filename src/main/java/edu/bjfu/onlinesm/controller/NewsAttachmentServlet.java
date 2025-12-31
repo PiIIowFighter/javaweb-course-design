@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 @WebServlet(name = "NewsAttachmentServlet", urlPatterns = {"/news/attachment"})
 public class NewsAttachmentServlet extends HttpServlet {

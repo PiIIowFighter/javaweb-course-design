@@ -56,11 +56,6 @@ body {
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-
-    /* Layout: header + main + footer */
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
 }
 
 a {
@@ -79,10 +74,7 @@ a:hover { text-decoration-thickness: 2px; }
     padding-right: var(--space-6);
 }
 
-/* ======================= */
-/* Header / Global Nav     */
-/* ======================= */
-
+/* Header */
 .site-header {
     position: sticky;
     top: 0;
@@ -92,16 +84,10 @@ a:hover { text-decoration-thickness: 2px; }
     border-bottom: 1px solid var(--border);
     box-shadow: 0 1px 0 rgba(11, 18, 32, 0.04);
 }
-
-/* header 行铺满宽度，不受 max-width 限制 */
-.site-header .container {
-    max-width: none;
-}
-
 .header-inner {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: var(--space-4);
     min-height: var(--header-h);
     padding-top: 12px;
@@ -113,9 +99,6 @@ a:hover { text-decoration-thickness: 2px; }
     align-items: center;
     gap: var(--space-3);
     text-decoration: none;
-
-    margin-right: var(--space-6);
-    white-space: nowrap;
 }
 .brand-mark {
     width: 30px;
@@ -218,16 +201,13 @@ a:hover { text-decoration-thickness: 2px; }
 }
 .nav-toggle .bi { font-size: 18px; }
 
-/* ======================= */
-/* Main Layout             */
-/* ======================= */
-
+/* Main */
 .site-main {
-    flex: 1 0 auto;
     padding-top: var(--space-10);
     padding-bottom: var(--space-10);
 }
 
+/* Two-column layout (sidebar + content) */
 .layout {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
@@ -319,6 +299,7 @@ a:hover { text-decoration-thickness: 2px; }
 }
 .side-link .bi { margin-right: 10px; opacity: 0.9; }
 
+
 /* Layout helpers */
 .stack > * + * { margin-top: var(--space-4); }
 .stack-lg > * + * { margin-top: var(--space-6); }
@@ -335,7 +316,7 @@ a:hover { text-decoration-thickness: 2px; }
 .card-header {
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: var(--space-4);
     margin-bottom: var(--space-5);
 }
@@ -608,6 +589,7 @@ button:active { transform: translateY(1px); }
 }
 .btn-primary:hover { background: rgba(0, 90, 156, 0.92); }
 
+/* ✅ 关键：确保 a.btn-primary 也走深色主按钮（覆盖上面浅色背景） */
 a.btn-primary {
     background: var(--accent);
     color: #fff;
@@ -758,12 +740,11 @@ tbody tr:hover td {
     border-top: 1px solid var(--border);
     padding: var(--space-8) 0;
     color: var(--muted);
-    flex-shrink: 0;
 }
 .footer-inner {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: var(--space-4);
     flex-wrap: wrap;
 }
@@ -773,26 +754,19 @@ tbody tr:hover td {
     .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .layout { grid-template-columns: 1fr; }
     .sidebar { position: static; }
-    .authed .sidebar { position: static; width: auto; height: auto; overflow: visible; padding: 0; border-right: 0; }
-    .authed .content { margin-left: 0; }
-    .authed .site-main > .container { padding-left: var(--space-6); padding-right: var(--space-6); }
 }
 
 @media (max-width: 720px) {
     .container { padding-left: var(--space-4); padding-right: var(--space-4); }
     .site-main { padding-top: var(--space-8); padding-bottom: var(--space-8); }
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
-
     .nav-toggle { display: inline-flex; align-items: center; justify-content: center; }
-
     .nav {
         position: absolute;
         right: var(--space-4);
         top: calc(var(--header-h) - 6px);
         flex-direction: column;
         align-items: stretch;
-        justify-content: flex-start;
-        flex: 0 0 auto;
         padding: var(--space-3);
         background: rgba(255, 255, 255, 0.92);
         border: 1px solid var(--border);
@@ -801,7 +775,6 @@ tbody tr:hover td {
         min-width: 220px;
         display: none;
     }
-
     .nav.nav-open { display: flex; }
 
     .nav-left,
@@ -828,9 +801,6 @@ tbody tr:hover td {
 
     .layout { grid-template-columns: 1fr; }
     .sidebar { position: static; }
-    .authed .sidebar { position: static; width: auto; height: auto; overflow: visible; padding: 0; border-right: 0; }
-    .authed .content { margin-left: 0; }
-    .authed .site-main > .container { padding-left: var(--space-4); padding-right: var(--space-4); }
 }
 
 /* OTP / verification code buttons */

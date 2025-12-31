@@ -18,14 +18,13 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 期刊资源访问（封面图 / 附件）：
  *  - /journal/asset?type=page_cover&id=1
  *  - /journal/asset?type=issue_attachment&id=2
  *
- * 文件实际存放：upload/journal/{pages|issues|calls}/<storedName>
+ * 文件实际存放：D:/upload/journal/{pages|issues|calls}/<storedName>
  */
 @WebServlet(name = "JournalAssetServlet", urlPatterns = {"/journal/asset"})
 public class JournalAssetServlet extends HttpServlet {
@@ -35,6 +34,7 @@ public class JournalAssetServlet extends HttpServlet {
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
     private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
+    private static final String BASE_UPLOAD_DIR = "D:/upload";
     private static final String JOURNAL_SUB_DIR = "journal";
 
     @Override

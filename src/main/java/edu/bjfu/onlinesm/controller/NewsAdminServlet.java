@@ -18,7 +18,6 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 新闻 / 公告管理模块控制器。
