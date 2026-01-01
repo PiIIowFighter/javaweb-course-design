@@ -6,10 +6,49 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<%-- 引入富文本编辑器 --%>
+<%-- Quill 富文本编辑器（本地引用） --%>
+<link href="${ctx}/static/css/quill.snow.css" rel="stylesheet">
+<script src="${ctx}/static/js/quill.min.js"></script>
 
-<%-- 使用 BootCDN 的 CKEditor --%>
-<script src="https://cdn.bootcdn.net/ajax/libs/ckeditor/4.16.2/ckeditor.js"></script>
+<style>
+    /* Quill 编辑器：与系统表单风格对齐 */
+    .quill-editor {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        min-height: 220px;
+    }
+    .quill-editor .ql-toolbar {
+        border: none;
+        border-bottom: 1px solid var(--border);
+        border-top-left-radius: var(--radius-sm);
+        border-top-right-radius: var(--radius-sm);
+    }
+    .quill-editor .ql-container {
+        border: none;
+        border-bottom-left-radius: var(--radius-sm);
+        border-bottom-right-radius: var(--radius-sm);
+    }
+    .quill-editor .ql-editor {
+        min-height: 200px;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    #commentsToAuthorEditor .ql-editor { min-height: 260px; }
+
+    /* 用于提交：隐藏 textarea，但仍参与 JS 同步 */
+    .quill-sync-textarea {
+        position: absolute !important;
+        left: -10000px !important;
+        top: auto !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+    }
+</style>
+
+<%-- Font Awesome 图标（用于评分/提示等） --%>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <c:choose>
@@ -39,7 +78,7 @@
         <strong>重要提醒：</strong>提交评审意见后，您将无法再查看该稿件的脱密版文件。
     </div>
 
-<form method="post" action="${ctx}/reviewer/submit" id="reviewForm" onsubmit="return prepareForm()">
+<form method="post" action="${ctx}/reviewer/submit" id="reviewForm" novalidate onsubmit="return prepareForm()">
     <input type="hidden" name="reviewId" value="${rid}"/>
     <input type="hidden" name="id" value="${rid}"/>
 
@@ -276,8 +315,14 @@
                 <small class="form-text text-muted d-block mb-2">
                     仅编辑/主编可见。请评估：是否存在学术不端风险、重要缺陷、建议处理方式等
                 </small>
-                <textarea name="confidentialToEditor" id="confidentialToEditor" rows="8" required
-                          placeholder="请输入给编辑的保密意见..." class="form-control"></textarea>
+                <textarea name="confidentialToEditor" id="confidentialToEditor" rows="8" required placeholder="请输入给编辑的保密意见..." class="form-control"></textarea>
+                <div id="confidentialToEditorEditor" class="quill-editor" style="display:none;"></div>
+
+                <div id="quillLoadError" class="alert alert-warning mt-2" style="display:none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    富文本编辑器未能加载，已自动切换为普通文本输入。请确认本地资源存在且可访问：
+                    <code>${ctx}/static/js/quill.min.js</code> 与 <code>${ctx}/static/css/quill.snow.css</code>。
+                </div>
             </div>
         </div>
     </div>
@@ -294,8 +339,8 @@
                 <small class="form-text text-muted d-block mb-2">
                     作者可见。请提供详细的修改建议，帮助作者改进稿件
                 </small>
-                <textarea name="commentsToAuthor" id="commentsToAuthor" rows="10" required
-                          placeholder="请输入给作者的具体修改建议..." class="form-control"></textarea>
+                <textarea name="commentsToAuthor" id="commentsToAuthor" rows="10" required placeholder="请输入给作者的具体修改建议..." class="form-control"></textarea>
+                <div id="commentsToAuthorEditor" class="quill-editor" style="display:none;"></div>
                 <%-- 兼容旧后端 --%>
                 <input type="hidden" name="content" id="contentCompat"/>
                 
@@ -337,31 +382,91 @@
 </div>
 
 <script>
-    // 初始化富文本编辑器
-    CKEDITOR.replace('confidentialToEditor', {
-        toolbar: [
-            ['Bold', 'Italic', 'Underline', 'Strike'],
-            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
-            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
-            ['Link', 'Unlink'],
-            ['RemoveFormat', 'Source']
-        ],
-        height: 200,
-        language: 'zh-cn'
-    });
-    
-    CKEDITOR.replace('commentsToAuthor', {
-        toolbar: [
-            ['Bold', 'Italic', 'Underline'],
-            ['NumberedList', 'BulletedList'],
-            ['Link', 'Unlink'],
-            ['RemoveFormat', 'Source']
-        ],
-        height: 250,
-        language: 'zh-cn'
-    });
+    // 初始化 Quill 富文本编辑器（Snow theme，本地资源）
+    var quillToolbar = [
+        ['bold', 'italic', 'underline', 'strike'],
+        [{'list': 'ordered'}, {'list': 'bullet'}],
+        [{'indent': '-1'}, {'indent': '+1'}],
+        [{'align': []}],
+        ['link'],
+        ['clean']
+    ];
 
-    // 更新总体分 - 基于所有9个维度计算
+    var confidentialQuill = null;
+    var commentsQuill = null;
+
+    function syncQuillToTextarea() {
+        if (!confidentialQuill || !commentsQuill) return;
+        var confidentialEl = document.getElementById('confidentialToEditor');
+        var commentsEl = document.getElementById('commentsToAuthor');
+        if (confidentialEl) confidentialEl.value = confidentialQuill.root.innerHTML;
+        if (commentsEl) commentsEl.value = commentsQuill.root.innerHTML;
+    }
+
+    function initQuillIfAvailable() {
+        var warn = document.getElementById('quillLoadError');
+        var ta1 = document.getElementById('confidentialToEditor');
+        var ta2 = document.getElementById('commentsToAuthor');
+        var ed1 = document.getElementById('confidentialToEditorEditor');
+        var ed2 = document.getElementById('commentsToAuthorEditor');
+
+        // 未加载 Quill：保留 textarea 作为降级输入
+        if (typeof window.Quill === 'undefined') {
+            if (warn) warn.style.display = 'block';
+            if (ed1) ed1.style.display = 'none';
+            if (ed2) ed2.style.display = 'none';
+            return;
+        }
+
+        try {
+            if (ed1) ed1.style.display = 'block';
+            if (ed2) ed2.style.display = 'block';
+
+            confidentialQuill = new Quill('#confidentialToEditorEditor', {
+                theme: 'snow',
+                modules: { toolbar: quillToolbar },
+                placeholder: '请输入给编辑的保密意见...'
+            });
+
+            commentsQuill = new Quill('#commentsToAuthorEditor', {
+                theme: 'snow',
+                modules: { toolbar: quillToolbar },
+                placeholder: '请输入给作者的具体修改建议...'
+            });
+
+            // 若后端回填了历史内容，则带入 Quill
+            if (ta1 && ta1.value) confidentialQuill.root.innerHTML = ta1.value;
+            if (ta2 && ta2.value) commentsQuill.root.innerHTML = ta2.value;
+
+            // Quill 正常后再隐藏 textarea
+            if (ta1) ta1.classList.add('quill-sync-textarea');
+            if (ta2) ta2.classList.add('quill-sync-textarea');
+
+            // 同步一次，并绑定变更事件
+            syncQuillToTextarea();
+            confidentialQuill.on('text-change', syncQuillToTextarea);
+            commentsQuill.on('text-change', syncQuillToTextarea);
+
+            if (warn) warn.style.display = 'none';
+        } catch (e) {
+            console.error('Quill init failed:', e);
+            if (warn) warn.style.display = 'block';
+            if (ed1) ed1.style.display = 'none';
+            if (ed2) ed2.style.display = 'none';
+            if (ta1) ta1.classList.remove('quill-sync-textarea');
+            if (ta2) ta2.classList.remove('quill-sync-textarea');
+            confidentialQuill = null;
+            commentsQuill = null;
+        }
+    }
+
+    // 兼容：如果脚本在 DOMContentLoaded 之后执行，也能初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initQuillIfAvailable);
+    } else {
+        initQuillIfAvailable();
+    }
+// 更新总体分 - 基于所有9个维度计算
     function updateOverallScore() {
         console.log('updateOverallScore called');
         
@@ -436,12 +541,39 @@
     // 准备表单提交（保留原逻辑）
     function prepareForm() {
         console.log('prepareForm called');
-        
-        // 更新富文本编辑器内容到隐藏字段
-        for (var instance in CKEDITOR.instances) {
-            CKEDITOR.instances[instance].updateElement();
+        // 同步 Quill 内容到隐藏字段
+        if (typeof syncQuillToTextarea === "function") {
+            syncQuillToTextarea();
         }
-        
+
+        // 校验【给编辑的保密意见】与【给作者的意见】必填
+        var confidentialTa = document.getElementById('confidentialToEditor');
+        var commentsTa = document.getElementById('commentsToAuthor');
+
+        if (confidentialQuill) {
+            if (confidentialQuill.getText().trim().length === 0) {
+                alert("请填写【给编辑的保密意见】");
+                return false;
+            }
+        } else {
+            if (!confidentialTa || confidentialTa.value.trim().length === 0) {
+                alert("请填写【给编辑的保密意见】");
+                return false;
+            }
+        }
+
+        if (commentsQuill) {
+            if (commentsQuill.getText().trim().length === 0) {
+                alert("请填写【给作者的意见】");
+                return false;
+            }
+        } else {
+            if (!commentsTa || commentsTa.value.trim().length === 0) {
+                alert("请填写【给作者的意见】");
+                return false;
+            }
+        }
+
         // 同步兼容字段
         const commentsEl = document.getElementById('commentsToAuthor');
         const compatEl = document.getElementById('contentCompat');
@@ -453,7 +585,9 @@
         // 验证表单
         const form = document.getElementById('reviewForm');
         if (!form.checkValidity()) {
-            alert('请填写所有必填字段');
+            // 触发浏览器原生提示（更直观）
+            if (form.reportValidity) form.reportValidity();
+            else alert('请填写所有必填字段');
             return false;
         }
         
@@ -549,19 +683,8 @@
                 }
             });
         }
-        
-        // 监听富文本编辑器的变化
-        setTimeout(() => {
-            if (CKEDITOR.instances['confidentialToEditor']) {
-                CKEDITOR.instances['confidentialToEditor'].on('change', function() {
-                    this.updateElement();
-                });
             }
-            
-            if (CKEDITOR.instances['commentsToAuthor']) {
-                CKEDITOR.instances['commentsToAuthor'].on('change', function() {
-                    this.updateElement();
-                });
+);
             }
         }, 1000);
     });

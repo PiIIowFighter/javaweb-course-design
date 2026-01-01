@@ -18,7 +18,11 @@ import edu.bjfu.onlinesm.service.PlagiarismCheckService;
 import edu.bjfu.onlinesm.util.OperationLogger;
 import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptRecommendedReviewerDAO;
+import edu.bjfu.onlinesm.dao.ManuscriptAuthorDAO;
+import edu.bjfu.onlinesm.dao.ManuscriptVersionDAO;
 import edu.bjfu.onlinesm.model.ManuscriptRecommendedReviewer;
+import edu.bjfu.onlinesm.model.ManuscriptAuthor;
+import edu.bjfu.onlinesm.model.ManuscriptVersion;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.util.mail.MailService;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
@@ -65,6 +69,8 @@ public class EditorServlet extends HttpServlet {
     private final EditorSuggestionDAO editorSuggestionDAO = new EditorSuggestionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
+    private final ManuscriptAuthorDAO manuscriptAuthorDAO = new ManuscriptAuthorDAO();
+    private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
     private final FormalCheckService formalCheckService = new FormalCheckService();
     private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
@@ -138,6 +144,11 @@ public class EditorServlet extends HttpServlet {
                 case "/recommend":
                     // 提出建议：汇总审稿意见并向主编提交编辑建议（无最终决策权）
                     handleEditorRecommendPage(req, resp, current);
+                    break;
+
+                case "/recommend/detail":
+                    // 提出建议模块下的“查看稿件详情”（独立 JSP，展示更完整信息）
+                    handleRecommendManuscriptDetailPage(req, resp, current);
                     break;
 
                 case "/review/monitor":
@@ -408,6 +419,74 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
                 .forward(req, resp);
     }
 
+    /**
+     * 提出建议模块下的“查看稿件详情”页面。
+     * 说明：该页是从“提出建议”入口进入的独立详情 JSP，
+     * 用于展示更完整的稿件信息（作者列表、版本文件、形式审查结果、外审记录与已提交意见等）。
+     */
+    private void handleRecommendManuscriptDetailPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        String role = current.getRoleCode();
+        if (!"EDITOR".equals(role) && !"EDITOR_IN_CHIEF".equals(role)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以访问该页面。");
+            return;
+        }
+
+        String midStr = req.getParameter("manuscriptId");
+        if (midStr == null || midStr.trim().isEmpty()) {
+            midStr = req.getParameter("id");
+        }
+        if (midStr == null || midStr.trim().isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/editor/recommend");
+            return;
+        }
+
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(midStr);
+        } catch (Exception e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 参数无效。");
+            return;
+        }
+
+        Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+        if (manuscript == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
+            return;
+        }
+
+        // 责任编辑只能查看分配给自己的稿件
+        if ("EDITOR".equals(role)) {
+            Integer editorId = manuscriptDAO.findCurrentEditorId(manuscriptId);
+            if (!java.util.Objects.equals(editorId, current.getUserId())) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "您无权查看该稿件的详情。");
+                return;
+            }
+        }
+
+        // 基本信息 + 作者列表
+        List<ManuscriptAuthor> authors = manuscriptAuthorDAO.findByManuscriptId(manuscriptId);
+
+        // 当前版本与形式审查结果
+        ManuscriptVersion currentVersion = versionDAO.findCurrentByManuscriptId(manuscriptId);
+        FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+
+        // 外审记录与作者推荐审稿人
+        List<Review> reviews = reviewDAO.findByManuscript(manuscriptId);
+        List<ManuscriptRecommendedReviewer> recommendedReviewers = recommendedReviewerDAO.findByManuscriptId(manuscriptId);
+
+        req.setAttribute("manuscript", manuscript);
+        req.setAttribute("authors", authors);
+        req.setAttribute("currentVersion", currentVersion);
+        req.setAttribute("formalCheckResult", formalCheckResult);
+        req.setAttribute("reviews", reviews);
+        req.setAttribute("recommendedReviewers", recommendedReviewers);
+
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/recommend_manuscript_detail.jsp")
+                .forward(req, resp);
+    }
+
 
     /**
      * 主编管理“审稿人库”的页面：仅允许 EDITOR_IN_CHIEF 访问。
@@ -606,6 +685,7 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String[] reviewerIdParams = req.getParameterValues("reviewerIds");
         String dueDateStr = req.getParameter("dueDate"); // yyyy-MM-dd，可为空
+        String backTo = req.getParameter("backTo");      // 可为空：合并页会传回跳地址
 
         // 兼容旧表单：如果没有 reviewerIds，则尝试读取单个 reviewerId
         if (reviewerIdParams == null || reviewerIdParams.length == 0) {
@@ -652,11 +732,12 @@ for (String reviewerIdStr : reviewerIdParams) {
             manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
         }
 
-        // 回到“选择审稿人”页面，并给出提示（更符合用户期望：邀请后仍停留在当前稿件的审稿人管理页）
-String msg = URLEncoder.encode("已向所选审稿人发送邀请。", StandardCharsets.UTF_8);
-resp.sendRedirect(req.getContextPath()
-        + "/editor/review/select?manuscriptId=" + manuscriptId
-        + "&inviteMsg=" + msg);
+        // 回到合并后的详情页（或 backTo 指定的页面），并给出提示
+        String base = (backTo != null && !backTo.trim().isEmpty())
+                ? backTo.trim()
+                : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
+        String msg = URLEncoder.encode("已向所选审稿人发送邀请。", StandardCharsets.UTF_8);
+        resp.sendRedirect(appendQueryParam(base, "inviteMsg", msg));
     }
 
     /**
@@ -678,6 +759,7 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
 
     String manuscriptIdStr = req.getParameter("manuscriptId");
     String dueDateStr = req.getParameter("dueDate"); // yyyy-MM-dd，可为空
+    String backTo = req.getParameter("backTo");      // 可为空：合并页会传回跳地址
 
     String username = req.getParameter("username");
     String password = req.getParameter("password");
@@ -702,10 +784,11 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
     }
 
     if (username.isEmpty() || password.isEmpty() || email.isEmpty()) {
+        String base = (backTo != null && !backTo.trim().isEmpty())
+                ? backTo.trim()
+                : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
         String msg = URLEncoder.encode("用户名/初始密码/邮箱均不能为空。", StandardCharsets.UTF_8);
-        resp.sendRedirect(req.getContextPath()
-                + "/editor/review/select?manuscriptId=" + manuscriptId
-                + "&inviteErr=" + msg);
+        resp.sendRedirect(appendQueryParam(base, "inviteErr", msg));
         return;
     }
 
@@ -728,10 +811,11 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
     // 如果用户名已存在，直接提示
     User existed = userDAO.findByUsername(username);
     if (existed != null) {
+        String base = (backTo != null && !backTo.trim().isEmpty())
+                ? backTo.trim()
+                : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
         String msg = URLEncoder.encode("用户名已存在，请更换用户名后再邀请。", StandardCharsets.UTF_8);
-        resp.sendRedirect(req.getContextPath()
-                + "/editor/review/select?manuscriptId=" + manuscriptId
-                + "&inviteErr=" + msg);
+        resp.sendRedirect(appendQueryParam(base, "inviteErr", msg));
         return;
     }
 
@@ -763,10 +847,11 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
         manuscriptDAO.updateStatusWithHistory(manuscriptId, "UNDER_REVIEW", "SEND_TO_REVIEW", current.getUserId(), "送外审");
     }
 
+    String base = (backTo != null && !backTo.trim().isEmpty())
+            ? backTo.trim()
+            : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
     String msg = URLEncoder.encode("外部审稿人账号已创建，并已发送邮件邀请。", StandardCharsets.UTF_8);
-    resp.sendRedirect(req.getContextPath()
-            + "/editor/review/select?manuscriptId=" + manuscriptId
-            + "&inviteMsg=" + msg);
+    resp.sendRedirect(appendQueryParam(base, "inviteMsg", msg));
 }
 
 /**
@@ -786,6 +871,7 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
 
         String reviewIdStr     = req.getParameter("reviewId");
         String manuscriptIdStr = req.getParameter("manuscriptId");
+        String backTo          = req.getParameter("backTo");
 
         if (reviewIdStr == null || manuscriptIdStr == null) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
@@ -798,9 +884,11 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
         // 更新 dbo.Reviews.RemindCount / LastRemindedAt
         reviewDAO.remind(reviewId);
 
-        // 催审后跳回该稿件在送外审列表，可按需改成 detail 页面
-        resp.sendRedirect(req.getContextPath()
-                + "/editor/underReview?highlight=" + manuscriptId);
+        // 催审后跳回合并后的详情页（或 backTo 指定页面），避免在多个列表之间来回跳转
+        String target = (backTo != null && !backTo.trim().isEmpty())
+                ? backTo.trim()
+                : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
+        resp.sendRedirect(target);
     }
 
     
@@ -1718,59 +1806,18 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
             }
         }
 
-        String reviewerKeyword = req.getParameter("reviewerKeyword");
-        if (reviewerKeyword == null) reviewerKeyword = "";
+        // 详情页已合并“选择审稿人”功能：该旧入口统一跳转到稿件详情页的“审稿人管理”锚点
+        String base = req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId;
 
-        Integer minCompleted = null;
-        Integer minAvgScore = null;
-        try {
-            String mc = req.getParameter("minCompleted");
-            if (mc != null && !mc.trim().isEmpty()) minCompleted = Integer.parseInt(mc.trim());
-        } catch (Exception ignore) {}
-        try {
-            String ms = req.getParameter("minAvgScore");
-            if (ms != null && !ms.trim().isEmpty()) minAvgScore = Integer.parseInt(ms.trim());
-        } catch (Exception ignore) {}
-
-        // 可选：默认用研究主题做一次建议关键词
-        if (reviewerKeyword.trim().isEmpty() && m.getSubjectArea() != null) {
-            reviewerKeyword = m.getSubjectArea();
-        }
-
-List<User> reviewers = userDAO.searchReviewerPool(reviewerKeyword, minCompleted, minAvgScore, 100);
-
-// 仅展示“仍然有效/已提交”的审稿记录；撤回/拒绝/过期的不在此处展示，也不应阻止再次邀请
-List<Review> allReviews = reviewDAO.findByManuscript(manuscriptId);
-List<Review> currentReviews = new ArrayList<>();
-Set<Integer> assignedReviewerIds = new HashSet<>(); // 仅 INVITED/ACCEPTED 视为“仍被分配”
-for (Review r : allReviews) {
-    String st = r.getStatus();
-    if ("INVITED".equalsIgnoreCase(st) || "ACCEPTED".equalsIgnoreCase(st)) {
-        currentReviews.add(r);
-        assignedReviewerIds.add(r.getReviewerId());
-    } else if ("SUBMITTED".equalsIgnoreCase(st)) {
-        currentReviews.add(r);
-    }
-}
-
-Map<Integer, User> reviewerMap = new HashMap<>();
-for (Review r : currentReviews) {
-    User u = userDAO.findById(r.getReviewerId());
-    if (u != null) reviewerMap.put(r.getReviewerId(), u);
-}
-
-        // 作者在投稿/修回时填写的“推荐审稿人”（可作为编辑选人的参考）
-        List<ManuscriptRecommendedReviewer> recommendedReviewers = recommendedReviewerDAO.findByManuscriptId(manuscriptId);
-        req.setAttribute("recommendedReviewers", recommendedReviewers);
-
-        req.setAttribute("manuscript", m);
-        req.setAttribute("reviewers", reviewers);
-        req.setAttribute("reviewerKeyword", reviewerKeyword);
-        req.setAttribute("currentReviews", currentReviews);
-        req.setAttribute("reviewerMap", reviewerMap);
-        req.setAttribute("assignedReviewerIds", assignedReviewerIds);
-
-        req.getRequestDispatcher("/WEB-INF/jsp/editor/select_reviewers.jsp").forward(req, resp);
+        // 透传搜索/提示参数（如从旧页面跳转过来，仍能保留筛选条件与提示信息）
+        String target = base;
+        target = appendQueryParamIfPresent(req, target, "reviewerKeyword");
+        target = appendQueryParamIfPresent(req, target, "minCompleted");
+        target = appendQueryParamIfPresent(req, target, "minAvgScore");
+        target = appendQueryParamIfPresent(req, target, "inviteMsg");
+        target = appendQueryParamIfPresent(req, target, "inviteErr");
+        target = appendQueryParamIfPresent(req, target, "cancelMsg");
+        resp.sendRedirect(target + "#inviteReviewers");
     }
 
     /**
@@ -2185,6 +2232,35 @@ for (Review r : currentReviews) {
         String okText = "消息已发送" + (sendEmail && !emailOk ? "（邮件发送失败，仅站内消息生效）" : "。");
         req.getSession().setAttribute("authorMessageFlash", okText);
         resp.sendRedirect(req.getContextPath() + "/editor/author/message?manuscriptId=" + manuscriptId);
+    }
+
+    // ========================= URL 工具（用于合并页跳转） =========================
+
+    /**
+     * 在原 URL 后追加 query 参数。valueEncoded 必须已进行 URL 编码。
+     * 支持 URL 带有锚点（#...），会自动把参数插入到锚点前。
+     */
+    private String appendQueryParam(String url, String key, String valueEncoded) {
+        if (url == null) return null;
+        String base = url;
+        String fragment = "";
+        int idx = url.indexOf('#');
+        if (idx >= 0) {
+            base = url.substring(0, idx);
+            fragment = url.substring(idx);
+        }
+        String sep = base.contains("?") ? "&" : "?";
+        return base + sep + key + "=" + valueEncoded + fragment;
+    }
+
+    /**
+     * 若请求中存在某个参数（非空），则把它透传到目标 URL 上。
+     */
+    private String appendQueryParamIfPresent(HttpServletRequest req, String url, String key) {
+        String v = req.getParameter(key);
+        if (v == null || v.trim().isEmpty()) return url;
+        String enc = URLEncoder.encode(v, StandardCharsets.UTF_8);
+        return appendQueryParam(url, key, enc);
     }
 
 

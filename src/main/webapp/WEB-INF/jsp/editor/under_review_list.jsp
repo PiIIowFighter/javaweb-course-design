@@ -15,7 +15,7 @@
 
 <p style="margin:8px 0;">
     <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/review/monitor">进入全局催审/逾期监控</a>
-    <span style="margin-left:8px; color:#666;">（用于查看所有稿件的逾期审稿与批量催审；单篇稿件的邀请/撤回/催审请在下方“管理审稿人”进入。）</span>
+    <span style="margin-left:8px; color:#666;">（用于查看所有稿件的逾期审稿与批量催审；单篇稿件的邀请/撤回/催审请点击下方“查看详细信息”。）</span>
 </p>
 
 <c:if test="${empty underReviewList}">
@@ -48,9 +48,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
-                    <a class="btn" href="${pageContext.request.contextPath}/editor/review/select?manuscriptId=${m.manuscriptId}"
-                       style="margin-left:6px;">管理审稿人</a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers">查看详细信息</a>
                 </td>
             </tr>
         </c:forEach>

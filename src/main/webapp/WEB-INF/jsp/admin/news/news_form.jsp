@@ -75,8 +75,8 @@
 
 
 <!-- Quill 富文本编辑器：用于新闻 / 公告内容 -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<link href="${pageContext.request.contextPath}/static/css/quill.snow.css" rel="stylesheet">
+<script src="${pageContext.request.contextPath}/static/js/quill.min.js"></script>
 
 <style>
     #newsContentEditor {

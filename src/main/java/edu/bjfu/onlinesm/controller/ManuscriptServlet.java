@@ -273,6 +273,18 @@ public class ManuscriptServlet extends HttpServlet {
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);
         req.setAttribute("reviews", reviewList);
 
+        // 1.1）详情页已合并“审稿人选择”功能：用于禁用已分配的审稿人，避免重复邀请
+        // 与 EditorServlet 的 /review/select 保持一致：INVITED / ACCEPTED 视为已分配（SUBMITTED 可再次邀请由业务决定）
+        java.util.Set<Integer> assignedReviewerIds = new java.util.HashSet<>();
+        for (Review r : reviewList) {
+            if (r == null) continue;
+            String st = r.getStatus();
+            if ("INVITED".equals(st) || "ACCEPTED".equals(st)) {
+                assignedReviewerIds.add(r.getReviewerId());
+            }
+        }
+        req.setAttribute("assignedReviewerIds", assignedReviewerIds);
+
         // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库（支持搜索与推荐）
         String role = current.getRoleCode();
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {

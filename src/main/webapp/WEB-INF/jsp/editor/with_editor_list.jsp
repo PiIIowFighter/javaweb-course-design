@@ -88,10 +88,8 @@
                 </td>
             </c:if>
             <td>
-                <!-- 逻辑优化：统一“进入工作台”作为详情入口；审稿相关操作统一为“管理审稿人” -->
-                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
-                <a class="btn" href="${pageContext.request.contextPath}/editor/review/select?manuscriptId=${m.manuscriptId}"
-                   style="margin-left:6px;">管理审稿人</a>
+                <!-- 逻辑优化：统一详情入口（审稿邀请/撤回/催审等功能已合并至详情页） -->
+                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers">查看详细信息</a>
 
                 <!-- 主编 / 编辑部管理员可以对单条稿件发送“催办编辑”提醒 -->
                 <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF' || sessionScope.currentUser.roleCode == 'EO_ADMIN'}">

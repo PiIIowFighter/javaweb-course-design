@@ -3,7 +3,7 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet"/>
+<link href="${pageContext.request.contextPath}/static/css/quill.snow.css" rel="stylesheet"/>
 
 <h2>
     <c:choose>
@@ -81,7 +81,7 @@
     </p>
 </form>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script src="${pageContext.request.contextPath}/static/js/quill.min.js"></script>
 <script>
     var pageQuill = new Quill('#pageContentEditor', {
         theme: 'snow',

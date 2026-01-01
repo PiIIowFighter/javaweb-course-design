@@ -27,7 +27,7 @@
         <div class="card-body">
             <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
             <p style="margin-top: 10px;">
-                <a href="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}">查看稿件详情</a>
+                <a href="${ctx}/editor/recommend/detail?manuscriptId=${manuscript.manuscriptId}">查看稿件详情</a>
             </p>
         </div>
     </div>
