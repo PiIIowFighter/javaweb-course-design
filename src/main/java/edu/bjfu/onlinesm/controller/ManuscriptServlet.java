@@ -4,6 +4,7 @@ import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
 import edu.bjfu.onlinesm.util.DbUtil;
 import edu.bjfu.onlinesm.util.UploadPathUtil;
+import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -592,8 +593,20 @@ public class ManuscriptServlet extends HttpServlet {
 
             // 版本文件
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
-            Part coverFile = safeGetPart(req, "coverFile");
+            Part anonymousFile = safeGetPart(req, "anonymousFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
+
+            // PDF 格式验证
+            if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {
+                req.setAttribute("error", "手稿文件必须是 PDF 格式。");
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
+            if (anonymousFile != null && anonymousFile.getSize() > 0 && !isPdfFile(anonymousFile)) {
+                req.setAttribute("error", "匿名手稿必须是 PDF 格式。");
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
 
             // 作者列表冗余字段
             m.setAuthorList(joinAuthorNames(authors));
@@ -641,21 +654,26 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
-                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
-                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+                // 匿名手稿：独立上传
+                String fileAnonymousPath = null;
+                if (anonymousFile != null && anonymousFile.getSize() > 0) {
+                    fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
+                }
 
 
+                // CoverLetter：富文本转 PDF
                 String coverPath = null;
                 String remark = null;
-                if (coverFile != null && coverFile.getSize() > 0) {
-                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
-                }
-                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
-                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
-                    if (coverPath == null) {
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
+                    try {
+                        File coverPdfFile = new File(versionDir, "cover_letter.pdf");
+                        HtmlToPdfConverter.convert(coverLetterHtml, coverPdfFile);
+                        coverPath = coverPdfFile.getAbsolutePath();
+                    } catch (Exception e) {
+                        // 转换失败时保存原始 HTML 作为备份
+                        String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
                         coverPath = htmlPath;
-                    } else {
-                        remark = "CoverLetterHtml=" + htmlPath;
+                        remark = "CoverLetter PDF 转换失败，已保存 HTML 原文";
                     }
                 }
 
@@ -758,8 +776,18 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
-            Part coverFile = safeGetPart(req, "coverFile");
+            Part anonymousFile = safeGetPart(req, "anonymousFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
+
+            // PDF 格式验证
+            if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "手稿文件必须是 PDF 格式。");
+                return;
+            }
+            if (anonymousFile != null && anonymousFile.getSize() > 0 && !isPdfFile(anonymousFile)) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "匿名手稿必须是 PDF 格式。");
+                return;
+            }
 
             try (Connection conn = DbUtil.getConnection()) {
                 conn.setAutoCommit(false);
@@ -794,20 +822,25 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
-                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
-                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+                // 匿名手稿：独立上传
+                String fileAnonymousPath = null;
+                if (anonymousFile != null && anonymousFile.getSize() > 0) {
+                    fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
+                }
 
+                // CoverLetter：富文本转 PDF
                 String coverPath = null;
                 String remark = null;
-                if (coverFile != null && coverFile.getSize() > 0) {
-                    coverPath = savePartToDir(coverFile, versionDir, "cover_letter_");
-                }
-                if (coverLetterHtml != null && !coverLetterHtml.isEmpty()) {
-                    String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
-                    if (coverPath == null) {
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
+                    try {
+                        File coverPdfFile = new File(versionDir, "cover_letter.pdf");
+                        HtmlToPdfConverter.convert(coverLetterHtml, coverPdfFile);
+                        coverPath = coverPdfFile.getAbsolutePath();
+                    } catch (Exception e) {
+                        // 转换失败时保存原始 HTML 作为备份
+                        String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
                         coverPath = htmlPath;
-                    } else {
-                        remark = "CoverLetterHtml=" + htmlPath;
+                        remark = "CoverLetter PDF 转换失败，已保存 HTML 原文";
                     }
                 }
 
@@ -1285,6 +1318,34 @@ public class ManuscriptServlet extends HttpServlet {
     private String sanitizeFilename(String name) {
         if (name == null) return "file";
         return name.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    /**
+     * 检查上传的文件是否为 PDF 格式
+     * @param part 上传的文件
+     * @return 如果是 PDF 文件返回 true
+     */
+    private boolean isPdfFile(Part part) {
+        if (part == null || part.getSize() == 0) {
+            return false;
+        }
+        
+        // 检查文件扩展名
+        String filename = part.getSubmittedFileName();
+        if (filename != null) {
+            String lowerName = filename.toLowerCase();
+            if (!lowerName.endsWith(".pdf")) {
+                return false;
+            }
+        }
+        
+        // 检查 MIME 类型
+        String contentType = part.getContentType();
+        if (contentType != null) {
+            return contentType.equalsIgnoreCase("application/pdf");
+        }
+        
+        return true; // 如果无法确定，默认允许（依赖扩展名检查）
     }
 
     private int getNextVersionNumber(Connection conn, int manuscriptId) throws SQLException {

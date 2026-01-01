@@ -40,3 +40,4 @@ Thumbs.db
 
 # m2e-jee 自动生成的web资源（你的日志里出现的target/m2e-jee目录）
 target/m2e-jee/
+".kiro/" 

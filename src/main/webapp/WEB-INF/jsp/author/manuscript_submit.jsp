@@ -80,20 +80,20 @@
             <legend><b>2. 作者列表（支持多作者）</b></legend>
             <small>勾选“通讯作者”用于系统记录（默认第一作者）。</small>
 
-            <div style="margin-top: var(--space-4);"></div>
+            <div style="margin-top: var(--space-4); overflow-x: auto;">
 
             <table id="authorsTable">
                 <thead>
                 <tr>
-                    <th style="width:70px;">顺序</th>
-                    <th style="width:110px;">通讯作者</th>
+                    <th>顺序</th>
+                    <th>通讯作者</th>
                     <th>姓名</th>
                     <th>单位</th>
-                    <th style="width:120px;">学历</th>
-                    <th style="width:120px;">职称</th>
-                    <th style="width:140px;">职位</th>
-                    <th style="width:220px;">邮箱</th>
-                    <th style="width:110px;">操作</th>
+                    <th>学历</th>
+                    <th>职称</th>
+                    <th>职位</th>
+                    <th>邮箱</th>
+                    <th>操作</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -106,15 +106,15 @@
                                     <input type="radio" name="correspondingIndex" value="${st.index}"
                                            <c:if test="${a.corresponding}">checked</c:if> />
                                 </td>
-                                <td><input type="text" name="authorName" value="${a.fullName}"/></td>
-                                <td><input type="text" name="authorAffiliation" value="${a.affiliation}"/></td>
-                                <td><input type="text" name="authorDegree" value="${a.degree}"/></td>
-                                <td><input type="text" name="authorTitle" value="${a.title}"/></td>
-                                <td><input type="text" name="authorPosition" value="${a.position}"/></td>
-                                <td><input type="text" name="authorEmail" value="${a.email}"/></td>
+                                <td><input type="text" name="authorName" value="${a.fullName}" placeholder="作者姓名"/></td>
+                                <td><input type="text" name="authorAffiliation" value="${a.affiliation}" placeholder="单位/学院"/></td>
+                                <td><input type="text" name="authorDegree" value="${a.degree}" placeholder="学历"/></td>
+                                <td><input type="text" name="authorTitle" value="${a.title}" placeholder="职称"/></td>
+                                <td><input type="text" name="authorPosition" value="${a.position}" placeholder="职位"/></td>
+                                <td><input type="text" name="authorEmail" value="${a.email}" placeholder="邮箱"/></td>
                                 <td style="text-align:center;">
                                     <button type="button" class="btn-quiet" onclick="removeRow(this)">
-                                        <i class="bi bi-trash" aria-hidden="true"></i> 删除
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -128,13 +128,13 @@
                             </td>
                             <td><input type="text" name="authorName" placeholder="作者姓名"/></td>
                             <td><input type="text" name="authorAffiliation" placeholder="单位/学院"/></td>
-                            <td><input type="text" name="authorDegree" placeholder="本科/硕士/博士"/></td>
-                            <td><input type="text" name="authorTitle" placeholder="讲师/副教授/教授"/></td>
+                            <td><input type="text" name="authorDegree" placeholder="学历"/></td>
+                            <td><input type="text" name="authorTitle" placeholder="职称"/></td>
                             <td><input type="text" name="authorPosition" placeholder="职位"/></td>
                             <td><input type="text" name="authorEmail" placeholder="邮箱"/></td>
                             <td style="text-align:center;">
                                 <button type="button" class="btn-quiet" onclick="removeRow(this)">
-                                    <i class="bi bi-trash" aria-hidden="true"></i> 删除
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
                                 </button>
                             </td>
                         </tr>
@@ -142,6 +142,7 @@
                 </c:choose>
                 </tbody>
             </table>
+            </div>
 
             <div class="actions">
                 <button type="button" onclick="addAuthorRow()">
@@ -156,37 +157,51 @@
             <legend><b>3. 文件上传</b></legend>
 
             <div class="form-row">
-                <label>手稿文件</label>
+                <label>手稿文件 <span style="color: #be123c;">*</span></label>
                 <div>
-                    <input type="file" name="manuscriptFile" accept=".pdf,.doc,.docx"/>
-                    <c:if test="${not empty currentVersion and (not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath)}">
-                        <div class="help">
+                    <input type="file" name="manuscriptFile" accept=".pdf"/>
+                    <div class="help">请上传包含作者信息的完整稿件（仅支持 PDF 格式）</div>
+                    <c:if test="${not empty currentVersion and not empty currentVersion.fileOriginalPath}">
+                        <div class="help" style="margin-top: 4px;">
                             当前版本：
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">预览/下载</a>
+                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">
+                                <i class="bi bi-file-pdf"></i> 预览/下载
+                            </a>
                         </div>
                     </c:if>
                 </div>
             </div>
 
             <div class="form-row">
-                <label>Cover Letter（文件，可选）</label>
+                <label>匿名手稿 <span style="color: #be123c;">*</span></label>
                 <div>
-                    <input type="file" name="coverFile" accept=".pdf,.doc,.docx,.html,.htm"/>
-                    <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterPath}">
-                        <div class="help">
+                    <input type="file" name="anonymousFile" accept=".pdf"/>
+                    <div class="help">请上传去除作者信息的匿名稿件，用于盲审（仅支持 PDF 格式）</div>
+                    <c:if test="${not empty currentVersion and not empty currentVersion.fileAnonymousPath}">
+                        <div class="help" style="margin-top: 4px;">
                             当前版本：
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">预览/下载</a>
+                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=anonymous">
+                                <i class="bi bi-file-pdf"></i> 预览/下载
+                            </a>
                         </div>
                     </c:if>
                 </div>
             </div>
 
             <div class="form-row">
-                <label>Cover Letter（富文本，可选）</label>
+                <label>Cover Letter</label>
                 <div>
                     <div id="coverEditor" style="min-height: 200px;"></div>
                     <input type="hidden" id="coverHidden" name="coverLetterHtml" />
-                    <div class="help">若同时上传文件与填写富文本，系统将优先以"上传文件"为 Cover Letter，富文本将作为备注保存。支持粗体、斜体、上下标、数学公式等。</div>
+                    <div class="help">请输入投稿信内容，系统将自动转换为 PDF 格式保存。支持粗体、斜体、上下标等格式。</div>
+                    <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterPath}">
+                        <div class="help" style="margin-top: 4px;">
+                            当前版本：
+                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">
+                                <i class="bi bi-file-pdf"></i> 预览/下载
+                            </a>
+                        </div>
+                    </c:if>
                 </div>
             </div>
         </fieldset>
@@ -288,6 +303,42 @@
         display: inline-block;
         vertical-align: middle;
     }
+    
+    /* 作者列表表格优化 */
+    #authorsTable {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #authorsTable th:nth-child(1) { width: 50px; }   /* 顺序 */
+    #authorsTable th:nth-child(2) { width: 70px; }   /* 通讯作者 */
+    #authorsTable th:nth-child(3) { width: 150px; }  /* 姓名 */
+    #authorsTable th:nth-child(4) { width: 250px; }  /* 单位 */
+    #authorsTable th:nth-child(5) { width: 90px; }   /* 学历 */
+    #authorsTable th:nth-child(6) { width: 90px; }   /* 职称 */
+    #authorsTable th:nth-child(7) { width: 100px; }  /* 职位 */
+    #authorsTable th:nth-child(8) { width: 180px; }  /* 邮箱 */
+    #authorsTable th:nth-child(9) { width: 70px; }   /* 操作 */
+    
+    #authorsTable td input[type="text"] {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    
+    /* 允许文本换行 */
+    #authorsTable td {
+        word-wrap: break-word;
+        white-space: normal;
+        vertical-align: middle;
+    }
+    
+    /* 响应式：小屏幕时允许表格横向滚动 */
+    @media (max-width: 1200px) {
+        #authorsTable {
+            table-layout: auto;
+            min-width: 1000px;
+        }
+    }
 </style>
 <!-- MathJax 用于数学公式渲染 -->
 <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -358,13 +409,13 @@
             '<td style="text-align:center;"><input type="radio" name="correspondingIndex" value="' + index + '"></td>' +
             '<td><input type="text" name="authorName" placeholder="作者姓名"></td>' +
             '<td><input type="text" name="authorAffiliation" placeholder="单位/学院"></td>' +
-            '<td><input type="text" name="authorDegree" placeholder="本科/硕士/博士"></td>' +
-            '<td><input type="text" name="authorTitle" placeholder="讲师/副教授/教授"></td>' +
+            '<td><input type="text" name="authorDegree" placeholder="学历"></td>' +
+            '<td><input type="text" name="authorTitle" placeholder="职称"></td>' +
             '<td><input type="text" name="authorPosition" placeholder="职位"></td>' +
             '<td><input type="text" name="authorEmail" placeholder="邮箱"></td>' +
             '<td style="text-align:center;">' +
                 '<button type="button" class="btn-quiet" onclick="removeRow(this)">' +
-                    '<i class="bi bi-trash" aria-hidden="true"></i> 删除' +
+                    '<i class="bi bi-trash" aria-hidden="true"></i>' +
                 '</button>' +
             '</td>';
         tbody.appendChild(tr);
