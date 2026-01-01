@@ -49,26 +49,84 @@ public class ReviewDAO {
      *（避免唯一约束/重复数据导致插入失败，且不会影响已提交的评审记录）
      */
     public void inviteReviewer(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
+        inviteReviewerReturnId(manuscriptId, reviewerId, dueAt);
+    }
+
+    /**
+     * 发出审稿邀请并返回新插入的 ReviewId。
+     *
+     * 兼容不同同学/不同版本数据库脚本可能缺失 InvitedAt / DueAt / RemindCount 列的情况：
+     *  - 优先写入 InvitedAt + DueAt + RemindCount；
+     *  - 若列缺失则降级写入；
+     */
+    public int inviteReviewerReturnId(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
         String cleanup = "DELETE FROM dbo.Reviews WHERE ManuscriptId = ? AND ReviewerId = ? AND Status <> 'SUBMITTED'";
-        String insert = "INSERT INTO dbo.Reviews " +
-                "(ManuscriptId, ReviewerId, Status, InvitedAt, DueAt, RemindCount) " +
-                "VALUES (?,?, 'INVITED', SYSUTCDATETIME(), ?, 0)";
 
         try (Connection conn = DbUtil.getConnection()) {
+            // 1) 清理历史
             try (PreparedStatement ps = conn.prepareStatement(cleanup)) {
                 ps.setInt(1, manuscriptId);
                 ps.setInt(2, reviewerId);
                 ps.executeUpdate();
             }
-            try (PreparedStatement ps = conn.prepareStatement(insert)) {
-                ps.setInt(1, manuscriptId);
-                ps.setInt(2, reviewerId);
-                if (dueAt != null) ps.setTimestamp(3, Timestamp.valueOf(dueAt));
-                else ps.setNull(3, Types.TIMESTAMP);
-                ps.executeUpdate();
+
+            // 2) 方案1：InvitedAt + DueAt + RemindCount
+            String insert1 = "INSERT INTO dbo.Reviews (ManuscriptId, ReviewerId, Status, InvitedAt, DueAt, RemindCount) " +
+                    "OUTPUT INSERTED.ReviewId VALUES (?,?, 'INVITED', SYSUTCDATETIME(), ?, 0)";
+            try {
+                return execInsertReturnId(conn, insert1, manuscriptId, reviewerId, dueAt);
+            } catch (SQLException ex1) {
+                if (!looksLikeMissingColumnOrObject(ex1)) {
+                    throw ex1;
+                }
             }
+
+            // 3) 方案2：无 InvitedAt（旧表）
+            String insert2 = "INSERT INTO dbo.Reviews (ManuscriptId, ReviewerId, Status, DueAt, RemindCount) " +
+                    "OUTPUT INSERTED.ReviewId VALUES (?,?, 'INVITED', ?, 0)";
+            try {
+                return execInsertReturnId(conn, insert2, manuscriptId, reviewerId, dueAt);
+            } catch (SQLException ex2) {
+                if (!looksLikeMissingColumnOrObject(ex2)) {
+                    throw ex2;
+                }
+            }
+
+            // 4) 方案3：最小列集合
+            String insert3 = "INSERT INTO dbo.Reviews (ManuscriptId, ReviewerId, Status) OUTPUT INSERTED.ReviewId VALUES (?,?, 'INVITED')";
+            return execInsertReturnId(conn, insert3, manuscriptId, reviewerId, null);
         }
     }
+
+    private int execInsertReturnId(Connection conn, String sql, int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.setInt(2, reviewerId);
+            // 兼容 insert3（无 dueAt 参数）
+            if (sql.contains("?") && sql.contains("DueAt")) {
+                if (dueAt != null) ps.setTimestamp(3, Timestamp.valueOf(dueAt));
+                else ps.setNull(3, Types.TIMESTAMP);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("插入审稿邀请失败：未返回 ReviewId");
+    }
+
+    private boolean looksLikeMissingColumnOrObject(SQLException ex) {
+        if (ex == null) return false;
+        String msg = ex.getMessage();
+        if (msg == null) return false;
+        String low = msg.toLowerCase();
+        return low.contains("invalid column")
+                || low.contains("unknown column")
+                || low.contains("invalid object")
+                || low.contains("does not exist");
+    }
+
 
     /** 查询某一稿件的全部审稿记录（按邀请时间倒序）。 */
     public List<Review> findByManuscript(int manuscriptId) throws SQLException {

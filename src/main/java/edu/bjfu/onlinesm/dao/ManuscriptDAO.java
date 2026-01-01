@@ -324,37 +324,93 @@ public class ManuscriptDAO {
             throw new IllegalArgumentException("statuses 不能为空");
         }
 
-        StringBuilder sql = new StringBuilder(
-                "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, " +
-                "       SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
-                "FROM dbo.Manuscripts WHERE IsArchived = 0 AND IsWithdrawn = 0 " +
-                "  AND CurrentEditorId = ? AND Status IN ("
-        );
-        for (int i = 0; i < statuses.length; i++) {
-            if (i > 0) {
-                sql.append(',');
+        // 1) 优先使用 Manuscripts.CurrentEditorId（如果数据库版本已包含该列）。
+        try {
+            StringBuilder sql = new StringBuilder(
+                    "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, " +
+                    "       SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
+                    "FROM dbo.Manuscripts WHERE IsArchived = 0 AND IsWithdrawn = 0 " +
+                    "  AND CurrentEditorId = ? AND Status IN ("
+            );
+            for (int i = 0; i < statuses.length; i++) {
+                if (i > 0) sql.append(',');
+                sql.append('?');
             }
-            sql.append('?');
-        }
-        sql.append(") ORDER BY ISNULL(SubmitTime, LastStatusTime) DESC, ManuscriptId DESC");
+            sql.append(") ORDER BY ISNULL(SubmitTime, LastStatusTime) DESC, ManuscriptId DESC");
 
-        List<Manuscript> list = new java.util.ArrayList<>();
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            List<Manuscript> list = new ArrayList<>();
+            try (Connection conn = DbUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
-            int idx = 1;
-            ps.setInt(idx++, editorUserId);
-            for (String s : statuses) {
-                ps.setString(idx++, s);
-            }
+                int idx = 1;
+                ps.setInt(idx++, editorUserId);
+                for (String s : statuses) {
+                    ps.setString(idx++, s);
+                }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapRow(rs));
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(mapRow(rs));
+                    }
                 }
             }
+            return list;
+        } catch (SQLException e) {
+            // 兼容旧版数据库：没有 CurrentEditorId 列时，降级到 ManuscriptAssignments 或逐条判断。
+            String msg = (e.getMessage() == null) ? "" : e.getMessage();
+            if (!msg.contains("CurrentEditorId")) {
+                throw e; // 不是列缺失导致的错误，继续抛出
+            }
         }
-        return list;
+
+        // 2) 尝试通过 ManuscriptAssignments 的“最新指派”来过滤
+        try {
+            StringBuilder sql = new StringBuilder();
+            sql.append("WITH latest AS (\n");
+            sql.append("    SELECT ManuscriptId, EditorId,\n");
+            sql.append("           ROW_NUMBER() OVER (PARTITION BY ManuscriptId ORDER BY AssignedTime DESC, AssignmentId DESC) AS rn\n");
+            sql.append("    FROM dbo.ManuscriptAssignments\n");
+            sql.append(")\n");
+            sql.append("SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords,\n");
+            sql.append("       m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime\n");
+            sql.append("FROM dbo.Manuscripts m\n");
+            sql.append("JOIN latest la ON la.ManuscriptId = m.ManuscriptId AND la.rn = 1\n");
+            sql.append("WHERE m.IsArchived = 0 AND m.IsWithdrawn = 0\n");
+            sql.append("  AND la.EditorId = ? AND m.Status IN (");
+            for (int i = 0; i < statuses.length; i++) {
+                if (i > 0) sql.append(',');
+                sql.append('?');
+            }
+            sql.append(") ORDER BY ISNULL(m.SubmitTime, m.LastStatusTime) DESC, m.ManuscriptId DESC");
+
+            List<Manuscript> list = new ArrayList<>();
+            try (Connection conn = DbUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+                int idx = 1;
+                ps.setInt(idx++, editorUserId);
+                for (String s : statuses) {
+                    ps.setString(idx++, s);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(mapRow(rs));
+                    }
+                }
+            }
+            return list;
+        } catch (SQLException ignore) {
+            // 3) 兜底：先按状态取出，再逐条比对 current editor
+            List<Manuscript> raw = findByStatuses(statuses);
+            List<Manuscript> filtered = new ArrayList<>();
+            for (Manuscript m : raw) {
+                Integer ce = findCurrentEditorId(m.getManuscriptId());
+                if (java.util.Objects.equals(ce, editorUserId)) {
+                    filtered.add(m);
+                }
+            }
+            return filtered;
+        }
     }
 
 

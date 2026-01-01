@@ -13,6 +13,11 @@
 
 <h3>外审进行中（UNDER_REVIEW）</h3>
 
+<p style="margin:8px 0;">
+    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/review/monitor">进入全局催审/逾期监控</a>
+    <span style="margin-left:8px; color:#666;">（用于查看所有稿件的逾期审稿与批量催审；单篇稿件的邀请/撤回/催审请在下方“管理审稿人”进入。）</span>
+</p>
+
 <c:if test="${empty underReviewList}">
     <p>当前没有外审进行中的稿件。</p>
 </c:if>
@@ -43,9 +48,9 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
-                    &nbsp;|&nbsp;
-                    <a href="${pageContext.request.contextPath}/editor/review/monitor">进入催审面板</a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
+                    <a class="btn" href="${pageContext.request.contextPath}/editor/review/select?manuscriptId=${m.manuscriptId}"
+                       style="margin-left:6px;">管理审稿人</a>
                 </td>
             </tr>
         </c:forEach>

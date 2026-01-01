@@ -36,7 +36,7 @@
                 </c:choose>
             </td>
             <td>
-                <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
+                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
                 <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
                     <form method="post" action="${pageContext.request.contextPath}/editor/desk" style="display:inline">
                         <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>

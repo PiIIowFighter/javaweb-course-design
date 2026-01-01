@@ -27,6 +27,9 @@
         <th>当前状态</th>
         <th>责任编辑</th>
         <th>分配时间</th>
+        <c:if test="${sessionScope.currentUser.roleCode != 'EDITOR'}">
+            <th>主编备注</th>
+        </c:if>
         <th>操作</th>
     </tr>
     </thead>
@@ -40,13 +43,25 @@
                 <c:set var="assign" value="${latestAssignments[m.manuscriptId]}"/>
                 <c:choose>
                     <c:when test="${not empty assign}">
-                        <!-- 对编辑本人，这里可以简单显示“我”；对主编则显示编辑 ID -->
-                        <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR'}">
-                            我（用户ID：<c:out value="${assign.editorId}"/>）
-                        </c:if>
-                        <c:if test="${sessionScope.currentUser.roleCode != 'EDITOR'}">
-                            编辑用户ID：<c:out value="${assign.editorId}"/>
-                        </c:if>
+                        <c:set var="ed" value="${editors[assign.editorId]}"/>
+                        <c:choose>
+                            <c:when test="${not empty ed}">
+                                <c:choose>
+                                    <c:when test="${sessionScope.currentUser.roleCode == 'EDITOR'}">
+                                        我（<c:out value="${ed.fullName}"/>）
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:out value="${ed.fullName}"/>
+                                    </c:otherwise>
+                                </c:choose>
+                                <c:if test="${not empty ed.email}">
+                                    <span style="color:#666;">（<c:out value="${ed.email}"/>）</span>
+                                </c:if>
+                            </c:when>
+                            <c:otherwise>
+                                用户ID：<c:out value="${assign.editorId}"/>
+                            </c:otherwise>
+                        </c:choose>
                     </c:when>
                     <c:otherwise>
                         --
@@ -61,11 +76,22 @@
                     <c:otherwise>--</c:otherwise>
                 </c:choose>
             </td>
+
+            <c:if test="${sessionScope.currentUser.roleCode != 'EDITOR'}">
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty assign and not empty assign.chiefComment}">
+                            <c:out value="${assign.chiefComment}"/>
+                        </c:when>
+                        <c:otherwise>--</c:otherwise>
+                    </c:choose>
+                </td>
+            </c:if>
             <td>
-                <!-- WITH_EDITOR：可查看详情，并可直接定位到“邀请新的审稿人”区块 -->
-                <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
-                <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers"
-                   style="margin-left:8px;">邀请审稿人</a>
+                <!-- 逻辑优化：统一“进入工作台”作为详情入口；审稿相关操作统一为“管理审稿人” -->
+                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
+                <a class="btn" href="${pageContext.request.contextPath}/editor/review/select?manuscriptId=${m.manuscriptId}"
+                   style="margin-left:6px;">管理审稿人</a>
 
                 <!-- 主编 / 编辑部管理员可以对单条稿件发送“催办编辑”提醒 -->
                 <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF' || sessionScope.currentUser.roleCode == 'EO_ADMIN'}">
@@ -75,7 +101,7 @@
                               style="display:inline;margin-left:8px;">
                             <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
                             <input type="hidden" name="editorId" value="${assign.editorId}"/>
-                            <button type="submit">提醒责任编辑</button>
+                            <button class="btn btn-primary" type="submit">提醒责任编辑</button>
                         </form>
                     </c:if>
                 </c:if>

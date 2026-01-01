@@ -34,7 +34,7 @@
                 <td><c:out value="${m.currentStatus}"/></td>
                                 <td><c:out value="${m.submitTime}"/></td>
                 <td>
-                    <a href="${ctx}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
+                    <a class="btn btn-quiet" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
                     <!-- 仅编辑部管理员显示实际操作按钮 -->
                     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN'}">
                         <form method="post" action="${ctx}/editor/formalCheck" style="display:inline">

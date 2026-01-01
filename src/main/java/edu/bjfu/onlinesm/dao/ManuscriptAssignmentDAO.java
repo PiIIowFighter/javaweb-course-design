@@ -92,4 +92,47 @@ public class ManuscriptAssignmentDAO {
 
         return null;
     }
+
+    /**
+     * 查找某稿件“最新一条指派记录”（不限定编辑）。
+     *
+     * 用途：
+     *  - 编辑部列表页展示“当前编辑/主编备注”时，用于获取最近一次指派信息。
+     *
+     * @param manuscriptId 稿件 ID
+     * @return 最新一条 ManuscriptAssignment；如不存在，返回 null。
+     */
+    public ManuscriptAssignment findLatestByManuscript(int manuscriptId) throws SQLException {
+
+        String sql = "SELECT TOP 1 AssignmentId, ManuscriptId, EditorId, AssignedByChiefId, " +
+                "       ChiefComment, AssignedTime " +
+                "FROM dbo.ManuscriptAssignments " +
+                "WHERE ManuscriptId = ? " +
+                "ORDER BY AssignedTime DESC, AssignmentId DESC";
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, manuscriptId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    ManuscriptAssignment ma = new ManuscriptAssignment();
+                    ma.setAssignmentId(rs.getInt("AssignmentId"));
+                    ma.setManuscriptId(rs.getInt("ManuscriptId"));
+                    ma.setEditorId(rs.getInt("EditorId"));
+                    ma.setAssignedByChiefId(rs.getInt("AssignedByChiefId"));
+                    ma.setChiefComment(rs.getString("ChiefComment"));
+
+                    Timestamp ts = rs.getTimestamp("AssignedTime");
+                    if (ts != null) {
+                        ma.setAssignedTime(ts.toLocalDateTime());
+                    }
+                    return ma;
+                }
+            }
+        }
+
+        return null;
+    }
 }
