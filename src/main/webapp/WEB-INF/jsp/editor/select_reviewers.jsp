@@ -20,6 +20,16 @@
     </div>
 </c:if>
 
+<c:if test="${not empty param.inviteMsg}">
+    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
+        <c:out value="${param.inviteMsg}"/>
+    </div>
+</c:if>
+<c:if test="${not empty param.inviteErr}">
+    <div style="margin:10px 0; padding:10px 12px; border:1px solid #ffa39e; background:#fff1f0; color:#a8071a; border-radius:6px;">
+        <c:out value="${param.inviteErr}"/>
+    </div>
+</c:if>
 
 <c:if test="${empty manuscript}">
     <p>未找到稿件记录。</p>
@@ -55,6 +65,31 @@
             <td><c:out value="${manuscript.currentStatus}"/></td>
         </tr>
     </table>
+
+    <h3 style="margin-top:16px;">作者推荐审稿人</h3>
+    <c:if test="${empty recommendedReviewers}">
+        <p>（未推荐审稿人）</p>
+    </c:if>
+    <c:if test="${not empty recommendedReviewers}">
+        <table border="1" cellpadding="4" cellspacing="0" style="background:#fff; max-width:960px;">
+            <thead>
+            <tr>
+                <th>姓名</th>
+                <th>邮箱</th>
+                <th>推荐理由</th>
+            </tr>
+            </thead>
+            <tbody>
+            <c:forEach items="${recommendedReviewers}" var="rr">
+                <tr>
+                    <td><c:out value="${rr.fullName}"/></td>
+                    <td><c:out value="${rr.email}"/></td>
+                    <td><c:out value="${rr.reason}"/></td>
+                </tr>
+            </c:forEach>
+            </tbody>
+        </table>
+    </c:if>
 
     
 
@@ -101,7 +136,12 @@
             </form>
         </c:when>
         <c:otherwise>
-            -
+            <c:choose>
+                <c:when test="${r.status == 'SUBMITTED'}">
+                    <a href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">查看详细评价</a>
+                </c:when>
+                <c:otherwise>-</c:otherwise>
+            </c:choose>
         </c:otherwise>
     </c:choose>
 </td>
@@ -127,25 +167,6 @@
         <a href="${ctx}/editor/review/select?manuscriptId=${manuscript.manuscriptId}"
            style="margin-left:4px;">重置</a>
     </form>
-
-    <c:if test="${not empty reviewerSuggestionKeyword}">
-        <p>系统根据稿件主题（例如：<strong><c:out value="${reviewerSuggestionKeyword}"/></strong>）推荐的审稿人：</p>
-        <c:if test="${empty reviewerSuggestions}">
-            <p>暂未找到合适的推荐审稿人。</p>
-        </c:if>
-        <c:if test="${not empty reviewerSuggestions}">
-            <ul>
-                <c:forEach items="${reviewerSuggestions}" var="s">
-                    <li>
-                        <c:out value="${s.fullName}"/>
-                        <c:if test="${not empty s.researchArea}">
-                            —— <span style="color:#666;"><c:out value="${s.researchArea}"/></span>
-                        </c:if>
-                    </li>
-                </c:forEach>
-            </ul>
-        </c:if>
-    </c:if>
 
     <h3 style="margin-top:16px;">从审稿人库中选择</h3>
 
@@ -200,6 +221,51 @@
             </p>
         </form>
     </c:if>
+
+    <hr style="margin:22px 0; max-width:960px;"/>
+
+    <h3 style="margin-top:16px;">邀请外部审稿人（创建账号并邮件邀请）</h3>
+    <p style="color:#666; max-width:960px;">当审稿人不在现有审稿人库中时，可在此创建审稿人账号，并向其发送账户信息及本稿件的审稿邀请邮件。</p>
+
+    <form method="post" action="${ctx}/editor/review/inviteExternal" style="max-width:960px; background:#fff; border:1px solid #e5e7eb; padding:12px 14px; border-radius:8px;">
+        <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+
+        <table cellpadding="6" cellspacing="0" style="width:100%;">
+            <tr>
+                <td style="width:140px;"><b>用户名 *</b></td>
+                <td><input type="text" name="username" required="required" style="width:280px;" placeholder="例如 reviewer_zhang"/></td>
+            </tr>
+            <tr>
+                <td><b>初始密码 *</b></td>
+                <td><input type="text" name="password" required="required" style="width:280px;" placeholder="请设置一个初始密码"/></td>
+            </tr>
+            <tr>
+                <td><b>姓名</b></td>
+                <td><input type="text" name="fullName" style="width:280px;" placeholder="可选"/></td>
+            </tr>
+            <tr>
+                <td><b>邮箱 *</b></td>
+                <td><input type="email" name="email" required="required" style="width:360px;" placeholder="example@university.edu"/></td>
+            </tr>
+            <tr>
+                <td><b>单位/机构</b></td>
+                <td><input type="text" name="affiliation" style="width:360px;" placeholder="可选"/></td>
+            </tr>
+            <tr>
+                <td><b>研究方向</b></td>
+                <td><input type="text" name="researchArea" style="width:360px;" placeholder="可选"/></td>
+            </tr>
+            <tr>
+                <td><b>截止日期（可选）</b></td>
+                <td><input type="date" name="dueDate"/></td>
+            </tr>
+        </table>
+
+        <div style="margin-top:10px;">
+            <button type="submit">创建并邀请外部审稿人</button>
+        </div>
+    </form>
+
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

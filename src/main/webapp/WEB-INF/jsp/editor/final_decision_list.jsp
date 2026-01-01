@@ -86,9 +86,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">
-                        查看详情
-                    </a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
 
                     <!-- 只有主编并且状态在待终审/有编辑推荐时才显示三个决策按钮 -->
                     <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">

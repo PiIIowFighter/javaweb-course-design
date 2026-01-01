@@ -13,7 +13,7 @@
     <br/>
     撤稿：将稿件标记为撤稿并归档（Status=ARCHIVED）。
     <br/>
-    注：如需查看审稿流程与附件，请点击“查看详情”。
+    注：如需查看审稿流程与附件，请点击“进入工作台”。
 </p>
 
 <c:if test="${empty manuscripts}">
@@ -55,7 +55,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
 
                     <form method="post" action="${pageContext.request.contextPath}/editor/finalDecision" style="display:inline">
                         <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>

@@ -768,6 +768,33 @@
                or manuscript.currentStatus == 'EDITOR_RECOMMENDATION'
                or manuscript.currentStatus == 'FINAL_DECISION_PENDING')}">
 
+    <!-- 作者推荐审稿人：在稿件工作台直接可见，减少“详情/选择页面”来回跳转的冗余 -->
+    <h3>作者推荐审稿人</h3>
+    <c:if test="${empty recommendedReviewers}">
+        <p>作者未推荐审稿人。</p>
+    </c:if>
+    <c:if test="${not empty recommendedReviewers}">
+        <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>姓名</th>
+                <th>邮箱</th>
+                <th>推荐理由</th>
+            </tr>
+            </thead>
+            <tbody>
+            <c:forEach items="${recommendedReviewers}" var="rr" varStatus="st">
+                <tr>
+                    <td><c:out value="${st.index + 1}"/></td>
+                    <td><c:out value="${rr.reviewerName}"/></td>
+                    <td><c:out value="${rr.reviewerEmail}"/></td>
+                    <td><c:out value="${rr.reason}"/></td>
+                </tr>
+            </c:forEach>
+            </tbody>
+        </table>
+    </c:if>
 
     <h3>当前审稿记录</h3>
 
@@ -799,116 +826,101 @@
             </tr>
             </thead>
             <tbody>
-            <c:forEach items="${reviews}" var="r">
-                <c:if test="${r.status != 'DECLINED'}">
-                <tr>
-                    <td>
-                        <c:choose>
-                            <c:when test="${not empty r.reviewerName}">
-                                <c:out value="${r.reviewerName}"/>
-                                (<c:out value="${r.reviewerEmail}"/>)
-                            </c:when>
-                            <c:otherwise>
-                                审稿人ID: <c:out value="${r.reviewerId}"/>
-                            </c:otherwise>
-                        </c:choose>
-                    </td>
-                    <td>
-                        <c:out value="${r.status}"/>
-                        <!-- 新增：显示拒绝理由和拒绝时间 -->
-                        <c:if test="${r.status == 'DECLINED'}">
-                            <div class="alert alert-warning" style="margin:6px 0;padding:4px 8px;border:1px solid #ffc107;border-radius:4px;background:#fff3cd;color:#856404;">
-                                <strong>拒绝理由：</strong>
-                                <c:out value="${r.rejectionReason}"/>
-                                <br/>
-                                <small>拒绝时间：<c:out value="${r.declinedAt}"/></small>
-                            </div>
-                        </c:if>
-                    </td>
-                    <td><c:out value="${r.invitedAt}"/></td>
-                    <td><c:out value="${r.dueAt}"/></td>
-                    <td><c:out value="${r.lastRemindedAt}"/></td>
-                    <td><c:out value="${r.remindCount}"/></td>
-                    <td><c:out value="${r.recommendation}"/></td>
-                    <td>
-                        <c:if test="${r.status == 'SUBMITTED'}">
-                            <div>
-                                总体分：<c:out value="${r.score}"/>
-                                <span style="margin:0 8px;">|</span>
-                                <a href="javascript:void(0)" onclick="toggleReviewDetail('revDetail_${r.reviewId}')">展开/收起</a>
-                            </div>
-                            <div id="revDetail_${r.reviewId}" style="display:none; margin-top:6px; max-width:900px;">
-                                <div style="margin-bottom:6px;">
-                                    <strong>关键评价 KeyEvaluation：</strong>
-                                    <div style="white-space:pre-wrap;"><c:out value="${r.keyEvaluation}"/></div>
-                                </div>
-                                <div style="margin-bottom:6px;">
-                                    <strong>多维评分：</strong>
-                                    ScoreOriginality=<c:out value="${r.scoreOriginality}"/>,
-                                    ScoreSignificance=<c:out value="${r.scoreSignificance}"/>,
-                                    ScoreMethodology=<c:out value="${r.scoreMethodology}"/>,
-                                    ScorePresentation=<c:out value="${r.scorePresentation}"/>
-                                </div>
-                                <div style="margin-bottom:6px;">
-                                    <strong>给编辑的保密意见 ConfidentialToEditor：</strong>
-                                    <div style="white-space:pre-wrap;"><c:out value="${r.confidentialToEditor}"/></div>
-                                </div>
-                                <div>
-                                    <strong>给作者的意见 Content：</strong>
-                                    <div style="white-space:pre-wrap;"><c:out value="${r.content}"/></div>
-                                </div>
-                            </div>
-                        </c:if>
-                        <c:if test="${r.status != 'SUBMITTED' && r.status != 'DECLINED'}">
-                            -
-                        </c:if>
-                        <!-- 补充：DECLINED状态时评审详情列也标注提示 -->
-                        <c:if test="${r.status == 'DECLINED'}">
-                            <span style="color:#856404;">审稿人已拒绝邀请，理由见状态列</span>
-                        </c:if>
-                    </td>
-                    <td>
-    <c:choose>
-        <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
-            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
-                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                <button type="submit">催审</button>
-            </form>
-            <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认撤回该审稿人分配？')">
-                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                <input type="hidden" name="backTo" value="${backToUrl}"/>
-                <button type="submit">撤回分配</button>
-            </form>
-        </c:when>
-        <c:otherwise>
-            -
-        </c:otherwise>
-    </c:choose>
-</td>
-                        <c:if test="${r.status != 'SUBMITTED' && r.status != 'DECLINED'}">
-                            <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
-                                <input type="hidden" name="reviewId" value="${r.reviewId}"/>
-                                <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-                                <button type="submit">催审</button>
-                            </form>
-                        </c:if>
-                        <c:if test="${r.status == 'DECLINED'}">
-                            <span style="color:#999;">无法催审</span>
-                        </c:if>
-                    </td>
-                </tr>
-                </c:if>
-            </c:forEach>
-            </tbody>
+<c:forEach items="${reviews}" var="r">
+    <tr>
+        <td>
+            <c:choose>
+                <c:when test="${not empty r.reviewerName}">
+                    <c:out value="${r.reviewerName}"/>
+                    (<c:out value="${r.reviewerEmail}"/>)
+                </c:when>
+                <c:otherwise>
+                    审稿人ID: <c:out value="${r.reviewerId}"/>
+                </c:otherwise>
+            </c:choose>
+        </td>
+        <td>
+            <c:out value="${r.status}"/>
+            <c:if test="${r.status == 'EXPIRED'}">
+                <div style="margin:6px 0;padding:6px 10px;border:1px solid #ffc107;border-radius:6px;background:#fff3cd;color:#856404;">
+                    <strong>拒绝理由：</strong>
+                    <c:out value="${r.rejectionReason}"/>
+                    <br/>
+                    <small>拒绝时间：<c:out value="${r.declinedAt}"/></small>
+                </div>
+            </c:if>
+        </td>
+        <td><c:out value="${r.invitedAt}"/></td>
+        <td><c:out value="${r.dueAt}"/></td>
+        <td><c:out value="${r.lastRemindedAt}"/></td>
+        <td><c:out value="${r.remindCount}"/></td>
+        <td><c:out value="${r.recommendation}"/></td>
+        <td>
+            <c:choose>
+                <c:when test="${r.status == 'SUBMITTED'}">
+                    <div>
+                        总体分：<c:out value="${r.score}"/>
+                        <span style="margin:0 8px;">|</span>
+                        <a href="javascript:void(0)" onclick="toggleReviewDetail('detail${r.reviewId}')">查看/隐藏</a>
+                        &nbsp;|&nbsp;
+                        <a href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">单页查看</a>
+                    </div>
+                    <div id="detail${r.reviewId}" style="display:none; margin-top:8px;">
+                        <p><strong>关键评价 KeyEvaluation：</strong></p>
+                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
+                            <c:out value="${r.keyEvaluation}"/>
+                        </div>
+                        <p><strong>给编辑的保密意见 ConfidentialToEditor：</strong></p>
+                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
+                            <c:out value="${r.confidentialToEditor}"/>
+                        </div>
+                        <p><strong>给作者的意见 Content：</strong></p>
+                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
+                            <c:out value="${r.content}"/>
+                        </div>
+                    </div>
+                </c:when>
+                <c:when test="${r.status == 'EXPIRED'}">
+                    <span style="color:#856404;">审稿人已拒绝邀请</span>
+                </c:when>
+                <c:otherwise>-</c:otherwise>
+            </c:choose>
+        </td>
+        <td>
+            <c:choose>
+                <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
+                    <form method="post" action="${ctx}/editor/review/remind" style="display:inline">
+                        <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                        <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                        <button type="submit">催审</button>
+                    </form>
+                    <form method="post" action="${ctx}/editor/review/cancel" style="display:inline; margin-left:6px;" onsubmit="return confirm('确认撤回该审稿人分配？')">
+                        <input type="hidden" name="reviewId" value="${r.reviewId}"/>
+                        <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+                        <input type="hidden" name="backTo" value="${backToUrl}"/>
+                        <button type="submit">撤回分配</button>
+                    </form>
+                </c:when>
+                <c:when test="${r.status == 'SUBMITTED'}">
+                    <a href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">查看详细评价</a>
+                </c:when>
+                <c:otherwise>-</c:otherwise>
+            </c:choose>
+        </td>
+    </tr>
+</c:forEach>
+
+        </tbody>
         </table>
     </c:if>
 
-    <h3 id="inviteReviewers">邀请新的审稿人</h3>
+    <h3 id="inviteReviewers">审稿人管理</h3>
+    <p style="margin:8px 0; color:#666;">
+        说明：上方已展示“作者推荐审稿人”。如需邀请、撤回、催审或查看每位审稿人的详细评价，请进入审稿人管理页面。
+    </p>
     <p>
-        <a href="${ctx}/editor/review/select?manuscriptId=${manuscript.manuscriptId}">
-            进入审稿人选择页面
+        <a class="btn btn-primary" href="${ctx}/editor/review/select?manuscriptId=${manuscript.manuscriptId}">
+            进入审稿人管理（推荐/邀请/撤回/催审）
         </a>
     </p>
 

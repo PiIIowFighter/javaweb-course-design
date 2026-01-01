@@ -27,6 +27,11 @@
     <javax.activation.version>1.2.0</javax.activation.version>
     <!-- JSON处理依赖版本 -->
     <json.version>20230227</json.version>
+    <!-- HTML转PDF依赖版本 -->
+    <flying.saucer.version>9.1.22</flying.saucer.version>
+    <itext.version>2.1.7</itext.version>
+    <!-- 新增：Bouncycastle版本（1.70修复了循环继承bug） -->
+    <bouncycastle.version>1.70</bouncycastle.version>
   </properties>
 
   <dependencies>
@@ -79,18 +84,32 @@
       <version>${json.version}</version>
     </dependency>
 
-    <!-- Flying Saucer (xhtmlrenderer) for HTML to PDF -->
+    <!-- 新增：HTML转PDF工具（Flying Saucer）- 解决ITextRenderer类找不到的报错 -->
     <dependency>
       <groupId>org.xhtmlrenderer</groupId>
       <artifactId>flying-saucer-pdf</artifactId>
-      <version>9.1.22</version>
+      <version>${flying.saucer.version}</version>
+      <!-- 排除旧版本的Bouncycastle依赖，避免冲突 -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcprov-jdk15on</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
-    <!-- iText for PDF generation (Flying Saucer dependency) -->
+    <!-- 新增：Flying Saucer依赖的PDF生成库（iText 2.x为开源兼容版） -->
     <dependency>
       <groupId>com.lowagie</groupId>
       <artifactId>itext</artifactId>
-      <version>2.1.7</version>
+      <version>${itext.version}</version>
+    </dependency>
+
+    <!-- 新增：修复循环继承bug的Bouncycastle核心依赖 -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>${bouncycastle.version}</version>
     </dependency>
   </dependencies>
 
