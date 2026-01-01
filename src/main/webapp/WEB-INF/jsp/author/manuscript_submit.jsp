@@ -280,9 +280,9 @@
     </form>
 </div>
 
-<!-- Quill 富文本编辑器 -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<!-- Quill 富文本编辑器（本地引用） -->
+<link href="${ctx}/static/css/quill.snow.css" rel="stylesheet">
+<script src="${ctx}/static/js/quill.min.js"></script>
 <style>
     /* 自定义 Quill 编辑器样式 */
     #abstractEditor, #coverEditor {
