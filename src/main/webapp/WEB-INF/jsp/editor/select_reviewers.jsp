@@ -172,8 +172,8 @@
                     <tr>
                         <td style="text-align:center;">
                             <input type="checkbox" name="reviewerIds" value="${u.userId}"
-                                   <c:if test="${assignedReviewerIds contains u.userId}">disabled="disabled"</c:if> />
-                            <c:if test="${assignedReviewerIds contains u.userId}">
+                                   <c:if test="${assignedReviewerIds.contains(u.userId)}">disabled="disabled"</c:if> />
+                            <c:if test="${assignedReviewerIds.contains(u.userId)}">
                                 <span style="color:#999; font-size:12px;">已分配</span>
                             </c:if>
                         </td>

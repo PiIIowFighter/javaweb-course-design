@@ -20,7 +20,7 @@ import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.util.mail.MailService;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Objects;
 
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
@@ -293,8 +294,13 @@ public class EditorServlet extends HttpServlet {
                     .forward(req, resp);
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
 
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
@@ -564,8 +570,13 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
 
         LocalDateTime dueAt = null;
         if (dueDateStr != null && !dueDateStr.trim().isEmpty()) {
@@ -778,7 +789,7 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         // 责任编辑权限：只能查看自己负责的稿件
         if ("EDITOR".equals(current.getRoleCode())) {
             Integer ceid = manuscriptDAO.findCurrentEditorId(m.getManuscriptId());
-            if (ceid != null && ceid != current.getUserId()) {
+            if (ceid != null && !Objects.equals(ceid, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。\n");
                 return;
             }
@@ -817,7 +828,13 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         }
 
         int reviewId     = Integer.parseInt(reviewIdStr.trim());
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
 
         // 记录催审时间 / 次数
         reviewDAO.remindChecked(reviewId);
@@ -901,8 +918,13 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数。");
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
 
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
@@ -918,14 +940,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
                 return;
             }
         }
-        // 当稿件状态已进入 EDITOR_RECOMMENDATION（外审完成，可提交编辑建议），
-        // 编辑提交建议后应推进到 FINAL_DECISION_PENDING，等待主编终审。
-        String sql = "UPDATE dbo.Manuscripts "
-                   + "SET Status = 'FINAL_DECISION_PENDING', "
-                   + "    Decision = ?, "
-                   + "    LastStatusTime = SYSUTCDATETIME() "
-                   + "WHERE ManuscriptId = ?";
-
         String code = suggestionCode.trim().toUpperCase();
         String decisionText;
         switch (code) {
@@ -964,9 +978,9 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         );
 
         // 兼容旧展示：写入 Manuscripts.Decision（但这不是最终决策）
-        String sql = "UPDATE dbo.Manuscripts SET Decision = ? WHERE ManuscriptId = ?";
+        String sqlDecision = "UPDATE dbo.Manuscripts SET Decision = ? WHERE ManuscriptId = ?";
         try (java.sql.Connection conn = DbUtil.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+             java.sql.PreparedStatement ps = conn.prepareStatement(sqlDecision)) {
             ps.setString(1, decisionText);
             ps.setInt(2, manuscriptId);
             ps.executeUpdate();
@@ -1514,8 +1528,13 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 manuscriptId 参数。");
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
@@ -1525,7 +1544,7 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         // EDITOR 只能操作分配给自己的稿件
         if ("EDITOR".equals(current.getRoleCode())) {
             Integer ceid = manuscriptDAO.findCurrentEditorId(manuscriptId);
-            if (ceid != null && ceid != current.getUserId()) {
+            if (ceid != null && !Objects.equals(ceid, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
                 return;
             }
@@ -1608,7 +1627,13 @@ for (Review r : currentReviews) {
     }
 
     int reviewId = Integer.parseInt(reviewIdStr.trim());
-    int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
 
     Review r = reviewDAO.findById(reviewId);
     if (r == null || r.getManuscriptId() != manuscriptId) {
@@ -1619,7 +1644,7 @@ for (Review r : currentReviews) {
     // EDITOR 只能操作分配给自己的稿件
     if ("EDITOR".equals(current.getRoleCode())) {
         Integer ceid = manuscriptDAO.findCurrentEditorId(manuscriptId);
-        if (ceid != null && ceid != current.getUserId()) {
+        if (ceid != null && !Objects.equals(ceid, current.getUserId())) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
             return;
         }
@@ -1788,8 +1813,13 @@ for (Review r : currentReviews) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 manuscriptId 参数。");
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
@@ -1799,7 +1829,7 @@ for (Review r : currentReviews) {
         // EDITOR 只能操作分配给自己的稿件
         if ("EDITOR".equals(current.getRoleCode())) {
             Integer ceid = manuscriptDAO.findCurrentEditorId(manuscriptId);
-            if (ceid != null && ceid != current.getUserId()) {
+            if (ceid != null && !Objects.equals(ceid, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
                 return;
             }
@@ -1877,8 +1907,13 @@ for (Review r : currentReviews) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 manuscriptId 参数。");
             return;
         }
-
-        int manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(manuscriptIdStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
@@ -1888,7 +1923,7 @@ for (Review r : currentReviews) {
         // EDITOR 只能操作分配给自己的稿件
         if ("EDITOR".equals(current.getRoleCode())) {
             Integer ceid = manuscriptDAO.findCurrentEditorId(manuscriptId);
-            if (ceid != null && ceid != current.getUserId()) {
+            if (ceid != null && !Objects.equals(ceid, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
                 return;
             }

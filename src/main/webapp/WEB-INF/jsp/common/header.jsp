@@ -11,11 +11,12 @@
 
     <!-- Icons (Bootstrap Icons) -->
     <!-- 升级版本：避免部分图标类在旧版中不存在导致空白 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/main.css"/>
 </head>
-<body>
+<body class="${not empty sessionScope.currentUser ? 'authed' : ''}">
 <header class="site-header">
     <div class="container header-inner">
         <a class="brand" href="${pageContext.request.contextPath}/" aria-label="返回首页">
@@ -122,21 +123,5 @@
             <div class="layout">
                 <jsp:include page="/WEB-INF/jsp/common/auth_sidebar.jsp"/>
                 <section class="content">
+                    <div class="content-inner">
         </c:if>
-
-
-<script>
-    function toggleNav() {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        nav.classList.toggle('nav-open');
-    }
-    // Close the menu when clicking outside (mobile)
-    document.addEventListener('click', function (e) {
-        var nav = document.getElementById('primaryNav');
-        if (!nav) return;
-        var toggle = document.querySelector('.nav-toggle');
-        var clickedInside = nav.contains(e.target) || (toggle && toggle.contains(e.target));
-        if (!clickedInside) nav.classList.remove('nav-open');
-    });
-</script>

@@ -7,7 +7,7 @@ import edu.bjfu.onlinesm.model.CallForPaper;
 import edu.bjfu.onlinesm.model.Issue;
 import edu.bjfu.onlinesm.model.JournalPage;
 import edu.bjfu.onlinesm.model.User;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -34,7 +34,6 @@ public class JournalAssetServlet extends HttpServlet {
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
     private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
-    private static final String BASE_UPLOAD_DIR = "D:/upload";
     private static final String JOURNAL_SUB_DIR = "journal";
 
     @Override

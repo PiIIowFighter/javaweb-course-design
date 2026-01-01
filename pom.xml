@@ -1,135 +1,106 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>edu.bjfu</groupId>
   <artifactId>Online_SMsystem4SP</artifactId>
   <version>1.0.0</version>
   <packaging>war</packaging>
+
   <name>Online_SMsystem4SP</name>
-  <description>科研论文在线投稿及管理系统（SpringBoot + MyBatis + JSP，适配 MyEclipse）</description>
+  <description>科研论文在线投稿及管理系统 - JavaWeb 课程设计基本框架（Servlet + JSP）</description>
 
   <properties>
-    <java.version>1.8</java.version>
-    <spring-boot.version>2.7.18</spring-boot.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- 统一管理版本 -->
+    <servlet.api.version>4.0.1</servlet.api.version>
+    <jsp.api.version>2.3.3</jsp.api.version>
+    <jstl.version>1.2</jstl.version>
+    <mssql.jdbc.version>9.4.0.jre8</mssql.jdbc.version>
+
+    <!-- 邮件依赖：JDK 9+ 运行时通常需要显式引入（如果你的 MailNotifications 用到 javax.mail） -->
+    <javax.mail.version>1.6.2</javax.mail.version>
+    <javax.activation.version>1.2.0</javax.activation.version>
+    <!-- JSON处理依赖版本 -->
+    <json.version>20230227</json.version>
   </properties>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${spring-boot.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
-    <!-- Web MVC -->
+    <!-- Servlet API，由容器提供 -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-
-    <!-- 外置 Tomcat -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-tomcat</artifactId>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>${servlet.api.version}</version>
       <scope>provided</scope>
     </dependency>
 
-    <!-- JSP 支持 -->
+    <!-- JSP API，由容器提供 -->
     <dependency>
-      <groupId>org.apache.tomcat.embed</groupId>
-      <artifactId>tomcat-embed-jasper</artifactId>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>javax.servlet.jsp-api</artifactId>
+      <version>${jsp.api.version}</version>
       <scope>provided</scope>
     </dependency>
+
+    <!-- JSTL 标签库 -->
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>jstl</artifactId>
+      <version>${jstl.version}</version>
     </dependency>
 
-    <!-- MyBatis -->
-    <dependency>
-      <groupId>org.mybatis.spring.boot</groupId>
-      <artifactId>mybatis-spring-boot-starter</artifactId>
-      <version>2.3.2</version>
-    </dependency>
-
-    <!-- SQL Server JDBC -->
+    <!-- SQL Server JDBC 驱动 -->
     <dependency>
       <groupId>com.microsoft.sqlserver</groupId>
       <artifactId>mssql-jdbc</artifactId>
-      <version>12.6.1.jre8</version>
+      <version>${mssql.jdbc.version}</version>
     </dependency>
 
-    <!-- Validation -->
+    <!-- 邮件发送依赖 -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-validation</artifactId>
+      <groupId>com.sun.mail</groupId>
+      <artifactId>javax.mail</artifactId>
+      <version>${javax.mail.version}</version>
     </dependency>
-
-    <!-- BCrypt -->
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-crypto</artifactId>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
+      <version>${javax.activation.version}</version>
     </dependency>
 
-    <!-- 便于开发 -->
+    <!-- 新增：JSON处理依赖（解决org.json.JSONObject找不到的报错） -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>${json.version}</version>
     </dependency>
-    
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-aop</artifactId>
-    </dependency>
-    
-	<dependency>
-	    <groupId>org.json</groupId>
-	    <artifactId>json</artifactId>
-	    <version>20231013</version>
-	</dependency>
-
-
-    <dependency>
-        <groupId>org.apache.tomcat.embed</groupId>
-        <artifactId>tomcat-embed-el</artifactId>
-        <scope>provided</scope>
-    </dependency>
-
-    <!-- 修正：保留一个JavaMail依赖（移除重复，此版本适配JDK8+SpringBoot2.7） -->
-   <!-- 确保scope为compile，强制打包到WEB-INF/lib -->
-<dependency>
-    <groupId>com.sun.mail</groupId>
-    <artifactId>javax.mail</artifactId>
-    <version>1.6.2</version>
-    <scope>compile</scope> <!-- 显式声明，避免默认值被覆盖 -->
-</dependency>
   </dependencies>
 
   <build>
+    <finalName>Online_SMsystem4SP</finalName>
     <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <mainClass>edu.bjfu.journal.JournalSystemApplication</mainClass>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
         <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
           <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.3.2</version>
+        <configuration>
+          <failOnMissingWebXml>false</failOnMissingWebXml>
+          <warSourceDirectory>src/main/webapp</warSourceDirectory>
         </configuration>
       </plugin>
     </plugins>

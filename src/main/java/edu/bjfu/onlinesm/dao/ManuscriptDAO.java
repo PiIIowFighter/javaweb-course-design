@@ -215,22 +215,58 @@ public class ManuscriptDAO {
      * 查询稿件的当前责任编辑ID
      */
     public Integer findCurrentEditorId(int manuscriptId) throws SQLException {
-        String sql = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
-        
+        // 优先从 dbo.Manuscripts.CurrentEditorId 读取（新版脚本）。
+        // 但部分同学的旧库没有该列，会导致“Invalid column name 'CurrentEditorId'”从而页面 500。
+        String sql1 = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql1)) {
+
             ps.setInt(1, manuscriptId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    int editorId = rs.getInt("CurrentEditorId");
+                    int editorId = rs.getInt(1);
                     return rs.wasNull() ? null : editorId;
                 }
             }
-        }
-        return null;
-    }
+            return null;
 
-    /**
+        } catch (SQLException ex) {
+
+            // 仅在“列不存在/老库兼容”场景下回退（避免掩盖真实数据库故障）。
+            String msg = ex.getMessage();
+            String low = (msg == null) ? "" : msg.toLowerCase();
+            boolean columnMissing =
+                    (msg != null && msg.contains("CurrentEditorId"))
+                            || low.contains("invalid column")
+                            || low.contains("unknown column");
+
+            if (!columnMissing) {
+                throw ex;
+            }
+
+            // 回退：从 dbo.ManuscriptAssignments 取最新一条指派记录的 EditorId（旧库兼容）。
+            String sql2 = "SELECT TOP 1 EditorId " +
+                          "FROM dbo.ManuscriptAssignments " +
+                          "WHERE ManuscriptId = ? " +
+                          "ORDER BY AssignedTime DESC, AssignmentId DESC";
+            try (Connection conn2 = DbUtil.getConnection();
+                 PreparedStatement ps2 = conn2.prepareStatement(sql2)) {
+
+                ps2.setInt(1, manuscriptId);
+                try (ResultSet rs2 = ps2.executeQuery()) {
+                    if (rs2.next()) {
+                        int editorId = rs2.getInt(1);
+                        return rs2.wasNull() ? null : editorId;
+                    }
+                }
+            } catch (SQLException ignore) {
+                // 如果旧库也没有该表，则返回 null 让上层决定如何处理（不直接 500）。
+            }
+
+            return null;
+        }
+    }
+/**
      * 按单一状态查询所有稿件（编辑部视角简单使用）。
      */
     public List<Manuscript> findByStatus(String status) throws SQLException {

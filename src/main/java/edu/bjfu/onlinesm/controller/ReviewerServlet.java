@@ -7,6 +7,7 @@ import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.mail.MailNotifications; // 添加导入
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,6 +27,11 @@ public class ReviewerServlet extends HttpServlet {
 
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
+    private final UserDAO userDAO = new UserDAO();
+
+    // 通知（邮件/站内）。注意：通知发送失败不应影响主流程。
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     // ==================== GET：页面展示 ====================
 
@@ -142,11 +148,9 @@ public class ReviewerServlet extends HttpServlet {
 
     /**
      * 审稿人拒绝审稿邀请：
-     *  - 先通知编辑（邮件/站内），再移除该邀请记录（不写入额外状态），因此后续可再次邀请；
-     *  - 拒绝后返回“待评审稿件列表”，该记录将不再出现。
-     *  - 根据 reviewId 将 dbo.Reviews.Status 更新为 'DECLINED'；
-     *  - 填写拒绝理由；
-     *  - 拒绝后同样返回"待评审稿件列表"，该记录将不再出现。
+     *  - 记录拒绝理由与时间，并将该邀请置为非活动状态（不再出现在“待评审稿件列表”）；
+     *  - 通知编辑（邮件/站内）；
+     *  - 后续如果需要再次邀请同一审稿人，ReviewDAO.inviteReviewer 会在插入前清理未提交的历史记录，避免插入失败。
      */
     private void handleDeclineInvitation(HttpServletRequest req,
                                          HttpServletResponse resp)
@@ -168,26 +172,12 @@ public class ReviewerServlet extends HttpServlet {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
 
-            // 先通知编辑（邮件/站内），再移除邀请记录（拒绝后允许再次邀请）
-            mailNotifications.onReviewerResponded(reviewId, false);
-            inAppNotifications.onReviewerResponded(reviewId, false);
-
-            reviewDAO.declineInvitation(reviewId, current.getUserId());
-            
-            // 保存拒绝理由到数据库 - 现在传递3个参数
+            // 1) 先在 Reviews 里记录拒绝理由/时间，并将状态置为非活跃（不再出现在待审列表）
             reviewDAO.declineInvitation(reviewId, current.getUserId(), rejectionReason.trim());
-            
-            // 发送邮件通知编辑
-            try {
-                // 创建邮件通知实例
-                MailNotifications notifications = new MailNotifications(new UserDAO(), new ManuscriptDAO(), reviewDAO);
-                // 发送拒绝邀请通知给编辑
-                notifications.onReviewerDeclined(reviewId);
-            } catch (Exception e) {
-                // 邮件发送失败不影响主流程，只记录日志
-                System.err.println("Failed to send declined invitation email: " + e.getMessage());
-                e.printStackTrace();
-            }
+
+            // 2) 通知编辑（邮件/站内）
+            mailNotifications.onReviewerDeclined(reviewId);
+            inAppNotifications.onReviewerResponded(reviewId, false);
             
             // 简化：不在Servlet中通知编辑，可以改为异步处理或日志记录
             System.out.println("审稿人 " + current.getFullName() + 

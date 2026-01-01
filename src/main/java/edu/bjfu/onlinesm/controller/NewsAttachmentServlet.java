@@ -2,7 +2,7 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.NewsDAO;
 import edu.bjfu.onlinesm.model.News;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;

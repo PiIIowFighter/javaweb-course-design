@@ -6,7 +6,7 @@ import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -119,7 +119,8 @@ public class MailNotifications {
         } catch (Exception e) {
             log("催审邮件发送失败（自定义模板）", e);
         }
-    /** 审稿人拒绝邀请：通知编辑。 */
+    }
+
     /** 审稿人拒绝邀请：通知编辑。 */
     public void onReviewerDeclined(int reviewId) {
         if (!cfg.enabled()) return;

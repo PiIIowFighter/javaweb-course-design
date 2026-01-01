@@ -11,16 +11,16 @@ import java.util.List;
 /**
  * ReviewDAO（融合兼容版）
  *
+ * 修复点：冲突合并时“保留 both changes”导致的代码串行/嵌套（方法写进方法里）、
+ * ps.setInt 参数写错、重复 submitReview/declineInvitation 等问题。
+ *
  * 兼容审稿人端 / 编辑端在不同补丁阶段中出现的方法签名：
  * - findById(int)
  * - acceptInvitation(int) / acceptInvitation(int, Integer)
- * - declineInvitation(int) / declineInvitation(int, Integer)
+ * - declineInvitation(int) / declineInvitation(int, Integer) / declineInvitation(int, Integer, String)
  * - submitReview(...)
  * - submitReviewV2(...)（两种签名）
  * - promoteAllUnderReviewManuscriptsIfReady()（EditorServlet 调用）
- *
- * 以及结构图要求的新字段：
- * ConfidentialToEditor / KeyEvaluation / ScoreOriginality / ScoreSignificance / ScoreMethodology / ScorePresentation
  */
 public class ReviewDAO {
 
@@ -42,38 +42,81 @@ public class ReviewDAO {
         return null;
     }
 
-    /** 发出审稿邀请。 */
+    /**
+     * 发出审稿邀请。
+     *
+     * 为保证“被撤回/被拒绝后可再次邀请”，这里会先清理同一稿件+同一审稿人的历史“未提交”记录。
+     *（避免唯一约束/重复数据导致插入失败，且不会影响已提交的评审记录）
+     */
     public void inviteReviewer(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
-        String sql = "INSERT INTO dbo.Reviews " +
+        String cleanup = "DELETE FROM dbo.Reviews WHERE ManuscriptId = ? AND ReviewerId = ? AND Status <> 'SUBMITTED'";
+        String insert = "INSERT INTO dbo.Reviews " +
                 "(ManuscriptId, ReviewerId, Status, InvitedAt, DueAt, RemindCount) " +
                 "VALUES (?,?, 'INVITED', SYSUTCDATETIME(), ?, 0)";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, manuscriptId);
-            ps.setInt(2, reviewerId);
-            if (dueAt != null) ps.setTimestamp(3, Timestamp.valueOf(dueAt));
-            else ps.setNull(3, Types.TIMESTAMP);
-            ps.executeUpdate();
+
+        try (Connection conn = DbUtil.getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement(cleanup)) {
+                ps.setInt(1, manuscriptId);
+                ps.setInt(2, reviewerId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(insert)) {
+                ps.setInt(1, manuscriptId);
+                ps.setInt(2, reviewerId);
+                if (dueAt != null) ps.setTimestamp(3, Timestamp.valueOf(dueAt));
+                else ps.setNull(3, Types.TIMESTAMP);
+                ps.executeUpdate();
+            }
         }
     }
 
     /** 查询某一稿件的全部审稿记录（按邀请时间倒序）。 */
     public List<Review> findByManuscript(int manuscriptId) throws SQLException {
-        String sql = "SELECT r.*, u.FullName AS ReviewerName, u.Email AS ReviewerEmail " +
+        // 新版表可能有 InvitedAt；旧版可能没有。为避免 select 页面 500，这里做容错。
+        String sql1 = "SELECT r.*, u.FullName AS ReviewerName, u.Email AS ReviewerEmail " +
                 "FROM dbo.Reviews r " +
                 "LEFT JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
                 "WHERE r.ManuscriptId = ? " +
                 "ORDER BY r.InvitedAt DESC, r.ReviewId DESC";
+
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql1)) {
             ps.setInt(1, manuscriptId);
             try (ResultSet rs = ps.executeQuery()) {
                 List<Review> list = new ArrayList<>();
                 while (rs.next()) list.add(mapRow(rs));
                 return list;
             }
+        } catch (SQLException ex) {
+            String msg = ex.getMessage();
+            String low = (msg == null) ? "" : msg.toLowerCase();
+            boolean columnMissing =
+                    (msg != null && msg.contains("InvitedAt"))
+                            || low.contains("invalid column")
+                            || low.contains("unknown column");
+            if (!columnMissing) {
+                throw ex;
+            }
+
+            String sql2 = "SELECT r.*, u.FullName AS ReviewerName, u.Email AS ReviewerEmail " +
+                    "FROM dbo.Reviews r " +
+                    "LEFT JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
+                    "WHERE r.ManuscriptId = ? " +
+                    "ORDER BY r.ReviewId DESC";
+
+            try (Connection conn2 = DbUtil.getConnection();
+                 PreparedStatement ps2 = conn2.prepareStatement(sql2)) {
+                ps2.setInt(1, manuscriptId);
+                try (ResultSet rs2 = ps2.executeQuery()) {
+                    List<Review> list2 = new ArrayList<>();
+                    while (rs2.next()) list2.add(mapRow(rs2));
+                    return list2;
+                }
+            }
         }
     }
+
+
 
     /** 按审稿人 + 稿件状态 查询“待评审稿件”列表（只取 INVITED/ACCEPTED）。 */
     public List<Review> findByReviewerAndStatus(int reviewerId, String manuscriptStatus) throws SQLException {
@@ -100,13 +143,13 @@ public class ReviewDAO {
     public List<Review> findHistoryByReviewer(int reviewerId) throws SQLException {
         // 增强版：获取稿件标题信息
         String sql = "SELECT r.*, u.FullName AS ReviewerName, u.Email AS ReviewerEmail, " +
-                     "m.Title AS ManuscriptTitle " +
-                     "FROM dbo.Reviews r " +
-                     "JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
-                     "LEFT JOIN dbo.Manuscripts m ON r.ManuscriptId = m.ManuscriptId " +
-                     "WHERE r.ReviewerId = ? AND r.Status = 'SUBMITTED' " +
-                     "ORDER BY r.SubmittedAt DESC";
-        
+                "m.Title AS ManuscriptTitle " +
+                "FROM dbo.Reviews r " +
+                "JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
+                "LEFT JOIN dbo.Manuscripts m ON r.ManuscriptId = m.ManuscriptId " +
+                "WHERE r.ReviewerId = ? AND r.Status = 'SUBMITTED' " +
+                "ORDER BY r.SubmittedAt DESC";
+
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, reviewerId);
@@ -126,30 +169,31 @@ public class ReviewDAO {
             }
         }
     }
+
     /**
      * 查找逾期需要催审的审稿任务
-     * 
-     * @param overdueDays 逾期天数阈值（超过DueAt多少天算逾期）
-     * @param minIntervalDays 最小提醒间隔天数（避免频繁催审）
-     * @param maxPerRun 每次运行最多处理的数量
+     *
+     * @param overdueDays      逾期天数阈值（超过DueAt多少天算逾期）
+     * @param minIntervalDays  最小提醒间隔天数（避免频繁催审）
+     * @param maxPerRun        每次运行最多处理的数量
      */
     public List<Review> findOverdueForAutoRemind(int overdueDays, int minIntervalDays, int maxPerRun) throws SQLException {
         String sql = "SELECT TOP (?) r.*, u.FullName AS ReviewerName, u.Email AS ReviewerEmail " +
-                     "FROM dbo.Reviews r " +
-                     "LEFT JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
-                     "WHERE r.Status IN ('INVITED', 'ACCEPTED') " +
-                     "  AND r.DueAt IS NOT NULL " +
-                     "  AND r.DueAt < DATEADD(day, -?, SYSUTCDATETIME()) " + // 已逾期overdueDays天
-                     "  AND (r.LastRemindedAt IS NULL " +
-                     "       OR r.LastRemindedAt < DATEADD(day, -?, SYSUTCDATETIME())) " + // 上次提醒至少minIntervalDays天前
-                     "ORDER BY r.DueAt ASC"; // 最逾期的优先
-        
+                "FROM dbo.Reviews r " +
+                "LEFT JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
+                "WHERE r.Status IN ('INVITED', 'ACCEPTED') " +
+                "  AND r.DueAt IS NOT NULL " +
+                "  AND r.DueAt < DATEADD(day, -?, SYSUTCDATETIME()) " +
+                "  AND (r.LastRemindedAt IS NULL " +
+                "       OR r.LastRemindedAt < DATEADD(day, -?, SYSUTCDATETIME())) " +
+                "ORDER BY r.DueAt ASC";
+
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, maxPerRun);
             ps.setInt(2, overdueDays);
             ps.setInt(3, minIntervalDays);
-            
+
             try (ResultSet rs = ps.executeQuery()) {
                 List<Review> list = new ArrayList<>();
                 while (rs.next()) {
@@ -159,9 +203,8 @@ public class ReviewDAO {
             }
         }
     }
-    // ========================= 接受/拒绝邀请 =========================
 
- // ========================= 接受/拒绝邀请 =========================
+    // ========================= 接受/拒绝邀请 =========================
 
     /** 旧版：审稿人接受审稿邀请（仅按 reviewId）。 */
     public void acceptInvitation(int reviewId) throws SQLException {
@@ -192,74 +235,77 @@ public class ReviewDAO {
         }
     }
 
-    
-/** 旧版：审稿人拒绝审稿邀请（仅按 reviewId）。 */
-public void declineInvitation(int reviewId) throws SQLException {
-    // 需求：不保留 DECLINED 等额外状态；拒绝=移除邀请记录（后续可再次邀请）。
-    String sql = "DELETE r FROM dbo.Reviews r " +
-            "JOIN dbo.Manuscripts m ON m.ManuscriptId = r.ManuscriptId " +
-            "WHERE r.ReviewId = ? AND r.Status = 'INVITED' " +
-            "AND m.Status = 'UNDER_REVIEW' AND m.IsArchived = 0 AND m.IsWithdrawn = 0";
-    try (Connection conn = DbUtil.getConnection();
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, reviewId);
-        ps.executeUpdate();
-    }
-}
-
-/** 兼容新版：审稿人拒绝审稿邀请（带 reviewerId 校验，防越权）。 */
-public void declineInvitation(int reviewId, Integer reviewerId) throws SQLException {
-    if (reviewerId == null) {
-        declineInvitation(reviewId);
-        return;
-    }
-    String sql = "DELETE r FROM dbo.Reviews r " +
-            "JOIN dbo.Manuscripts m ON m.ManuscriptId = r.ManuscriptId " +
-            "WHERE r.ReviewId = ? AND r.ReviewerId = ? AND r.Status = 'INVITED' " +
-            "AND m.Status = 'UNDER_REVIEW' AND m.IsArchived = 0 AND m.IsWithdrawn = 0";
-    try (Connection conn = DbUtil.getConnection();
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, reviewId);
-        ps.setInt(2, reviewerId);
-        ps.executeUpdate();
-    }
-}
-
-/**
- * 由编辑/主编撤回“尚未响应”的审稿邀请（INVITED）。
- * 设计：不写入额外状态，而是直接删除该邀请记录。
- */
-public void cancelInvitation(int reviewId) throws SQLException {
-    String sql = "DELETE FROM dbo.Reviews WHERE ReviewId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
-    try (Connection conn = DbUtil.getConnection();
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, reviewId);
-        ps.executeUpdate();
-    }
-}
-
-/**
- * 由编辑/主编撤回审稿人分配（已邀请或已接受但未提交）。
- * 设计：不写入额外状态（不使用 DECLINED/CANCELED），而是直接删除该条审稿记录，
- * 这样同一审稿人可被再次邀请。
- *
- * @return 实际删除的行数（0=不满足条件或不存在）
- */
-public int cancelAssignment(int reviewId) throws SQLException {
-    String sql = "DELETE FROM dbo.Reviews WHERE ReviewId = ? AND Status IN ('INVITED','ACCEPTED') AND SubmittedAt IS NULL";
-    try (Connection conn = DbUtil.getConnection();
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, reviewId);
-        return ps.executeUpdate();
-    }
-}
-
-
-public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLException {
-        String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Reviews WHERE ManuscriptId = ? AND Status IN ('INVITED','ACCEPTED')";
     /** 旧版：审稿人拒绝审稿邀请（仅按 reviewId）。 */
     public void declineInvitation(int reviewId) throws SQLException {
-        String sql = "UPDATE dbo.Reviews SET Status = 'DECLINED' WHERE ReviewId = ? AND Status = 'INVITED'";
+        declineInvitation(reviewId, null, null);
+    }
+
+    /** 兼容新版：审稿人拒绝审稿邀请（带 reviewerId 校验，防越权）。 */
+    public void declineInvitation(int reviewId, Integer reviewerId) throws SQLException {
+        declineInvitation(reviewId, reviewerId, null);
+    }
+
+    /**
+     * 新版：审稿人拒绝审稿邀请（带拒绝理由）。
+     *
+     * 说明：
+     * - 为避免出现“DECLINED”状态（你此前要求不要出现），这里将拒绝视为非活跃记录，统一写为 EXPIRED；
+     * - 记录 RejectionReason/DeclinedAt 便于邮件/站内通知读取；
+     * - 该记录不会出现在审稿人“待评审”列表（因为列表只取 INVITED/ACCEPTED）。
+     */
+    public void declineInvitation(int reviewId, Integer reviewerId, String rejectionReason) throws SQLException {
+        String sql;
+        if (reviewerId == null) {
+            sql = "UPDATE dbo.Reviews SET Status = 'EXPIRED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() " +
+                    "WHERE ReviewId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
+        } else {
+            sql = "UPDATE dbo.Reviews SET Status = 'EXPIRED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() " +
+                    "WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
+        }
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, rejectionReason);
+            ps.setInt(2, reviewId);
+            if (reviewerId != null) {
+                ps.setInt(3, reviewerId);
+            }
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 由编辑/主编撤回“尚未响应”的审稿邀请（INVITED）。
+     * 设计：不写入额外状态，而是直接删除该邀请记录。
+     */
+    public void cancelInvitation(int reviewId) throws SQLException {
+        String sql = "DELETE FROM dbo.Reviews WHERE ReviewId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reviewId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 由编辑/主编撤回审稿人分配（已邀请或已接受但未提交）。
+     * 设计：不写入额外状态（不使用 DECLINED/CANCELED），而是直接删除该条审稿记录，
+     * 这样同一审稿人可被再次邀请。
+     *
+     * @return 实际删除的行数（0=不满足条件或不存在）
+     */
+    public int cancelAssignment(int reviewId) throws SQLException {
+        String sql = "DELETE FROM dbo.Reviews WHERE ReviewId = ? AND Status IN ('INVITED','ACCEPTED') AND SubmittedAt IS NULL";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reviewId);
+            return ps.executeUpdate();
+        }
+    }
+
+    /** 统计某稿件仍在分配中的审稿数（INVITED/ACCEPTED）。 */
+    public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLException {
+        String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Reviews WHERE ManuscriptId = ? AND Status IN ('INVITED','ACCEPTED')";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, manuscriptId);
@@ -269,18 +315,10 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         }
         return 0;
     }
-
 
     /** 统计某稿件已提交（SUBMITTED）的审稿意见数量。 */
     public int countSubmittedByManuscript(int manuscriptId) throws SQLException {
         String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Reviews WHERE ManuscriptId = ? AND Status = 'SUBMITTED'";
-    /** 兼容新版：审稿人拒绝审稿邀请（带 reviewerId 校验，防越权）。 */
-    public void declineInvitation(int reviewId, Integer reviewerId) throws SQLException {
-        if (reviewerId == null) {
-            declineInvitation(reviewId);
-            return;
-        }
-        String sql = "UPDATE dbo.Reviews SET Status = 'DECLINED' WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED'";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, manuscriptId);
@@ -289,40 +327,6 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
             }
         }
         return 0;
-    }
-
-
-    // ========================= 提交评审 =========================
-
-    /** 基础提交（老功能）。 */
-    public void submitReview(int reviewId, String content, Double score, String recommendation) throws SQLException {
-        submitReviewBasicChecked(reviewId, null, content, score, recommendation);
-        promoteManuscriptToEditorRecommendationIfReadyByReviewId(reviewId);
-    /** 新版：审稿人拒绝审稿邀请（带拒绝理由）。 */
-    public void declineInvitation(int reviewId, Integer reviewerId, String rejectionReason) throws SQLException {
-        if (reviewerId == null) {
-            declineInvitationWithReason(reviewId, rejectionReason);
-            return;
-        }
-        String sql = "UPDATE dbo.Reviews SET Status = 'DECLINED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED'";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, rejectionReason);
-            ps.setInt(2, reviewId);
-            ps.setInt(3, reviewerId);
-            ps.executeUpdate();
-        }
-    }
-
-    /** 旧版：审稿人拒绝审稿邀请（带拒绝理由，不带reviewerId）。 */
-    public void declineInvitationWithReason(int reviewId, String rejectionReason) throws SQLException {
-        String sql = "UPDATE dbo.Reviews SET Status = 'DECLINED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() WHERE ReviewId = ? AND Status = 'INVITED'";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, rejectionReason);
-            ps.setInt(2, reviewId);
-            ps.executeUpdate();
-        }
     }
 
     // ========================= 提交评审 =========================
@@ -351,15 +355,15 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
      * 兼容旧库：若新列不存在，自动降级为 submitReview。
      */
     public void submitReviewV2(int reviewId,
-                               String confidentialToEditor,
-                               String keyEvaluation,
-                               Integer scoreOriginality,
-                               Integer scoreSignificance,
-                               Integer scoreMethodology,
-                               Integer scorePresentation,
-                               Double totalScore,
-                               String recommendation,
-                               String commentsToAuthor) throws SQLException {
+                              String confidentialToEditor,
+                              String keyEvaluation,
+                              Integer scoreOriginality,
+                              Integer scoreSignificance,
+                              Integer scoreMethodology,
+                              Integer scorePresentation,
+                              Double totalScore,
+                              String recommendation,
+                              String commentsToAuthor) throws SQLException {
 
         String sqlV2 = "UPDATE dbo.Reviews SET " +
                 "ConfidentialToEditor = ?, " +
@@ -410,21 +414,18 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
      * v2 提交评审（新签名）：ReviewerServlet 常用的 11 参数版本
      * (reviewId, reviewerId, commentsToAuthor, confidentialToEditor, keyEvaluation,
      *  scoreOverall, scoreOriginality, scoreSignificance, scoreMethodology, scorePresentation, recommendation)
-     *
-     * 说明：四项分数通常来自前端数字输入，可能是 Double；这里会四舍五入并限制到 0~10。
-     * 兼容旧库：若新列不存在，自动降级为 submitReview（只写 Content/Score/Recommendation）。
      */
     public void submitReviewV2(int reviewId,
-                               Integer reviewerId,
-                               String commentsToAuthor,
-                               String confidentialToEditor,
-                               String keyEvaluation,
-                               Double scoreOverall,
-                               Double scoreOriginality,
-                               Double scoreSignificance,
-                               Double scoreMethodology,
-                               Double scorePresentation,
-                               String recommendation) throws SQLException {
+                              Integer reviewerId,
+                              String commentsToAuthor,
+                              String confidentialToEditor,
+                              String keyEvaluation,
+                              Double scoreOverall,
+                              Double scoreOriginality,
+                              Double scoreSignificance,
+                              Double scoreMethodology,
+                              Double scorePresentation,
+                              String recommendation) throws SQLException {
 
         Integer so = roundToInt(scoreOriginality);
         Integer ss = roundToInt(scoreSignificance);
@@ -485,6 +486,7 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         // 提交后尝试推进稿件状态
         promoteManuscriptToEditorRecommendationIfReadyByReviewId(reviewId);
     }
+
     /** 催审：RemindCount + 1, LastRemindedAt 更新为当前时间。 */
     public void remind(int reviewId) throws SQLException {
         String sql = "UPDATE dbo.Reviews SET RemindCount = ISNULL(RemindCount,0) + 1, LastRemindedAt = SYSUTCDATETIME() WHERE ReviewId = ?";
@@ -495,6 +497,15 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         }
     }
 
+    /**
+     * 兼容旧调用：EditorServlet 在某些补丁版本里使用 remindChecked(reviewId)。
+     * 实际行为等同于 remind(reviewId)：RemindCount +1, LastRemindedAt=now。
+     */
+    public void remindChecked(int reviewId) throws SQLException {
+        remind(reviewId);
+    }
+
+
     // ========================= 状态推进（EditorServlet 调用） =========================
 
     /**
@@ -502,7 +513,7 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
      * 不存在未提交项（即不存在 INVITED/ACCEPTED），并且至少存在 1 条 SUBMITTED，
      * 则推进为 EDITOR_RECOMMENDATION。
      *
-     * EXPIRED 不阻塞推进（不算有效邀请）。
+     * EXPIRED 不阻塞推进。
      */
     public void promoteAllUnderReviewManuscriptsIfReady() throws SQLException {
         String sql = "UPDATE m SET m.Status = 'EDITOR_RECOMMENDATION' " +
@@ -546,7 +557,6 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         }
     }
 
-
     // ========================= 映射/工具 =========================
 
     private Review mapRow(ResultSet rs) throws SQLException {
@@ -555,14 +565,15 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         r.setManuscriptId(rs.getInt("ManuscriptId"));
         r.setReviewerId(rs.getInt("ReviewerId"));
         r.setContent(rs.getString("Content"));
-
-        double score = rs.getDouble("Score");
-        if (!rs.wasNull()) r.setScore(score);
-
+        try {
+            double score = rs.getDouble("Score");
+            if (!rs.wasNull()) r.setScore(score);
+        } catch (SQLException ignore) {
+            // 兼容旧库：Reviews 表可能没有 Score 列
+        }
         r.setRecommendation(rs.getString("Recommendation"));
         r.setStatus(rs.getString("Status"));
 
-        // 只有一个 Timestamp t 声明
         Timestamp t;
         t = rs.getTimestamp("InvitedAt");
         if (t != null) r.setInvitedAt(t.toLocalDateTime());
@@ -574,10 +585,13 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         if (t != null) r.setDueAt(t.toLocalDateTime());
         t = rs.getTimestamp("LastRemindedAt");
         if (t != null) r.setLastRemindedAt(t.toLocalDateTime());
-        
+
         // 新增的拒绝时间字段
-        t = rs.getTimestamp("DeclinedAt");  // 使用同一个变量 t
-        if (t != null) r.setDeclinedAt(t.toLocalDateTime());
+        try {
+            t = rs.getTimestamp("DeclinedAt");
+            if (t != null) r.setDeclinedAt(t.toLocalDateTime());
+        } catch (Exception ignore) {
+        }
 
         try { r.setRemindCount(rs.getInt("RemindCount")); } catch (Exception ignore) {}
 
@@ -593,16 +607,17 @@ public int countActiveAssignmentsByManuscript(int manuscriptId) throws SQLExcept
         try { int v = rs.getInt("ScoreSignificance"); if (!rs.wasNull()) r.setScoreSignificance(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScoreMethodology"); if (!rs.wasNull()) r.setScoreMethodology(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScorePresentation"); if (!rs.wasNull()) r.setScorePresentation(v); } catch (Exception ignore) {}
-        // 新增5个字段映射
+
+        // 新增5个字段映射（若数据库无列则忽略）
         try { int v = rs.getInt("ScoreExperimentation"); if (!rs.wasNull()) r.setScoreExperimentation(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScoreLiteratureReview"); if (!rs.wasNull()) r.setScoreLiteratureReview(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScoreConclusions"); if (!rs.wasNull()) r.setScoreConclusions(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScoreAcademicIntegrity"); if (!rs.wasNull()) r.setScoreAcademicIntegrity(v); } catch (Exception ignore) {}
         try { int v = rs.getInt("ScorePracticality"); if (!rs.wasNull()) r.setScorePracticality(v); } catch (Exception ignore) {}
-        
-        // 新增拒绝理由字段映射
+
+        // 拒绝理由
         try { r.setRejectionReason(rs.getString("RejectionReason")); } catch (Exception ignore) {}
-        
+
         return r;
     }
 

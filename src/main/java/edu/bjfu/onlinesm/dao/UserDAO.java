@@ -124,58 +124,121 @@ public class UserDAO {
                                          Integer minAvgScore,
                                          Integer limit) throws SQLException {
 
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT ");
-        if (limit != null && limit > 0) {
-            sql.append("TOP ").append(limit).append(" ");
-        }
-        sql.append("u.UserId, u.Username, u.PasswordHash, u.Email, u.FullName, ")
-           .append("u.Affiliation, u.ResearchArea, u.Status, r.RoleCode ")
-           .append("FROM dbo.Users u ")
-           .append("JOIN dbo.Roles r ON u.RoleId = r.RoleId ")
-           .append("LEFT JOIN ( ")
-           .append("    SELECT ReviewerId, COUNT(*) AS CompletedCount, AVG(CAST(Score AS FLOAT)) AS AvgScore ")
-           .append("    FROM dbo.Reviews ")
-           .append("    WHERE Status = 'SUBMITTED' ")
-           .append("    GROUP BY ReviewerId ")
-           .append(") s ON s.ReviewerId = u.UserId ")
-           .append("WHERE r.RoleCode = 'REVIEWER' AND u.Status = 'ACTIVE' ");
+        // 注意：部分同学的旧数据库脚本可能没有 dbo.Reviews.Score / dbo.Reviews.InvitedAt 等列，
+        // 直接 JOIN/AVG 会导致“Invalid column name …”从而页面 500。
+        // 这里按“三段降级”策略查询审稿人池：先带 AvgScore+CompletedCount，再仅 CompletedCount，最后只查用户表。
 
-        java.util.List<Object> params = new java.util.ArrayList<>();
+        String top = (limit != null && limit > 0) ? ("TOP " + limit + " ") : "";
 
+        // 通用：用户字段
+        String selectCols = "SELECT " + top +
+                "u.UserId, u.Username, u.PasswordHash, u.Email, u.FullName, " +
+                "u.Affiliation, u.ResearchArea, u.Status, r.RoleCode ";
+
+        String fromJoin = "FROM dbo.Users u " +
+                "JOIN dbo.Roles r ON u.RoleId = r.RoleId ";
+
+        String whereBase = "WHERE r.RoleCode = 'REVIEWER' AND u.Status = 'ACTIVE' ";
+
+        // 关键词过滤（通用）
+        java.util.List<Object> kwParams = new java.util.ArrayList<>();
+        String kwClause = "";
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = "%" + keyword.trim() + "%";
-            sql.append("AND (u.FullName LIKE ? OR u.Username LIKE ? OR u.Affiliation LIKE ? OR u.ResearchArea LIKE ?) ");
-            params.add(kw);
-            params.add(kw);
-            params.add(kw);
-            params.add(kw);
+            kwClause = "AND (u.FullName LIKE ? OR u.Username LIKE ? OR u.Affiliation LIKE ? OR u.ResearchArea LIKE ?) ";
+            kwParams.add(kw);
+            kwParams.add(kw);
+            kwParams.add(kw);
+            kwParams.add(kw);
         }
 
+        // ---------- 方案1：带 AvgScore + CompletedCount ----------
+        String sql1 = selectCols + fromJoin +
+                "LEFT JOIN ( " +
+                "  SELECT ReviewerId, COUNT(*) AS CompletedCount, AVG(CAST(Score AS FLOAT)) AS AvgScore " +
+                "  FROM dbo.Reviews WHERE Status = 'SUBMITTED' GROUP BY ReviewerId " +
+                ") s ON s.ReviewerId = u.UserId " +
+                whereBase +
+                kwClause;
+
+        java.util.List<Object> p1 = new java.util.ArrayList<>(kwParams);
         if (minCompleted != null) {
-            sql.append("AND ISNULL(s.CompletedCount, 0) >= ? ");
-            params.add(minCompleted);
+            sql1 += "AND ISNULL(s.CompletedCount, 0) >= ? ";
+            p1.add(minCompleted);
         }
-
         if (minAvgScore != null) {
-            sql.append("AND ISNULL(s.AvgScore, 0) >= ? ");
-            params.add(minAvgScore);
+            sql1 += "AND ISNULL(s.AvgScore, 0) >= ? ";
+            p1.add(minAvgScore);
+        }
+        sql1 += "ORDER BY ISNULL(s.AvgScore, 0) DESC, ISNULL(s.CompletedCount, 0) DESC, u.UserId ASC";
+
+        try {
+            return runReviewerQuery(sql1, p1);
+        } catch (SQLException ex) {
+            String msg = ex.getMessage();
+            String low = (msg == null) ? "" : msg.toLowerCase();
+            boolean scoreMissing =
+                    (msg != null && msg.contains("Score"))
+                            || low.contains("invalid column")
+                            || low.contains("unknown column");
+            if (!scoreMissing) {
+                throw ex;
+            }
         }
 
-        sql.append("ORDER BY ISNULL(s.AvgScore, 0) DESC, ISNULL(s.CompletedCount, 0) DESC, u.UserId ASC");
+        // ---------- 方案2：仅 CompletedCount（忽略 minAvgScore） ----------
+        String sql2 = selectCols + fromJoin +
+                "LEFT JOIN ( " +
+                "  SELECT ReviewerId, COUNT(*) AS CompletedCount " +
+                "  FROM dbo.Reviews WHERE Status = 'SUBMITTED' GROUP BY ReviewerId " +
+                ") s ON s.ReviewerId = u.UserId " +
+                whereBase +
+                kwClause;
 
+        java.util.List<Object> p2 = new java.util.ArrayList<>(kwParams);
+        if (minCompleted != null) {
+            sql2 += "AND ISNULL(s.CompletedCount, 0) >= ? ";
+            p2.add(minCompleted);
+        }
+        sql2 += "ORDER BY ISNULL(s.CompletedCount, 0) DESC, u.UserId ASC";
+
+        try {
+            return runReviewerQuery(sql2, p2);
+        } catch (SQLException ex2) {
+            String msg = ex2.getMessage();
+            String low = (msg == null) ? "" : msg.toLowerCase();
+            boolean reviewsMissing =
+                    (msg != null && msg.contains("Reviews"))
+                            || low.contains("invalid object")
+                            || low.contains("does not exist");
+            if (!reviewsMissing) {
+                throw ex2;
+            }
+        }
+
+        // ---------- 方案3：不依赖 Reviews 表（忽略 minCompleted/minAvgScore） ----------
+        String sql3 = selectCols + fromJoin + whereBase + kwClause + "ORDER BY u.UserId ASC";
+        return runReviewerQuery(sql3, kwParams);
+    }
+
+    /**
+     * 执行审稿人池查询（供 searchReviewerPool 三段降级复用）
+     */
+    private List<User> runReviewerQuery(String sql, java.util.List<Object> params) throws SQLException {
         List<User> list = new ArrayList<>();
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            for (int i = 0; i < params.size(); i++) {
-                Object p = params.get(i);
-                if (p instanceof String) {
-                    ps.setString(i + 1, (String) p);
-                } else if (p instanceof Integer) {
-                    ps.setInt(i + 1, (Integer) p);
-                } else {
-                    ps.setObject(i + 1, p);
+            if (params != null) {
+                for (int i = 0; i < params.size(); i++) {
+                    Object p = params.get(i);
+                    if (p instanceof String) {
+                        ps.setString(i + 1, (String) p);
+                    } else if (p instanceof Integer) {
+                        ps.setInt(i + 1, (Integer) p);
+                    } else {
+                        ps.setObject(i + 1, p);
+                    }
                 }
             }
 
@@ -187,11 +250,7 @@ public class UserDAO {
         }
         return list;
     }
-
-
-
-
-    /**
+/**
      * 注册新用户：默认角色为 AUTHOR，状态为 ACTIVE。
      * 若用户名已存在，将抛出 SQLException（唯一键冲突）。
      */
