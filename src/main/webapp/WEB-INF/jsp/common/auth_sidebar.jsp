@@ -72,10 +72,16 @@
                 <a class="side-link ${fn:contains(uri, '/editor/underReview') ? 'active' : ''}" href="${ctx}/editor/underReview">
                     <i class="bi bi-hourglass-split" aria-hidden="true"></i> 审稿中
                 </a>
-                <a class="side-link ${fn:contains(uri, '/editor/finalDecision') ? 'active' : ''}" href="${ctx}/editor/finalDecision">
-                    <i class="bi bi-check2-circle" aria-hidden="true"></i> 终审决策
+                <a class="side-link ${fn:contains(uri, '/editor/recommend') ? 'active' : ''}" href="${ctx}/editor/recommend">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> 提出建议
                 </a>
-            </c:when>
+                <a class="side-link ${fn:contains(uri, '/editor/review/monitor') ? 'active' : ''}" href="${ctx}/editor/review/monitor">
+                    <i class="bi bi-bell" aria-hidden="true"></i> 审稿监控 / 催审
+                </a>
+                <a class="side-link ${fn:contains(uri, '/editor/authorComm') ? 'active' : ''}" href="${ctx}/editor/authorComm">
+                    <i class="bi bi-chat-dots" aria-hidden="true"></i> 与作者沟通
+                </a>
+</c:when>
 
             <c:when test="${roleCode == 'EDITOR_IN_CHIEF'}">
                 <a class="side-link ${fn:contains(uri, '/editor/overview') ? 'active' : ''}" href="${ctx}/editor/overview">
@@ -87,10 +93,7 @@
                 <a class="side-link ${fn:contains(uri, '/editor/toAssign') ? 'active' : ''}" href="${ctx}/editor/toAssign">
                     <i class="bi bi-diagram-3" aria-hidden="true"></i> 待分配队列
                 </a>
-                <a class="side-link ${fn:contains(uri, '/editor/finalDecision') ? 'active' : ''}" href="${ctx}/editor/finalDecision">
-                    <i class="bi bi-check2-circle" aria-hidden="true"></i> 终审决策
-                </a>
-                <a class="side-link ${fn:contains(uri, '/editor/reviewers') ? 'active' : ''}" href="${ctx}/editor/reviewers">
+<a class="side-link ${fn:contains(uri, '/editor/reviewers') ? 'active' : ''}" href="${ctx}/editor/reviewers">
                     <i class="bi bi-people" aria-hidden="true"></i> 审稿人库管理
                 </a>
                 <a class="side-link ${fn:contains(uri, '/editor/special') ? 'active' : ''}" href="${ctx}/editor/special">

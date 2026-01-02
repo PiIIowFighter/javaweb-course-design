@@ -29,7 +29,7 @@
     </c:if>
     <c:if test="${not empty news}">
         <div class="richtext">
-            <c:out value="${news.content}" escapeXml="false"/>
+            <pre class="pre-wrap"><c:out value="${news.content}"/></pre>
         </div>
         <c:if test="${not empty news.attachmentPath}">
             <p style="margin-top: 12px;">

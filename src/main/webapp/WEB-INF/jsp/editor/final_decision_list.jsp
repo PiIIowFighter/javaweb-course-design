@@ -4,6 +4,8 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+
 <h2>终审 / 录用与退稿决策列表</h2>
 <p>此页面展示已经完成外审、进入编辑推荐或主编终审阶段的稿件：</p>
 <ul>
@@ -36,7 +38,31 @@
                 <td><c:out value="${m.title}"/></td>
                 <td><c:out value="${m.currentStatus}"/></td>
                 <td>
+                    <c:set var="s" value="${suggestionMap[m.manuscriptId]}"/>
                     <c:choose>
+                        <c:when test="${not empty s}">
+                            <div>
+                                <strong>编辑建议：</strong>
+                                <c:choose>
+                                    <c:when test="${s.suggestion == 'ACCEPT'}">Suggest Acceptance</c:when>
+                                    <c:when test="${s.suggestion == 'MINOR_REVISION'}">Suggest Acceptance after Minor Revision</c:when>
+                                    <c:when test="${s.suggestion == 'MAJOR_REVISION'}">Suggest Major Revision</c:when>
+                                    <c:when test="${s.suggestion == 'REJECT'}">Suggest Reject</c:when>
+                                    <c:otherwise><c:out value="${s.suggestion}"/></c:otherwise>
+                                </c:choose>
+                                <c:if test="${not empty s.editorName}">
+                                    （<c:out value="${s.editorName}"/>）
+                                </c:if>
+                            </div>
+                            <c:if test="${not empty s.summary}">
+                                <div style="max-width: 460px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <strong>总结：</strong><c:out value="${s.summary}"/>
+                                </div>
+                            </c:if>
+                            <div style="margin-top: 4px;">
+                                <a href="${ctx}/editor/recommend?manuscriptId=${m.manuscriptId}">查看编辑建议</a>
+                            </div>
+                        </c:when>
                         <c:when test="${not empty m.decision}">
                             <c:out value="${m.decision}"/>
                         </c:when>
@@ -60,9 +86,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">
-                        查看详情
-                    </a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
 
                     <!-- 只有主编并且状态在待终审/有编辑推荐时才显示三个决策按钮 -->
                     <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
@@ -86,6 +110,23 @@
                                 </button>
                             </form>
                         </c:if>
+
+                        <!-- 特殊权限：撤销终审决定 / 撤稿 -->
+                        <form method="post" action="${pageContext.request.contextPath}/editor/finalDecision" style="display:inline">
+                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
+
+                            <c:if test="${m.currentStatus == 'ACCEPTED' or m.currentStatus == 'REJECTED' or m.currentStatus == 'REVISION'}">
+                                <button type="submit" name="op" value="rescind"
+                                        onclick="return confirm('确认撤销该稿件的终审决定？将回退到 FINAL_DECISION_PENDING。');">
+                                    撤销决策
+                                </button>
+                            </c:if>
+
+                            <button type="submit" name="op" value="retract"
+                                    onclick="return confirm('确认撤稿并归档该稿件？该操作通常不可逆。');">
+                                撤稿
+                            </button>
+                        </form>
                     </c:if>
                 </td>
             </tr>

@@ -5,12 +5,14 @@ import edu.bjfu.onlinesm.util.DbUtil;
 import edu.bjfu.onlinesm.util.SchemaUtil;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 站内通知 DAO（单向，无对话串）。
+ * 站内通知 DAO。
+ *
+ * 说明：本项目把“与作者沟通历史”也复用到 Notifications 表中，
+ * 通过 Category + RelatedManuscriptId 来做过滤即可。
  */
 public class NotificationDAO {
 
@@ -97,22 +99,74 @@ public class NotificationDAO {
         return list;
     }
 
-    
-    public Notification findById(int notificationId) throws SQLException {
+    /**
+     * 按“关联稿件 + 分类”拉取通知（可用于“与作者沟通历史”时间线）。
+     *
+     * @param manuscriptId      稿件 ID（RelatedManuscriptId）
+     * @param category          分类（例如 AUTHOR_MESSAGE）
+     * @param recipientUserId   可选：只取某个收件人的记录（作者侧查看历史时用）
+     * @param limit             最多返回条数
+     * @param ascendingByTime   true=按时间正序（时间线），false=倒序
+     */
+    public List<Notification> listByManuscriptAndCategory(int manuscriptId,
+                                                         String category,
+                                                         Integer recipientUserId,
+                                                         int limit,
+                                                         boolean ascendingByTime) throws SQLException {
         ensureTable();
-        String sql = "SELECT TOP 1 NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt " +
-                     "FROM dbo.Notifications WHERE NotificationId=?";
+        if (limit <= 0) limit = 100;
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT TOP ").append(limit)
+           .append(" NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt ")
+           .append("FROM dbo.Notifications WHERE RelatedManuscriptId=? AND Category=? ");
+
+        if (recipientUserId != null) {
+            sql.append("AND RecipientUserId=? ");
+        }
+
+        if (ascendingByTime) {
+            sql.append("ORDER BY CreatedAt ASC, NotificationId ASC");
+        } else {
+            sql.append("ORDER BY CreatedAt DESC, NotificationId DESC");
+        }
+
+        List<Notification> list = new ArrayList<>();
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, notificationId);
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int idx = 1;
+            ps.setInt(idx++, manuscriptId);
+            ps.setString(idx++, category);
+            if (recipientUserId != null) {
+                ps.setInt(idx++, recipientUserId);
+            }
+
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapRow(rs);
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
             }
         }
-        return null;
+        return list;
     }
 
-public int countUnread(int recipientUserId) throws SQLException {
+    /** 统计某稿件某分类下的通知数量（用于列表页展示）。 */
+    public int countByManuscriptAndCategory(int manuscriptId, String category) throws SQLException {
+        ensureTable();
+        String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Notifications WHERE RelatedManuscriptId=? AND Category=?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            ps.setString(2, category);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("Cnt");
+            }
+        }
+        return 0;
+    }
+
+    public int countUnread(int recipientUserId) throws SQLException {
         ensureTable();
         String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Notifications WHERE RecipientUserId=? AND IsRead=0";
         try (Connection conn = DbUtil.getConnection();

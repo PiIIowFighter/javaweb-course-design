@@ -116,6 +116,32 @@ public class InAppNotifications {
         }
     }
 
+
+    /** 编辑提交建议：通知主编（终审队列）。 */
+    public void onEditorRecommendationSubmitted(int manuscriptId, User editor, String suggestionText, String summary) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            String title = "收到编辑建议（待主编终审）";
+            String content = "编辑已提交处理建议，请前往终审列表查看并作出最终决策。";
+            if (m != null) content += "\n稿件标题：" + safe(m.getTitle());
+            if (editor != null) content += "\n提交人：" + safe(editor.getFullName() != null ? editor.getFullName() : editor.getUsername());
+            if (suggestionText != null && !suggestionText.trim().isEmpty()) content += "\n建议：" + suggestionText.trim();
+            if (summary != null && !summary.trim().isEmpty()) content += "\n总结：" + summary.trim();
+
+            // 通知所有主编（支持多主编）
+            for (User chief : userDAO.findByRoleCode("EDITOR_IN_CHIEF")) {
+                notificationDAO.create(chief.getUserId(),
+                        editor == null ? null : editor.getUserId(),
+                        "SYSTEM",
+                        "EDITOR_RECOMMENDATION",
+                        title,
+                        content,
+                        manuscriptId);
+            }
+        } catch (Exception ignore) {
+        }
+    }
+
     /** 终审决策：通知作者与编辑。 */
     public void onFinalDecision(int manuscriptId, String decisionText) {
         try {
@@ -169,6 +195,38 @@ public class InAppNotifications {
         } catch (Exception ignore) {
         }
     }
+
+
+    /**
+     * 催办责任编辑：在站内向该编辑发送一条“处理稿件提醒”通知。
+     */
+    public void onEditorReminder(Manuscript manuscript, User chief, User editor) {
+        try {
+            if (manuscript == null || editor == null || editor.getUserId() == null) return;
+            String code = "MS" + String.format("%05d", manuscript.getManuscriptId());
+            String title = "请尽快处理稿件 " + code;
+
+            StringBuilder content = new StringBuilder();
+            content.append("主编/编辑部管理员 ");
+            if (chief != null) {
+                content.append(safe(chief.getFullName()));
+            }
+            content.append(" 提醒您尽快处理稿件：");
+            content.append("\n标题：").append(safe(manuscript.getTitle()));
+
+            notificationDAO.create(
+                    editor.getUserId(),
+                    null,
+                    "SYSTEM",
+                    "EDITOR_REMIND",
+                    title,
+                    content.toString(),
+                    null
+            );
+        } catch (Exception ignore) {
+        }
+    }
+
 
     private String safe(String s) {
         return s == null ? "" : s;

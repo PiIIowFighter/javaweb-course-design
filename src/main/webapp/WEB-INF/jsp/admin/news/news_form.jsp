@@ -4,8 +4,6 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet"/>
-
 <h2>
     <c:choose>
         <c:when test="${news != null && news.newsId != null}">
@@ -37,7 +35,7 @@
             <textarea id="savedNewsContent" style="display:none;"><c:out value="${news.content}" escapeXml="false"/></textarea>
         </c:if>
         <div class="help" style="color:#666; font-size:0.9em; margin-top:4px;">
-            支持富文本：可粘贴/输入格式化内容；支持粗体、斜体、上下标、数学公式等；支持插入图片和视频（使用工具栏中的图片 / 视频按钮）；提交时会保存为 HTML。
+            支持富文本：可粘贴/输入格式化内容；支持粗体、斜体、上下标、数学公式等；提交时会保存为 HTML。
         </div>
     </div>
     <p>
@@ -77,6 +75,8 @@
 
 
 <!-- Quill 富文本编辑器：用于新闻 / 公告内容 -->
+<link href="${pageContext.request.contextPath}/static/css/quill.snow.css" rel="stylesheet">
+<script src="${pageContext.request.contextPath}/static/js/quill.min.js"></script>
 
 <style>
     #newsContentEditor {
@@ -94,7 +94,6 @@
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 <script>
     (function() {
         var editorEl = document.getElementById('newsContentEditor');
@@ -111,7 +110,7 @@
                     [{ 'script': 'sub'}, { 'script': 'super'}],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                     [{ 'align': [] }],
-                    ['link', 'image', 'video', 'formula'],
+                    ['link', 'formula'],
                     ['clean']
                 ]
             },

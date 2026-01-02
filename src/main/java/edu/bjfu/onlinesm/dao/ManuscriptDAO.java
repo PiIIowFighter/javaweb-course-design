@@ -211,28 +211,62 @@ public class ManuscriptDAO {
         }
         return null;
     }
-
     /**
-     * 查询稿件当前责任编辑（dbo.Manuscripts.CurrentEditorId）。
-     * 用于邮件通知“主编终审/审稿人回应”等场景。
+     * 查询稿件的当前责任编辑ID
      */
     public Integer findCurrentEditorId(int manuscriptId) throws SQLException {
-        String sql = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+        // 优先从 dbo.Manuscripts.CurrentEditorId 读取（新版脚本）。
+        // 但部分同学的旧库没有该列，会导致“Invalid column name 'CurrentEditorId'”从而页面 500。
+        String sql1 = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql1)) {
+
             ps.setInt(1, manuscriptId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    int v = rs.getInt(1);
-                    if (rs.wasNull()) return null;
-                    return v;
+                    int editorId = rs.getInt(1);
+                    return rs.wasNull() ? null : editorId;
                 }
             }
-        }
-        return null;
-    }
+            return null;
 
-    /**
+        } catch (SQLException ex) {
+
+            // 仅在“列不存在/老库兼容”场景下回退（避免掩盖真实数据库故障）。
+            String msg = ex.getMessage();
+            String low = (msg == null) ? "" : msg.toLowerCase();
+            boolean columnMissing =
+                    (msg != null && msg.contains("CurrentEditorId"))
+                            || low.contains("invalid column")
+                            || low.contains("unknown column");
+
+            if (!columnMissing) {
+                throw ex;
+            }
+
+            // 回退：从 dbo.ManuscriptAssignments 取最新一条指派记录的 EditorId（旧库兼容）。
+            String sql2 = "SELECT TOP 1 EditorId " +
+                          "FROM dbo.ManuscriptAssignments " +
+                          "WHERE ManuscriptId = ? " +
+                          "ORDER BY AssignedTime DESC, AssignmentId DESC";
+            try (Connection conn2 = DbUtil.getConnection();
+                 PreparedStatement ps2 = conn2.prepareStatement(sql2)) {
+
+                ps2.setInt(1, manuscriptId);
+                try (ResultSet rs2 = ps2.executeQuery()) {
+                    if (rs2.next()) {
+                        int editorId = rs2.getInt(1);
+                        return rs2.wasNull() ? null : editorId;
+                    }
+                }
+            } catch (SQLException ignore) {
+                // 如果旧库也没有该表，则返回 null 让上层决定如何处理（不直接 500）。
+            }
+
+            return null;
+        }
+    }
+/**
      * 按单一状态查询所有稿件（编辑部视角简单使用）。
      */
     public List<Manuscript> findByStatus(String status) throws SQLException {
@@ -276,6 +310,109 @@ public class ManuscriptDAO {
         }
         return list;
     }
+
+    /**
+     * 根据状态和当前指定的责任编辑筛选稿件列表。
+     * 仅返回 IsArchived = 0 且 IsWithdrawn = 0 的记录。
+     *
+     * 说明：
+     *  - 主要用于编辑“我的稿件”列表，保证编辑只能看到主编指派给自己的稿件；
+     *  - 这里通过 Manuscripts.CurrentEditorId 做过滤，不直接依赖历史指派记录。
+     */
+    public List<Manuscript> findByStatusesForEditor(int editorUserId, String... statuses) throws SQLException {
+        if (statuses == null || statuses.length == 0) {
+            throw new IllegalArgumentException("statuses 不能为空");
+        }
+
+        // 1) 优先使用 Manuscripts.CurrentEditorId（如果数据库版本已包含该列）。
+        try {
+            StringBuilder sql = new StringBuilder(
+                    "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, " +
+                    "       SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
+                    "FROM dbo.Manuscripts WHERE IsArchived = 0 AND IsWithdrawn = 0 " +
+                    "  AND CurrentEditorId = ? AND Status IN ("
+            );
+            for (int i = 0; i < statuses.length; i++) {
+                if (i > 0) sql.append(',');
+                sql.append('?');
+            }
+            sql.append(") ORDER BY ISNULL(SubmitTime, LastStatusTime) DESC, ManuscriptId DESC");
+
+            List<Manuscript> list = new ArrayList<>();
+            try (Connection conn = DbUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+                int idx = 1;
+                ps.setInt(idx++, editorUserId);
+                for (String s : statuses) {
+                    ps.setString(idx++, s);
+                }
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(mapRow(rs));
+                    }
+                }
+            }
+            return list;
+        } catch (SQLException e) {
+            // 兼容旧版数据库：没有 CurrentEditorId 列时，降级到 ManuscriptAssignments 或逐条判断。
+            String msg = (e.getMessage() == null) ? "" : e.getMessage();
+            if (!msg.contains("CurrentEditorId")) {
+                throw e; // 不是列缺失导致的错误，继续抛出
+            }
+        }
+
+        // 2) 尝试通过 ManuscriptAssignments 的“最新指派”来过滤
+        try {
+            StringBuilder sql = new StringBuilder();
+            sql.append("WITH latest AS (\n");
+            sql.append("    SELECT ManuscriptId, EditorId,\n");
+            sql.append("           ROW_NUMBER() OVER (PARTITION BY ManuscriptId ORDER BY AssignedTime DESC, AssignmentId DESC) AS rn\n");
+            sql.append("    FROM dbo.ManuscriptAssignments\n");
+            sql.append(")\n");
+            sql.append("SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords,\n");
+            sql.append("       m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime\n");
+            sql.append("FROM dbo.Manuscripts m\n");
+            sql.append("JOIN latest la ON la.ManuscriptId = m.ManuscriptId AND la.rn = 1\n");
+            sql.append("WHERE m.IsArchived = 0 AND m.IsWithdrawn = 0\n");
+            sql.append("  AND la.EditorId = ? AND m.Status IN (");
+            for (int i = 0; i < statuses.length; i++) {
+                if (i > 0) sql.append(',');
+                sql.append('?');
+            }
+            sql.append(") ORDER BY ISNULL(m.SubmitTime, m.LastStatusTime) DESC, m.ManuscriptId DESC");
+
+            List<Manuscript> list = new ArrayList<>();
+            try (Connection conn = DbUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+                int idx = 1;
+                ps.setInt(idx++, editorUserId);
+                for (String s : statuses) {
+                    ps.setString(idx++, s);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(mapRow(rs));
+                    }
+                }
+            }
+            return list;
+        } catch (SQLException ignore) {
+            // 3) 兜底：先按状态取出，再逐条比对 current editor
+            List<Manuscript> raw = findByStatuses(statuses);
+            List<Manuscript> filtered = new ArrayList<>();
+            for (Manuscript m : raw) {
+                Integer ce = findCurrentEditorId(m.getManuscriptId());
+                if (java.util.Objects.equals(ce, editorUserId)) {
+                    filtered.add(m);
+                }
+            }
+            return filtered;
+        }
+    }
+
 
     /**
      * 主编“全览权限”使用：查询系统内全部稿件（包含已归档/已撤稿/草稿等）。
@@ -1065,4 +1202,5 @@ public class ManuscriptDAO {
             }
         }
     }
+
 }

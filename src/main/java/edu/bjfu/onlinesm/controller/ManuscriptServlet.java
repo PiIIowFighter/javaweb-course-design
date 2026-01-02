@@ -3,9 +3,8 @@ package edu.bjfu.onlinesm.controller;
 import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
 import edu.bjfu.onlinesm.util.DbUtil;
-import edu.bjfu.onlinesm.util.mail.MailNotifications;
-import edu.bjfu.onlinesm.util.notify.InAppNotifications;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
+import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -23,7 +22,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 投稿/稿件列表/详情控制器
@@ -41,21 +39,21 @@ import edu.bjfu.onlinesm.util.UploadPathUtil;
 @MultipartConfig
 public class ManuscriptServlet extends HttpServlet {
 
-    private final UserDAO userDAO = new UserDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
-    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
-    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final UserDAO userDAO = new UserDAO();
 
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
+    private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
+    /** 与 ProfileServlet 保持一致的上传根目录 */
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
-    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDir();
+    private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
     @Override
@@ -268,17 +266,80 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
 
+        FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+        req.setAttribute("formalCheckResult", formalCheckResult);
+
         // 1）加载审稿记录，供“当前审稿记录”表格使用
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);
         req.setAttribute("reviews", reviewList);
 
-        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库
+        // 1.1）详情页已合并“审稿人选择”功能：用于禁用已分配的审稿人，避免重复邀请
+        // 与 EditorServlet 的 /review/select 保持一致：INVITED / ACCEPTED 视为已分配（SUBMITTED 可再次邀请由业务决定）
+        java.util.Set<Integer> assignedReviewerIds = new java.util.HashSet<>();
+        for (Review r : reviewList) {
+            if (r == null) continue;
+            String st = r.getStatus();
+            if ("INVITED".equals(st) || "ACCEPTED".equals(st)) {
+                assignedReviewerIds.add(r.getReviewerId());
+            }
+        }
+        req.setAttribute("assignedReviewerIds", assignedReviewerIds);
+
+        // 2）如果当前用户是编辑 / 主编 / 编辑部管理员，就加载审稿人库（支持搜索与推荐）
         String role = current.getRoleCode();
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
-            List<User> reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+
+            // 2.1 审稿人搜索条件（来自稿件详情页顶部的搜索表单）
+            String reviewerKeyword = req.getParameter("reviewerKeyword");
+            String minCompletedStr = req.getParameter("minCompleted");
+            String minAvgScoreStr  = req.getParameter("minAvgScore");
+
+            Integer minCompleted = null;
+            Integer minAvgScore  = null;
+            try {
+                if (minCompletedStr != null && !minCompletedStr.trim().isEmpty()) {
+                    minCompleted = Integer.parseInt(minCompletedStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+            try {
+                if (minAvgScoreStr != null && !minAvgScoreStr.trim().isEmpty()) {
+                    minAvgScore = Integer.parseInt(minAvgScoreStr.trim());
+                }
+            } catch (NumberFormatException ignore) {
+                // 非法数字直接忽略，视为未设置
+            }
+
+            boolean hasSearch = (reviewerKeyword != null && !reviewerKeyword.trim().isEmpty())
+                    || minCompleted != null
+                    || minAvgScore != null;
+
+            List<User> reviewerUsers;
+            if (hasSearch) {
+                // 根据搜索条件过滤审稿人库，最多返回 100 条，避免一次性加载过多
+                reviewerUsers = userDAO.searchReviewerPool(reviewerKeyword, minCompleted, minAvgScore, 100);
+            } else {
+                // 未填写任何搜索条件时，保持原有行为：加载全部 REVIEWER 列表
+                reviewerUsers = userDAO.findByRoleCode("REVIEWER");
+            }
             req.setAttribute("reviewers", reviewerUsers);
+
+            // 2.2 简单推荐算法：根据稿件的研究主题 / 关键词，在 ResearchArea 中做一次关键词匹配
+            String suggestionKeyword = null;
+            if (m.getSubjectArea() != null && !m.getSubjectArea().trim().isEmpty()) {
+                suggestionKeyword = m.getSubjectArea().split("[,;，； ]")[0];
+            } else if (m.getKeywords() != null && !m.getKeywords().trim().isEmpty()) {
+                suggestionKeyword = m.getKeywords().split("[,;，； ]")[0];
+            }
+
+            if (suggestionKeyword != null && !suggestionKeyword.trim().isEmpty()) {
+                List<User> suggested = userDAO.searchReviewerPool(suggestionKeyword, 1, null, 5);
+                req.setAttribute("reviewerSuggestions", suggested);
+                req.setAttribute("reviewerSuggestionKeyword", suggestionKeyword);
+            }
         }
-        
+
         // 3）如果当前用户是编辑（或主编），加载最新一条主编给该编辑的指派建议
         if ("EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role)) {
             ManuscriptAssignment chiefAssignment =
@@ -286,8 +347,43 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("chiefAssignment", chiefAssignment);
         }
 
+
+
+        // 4）与作者沟通历史（时间线）：复用 Notifications 表
+        NotificationDAO notificationDAO = new NotificationDAO();
+        List<Notification> authorMessages;
+        if ("AUTHOR".equals(role)) {
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", current.getUserId(), 200, true);
+        } else {
+            // 编辑/主编/编辑部管理员：查看全部沟通记录（包括抄送主编）
+            authorMessages = notificationDAO.listByManuscriptAndCategory(manuscriptId, "AUTHOR_MESSAGE", null, 200, true);
+        }
+
+        Map<Integer, User> authorMessageUserMap = new HashMap<>();
+        authorMessageUserMap.put(current.getUserId(), current);
+        if (m.getSubmitterId() != null) {
+            User au = userDAO.findById(m.getSubmitterId());
+            if (au != null) authorMessageUserMap.put(au.getUserId(), au);
+        }
+        for (Notification n : authorMessages) {
+            Integer cb = n.getCreatedByUserId();
+            if (cb != null && !authorMessageUserMap.containsKey(cb)) {
+                User u = userDAO.findById(cb);
+                if (u != null) authorMessageUserMap.put(cb, u);
+            }
+            int ru = n.getRecipientUserId();
+            if (!authorMessageUserMap.containsKey(ru)) {
+                User u = userDAO.findById(ru);
+                if (u != null) authorMessageUserMap.put(ru, u);
+            }
+        }
+
+        req.setAttribute("authorMessages", authorMessages);
+        req.setAttribute("authorMessageUserMap", authorMessageUserMap);
+
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
     }
+    
 
     /**
      * 追踪稿件状态：显示时间线视图和状态变更历史
@@ -509,7 +605,20 @@ public class ManuscriptServlet extends HttpServlet {
 
             // 版本文件
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
+            Part anonymousFile = safeGetPart(req, "anonymousFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
+
+            // PDF 格式验证
+            if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {
+                req.setAttribute("error", "手稿文件必须是 PDF 格式。");
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
+            if (anonymousFile != null && anonymousFile.getSize() > 0 && !isPdfFile(anonymousFile)) {
+                req.setAttribute("error", "匿名手稿必须是 PDF 格式。");
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
 
             // 作者列表冗余字段
             m.setAuthorList(joinAuthorNames(authors));
@@ -557,11 +666,28 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
-                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
-                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+                // 匿名手稿：独立上传
+                String fileAnonymousPath = null;
+                if (anonymousFile != null && anonymousFile.getSize() > 0) {
+                    fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
+                }
 
-                // Cover Letter 富文本直接存储到数据库字段
-                String coverLetterHtmlToSave = coverLetterHtml;
+
+                // CoverLetter：富文本转 PDF
+                String coverPath = null;
+                String remark = null;
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
+                    try {
+                        File coverPdfFile = new File(versionDir, "cover_letter.pdf");
+                        HtmlToPdfConverter.convert(coverLetterHtml, coverPdfFile);
+                        coverPath = coverPdfFile.getAbsolutePath();
+                    } catch (Exception e) {
+                        // 转换失败时保存原始 HTML 作为备份
+                        String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
+                        coverPath = htmlPath;
+                        remark = "CoverLetter PDF 转换失败，已保存 HTML 原文";
+                    }
+                }
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -571,19 +697,22 @@ public class ManuscriptServlet extends HttpServlet {
                     if (fileAnonymousPath == null || fileAnonymousPath.trim().isEmpty()) {
                         fileAnonymousPath = prevCurrent.getFileAnonymousPath();
                     }
-                    // 如果没有新的 Cover Letter 内容，沿用上一版
-                    if (coverLetterHtmlToSave == null || coverLetterHtmlToSave.trim().isEmpty()) {
-                        coverLetterHtmlToSave = prevCurrent.getCoverLetterHtml();
+                    if (coverPath == null || coverPath.trim().isEmpty()) {
+                        coverPath = prevCurrent.getCoverLetterPath();
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
                     }
+                    if (remark == null || remark.trim().isEmpty()) {
+                        remark = prevCurrent.getRemark();
+                    }
                 }
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterHtml(coverLetterHtmlToSave);
+                v.setCoverLetterPath(coverPath);
+                v.setRemark(remark);
 
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
@@ -594,12 +723,7 @@ public class ManuscriptServlet extends HttpServlet {
             String msg;
             String group;
             if (isFinalSubmit) {
-                String code = genManuscriptCode(manuscriptId);
-                msg = "投稿已提交，稿件 ID：" + code;
-                // 1.1 投稿提交成功：发送“投稿确认邮件”
-                mailNotifications.onSubmissionSuccess(current, m, code);
-                // 站内通知
-                inAppNotifications.onSubmissionSuccess(current, m, code);
+                msg = "投稿已提交，稿件 ID：" + genManuscriptCode(manuscriptId);
                 group = "processing";
             } else {
                 msg = "草稿已保存，可随时继续编辑。";
@@ -664,7 +788,18 @@ public class ManuscriptServlet extends HttpServlet {
             }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
+            Part anonymousFile = safeGetPart(req, "anonymousFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
+
+            // PDF 格式验证
+            if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "手稿文件必须是 PDF 格式。");
+                return;
+            }
+            if (anonymousFile != null && anonymousFile.getSize() > 0 && !isPdfFile(anonymousFile)) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "匿名手稿必须是 PDF 格式。");
+                return;
+            }
 
             try (Connection conn = DbUtil.getConnection()) {
                 conn.setAutoCommit(false);
@@ -699,15 +834,32 @@ public class ManuscriptServlet extends HttpServlet {
                     fileOriginalPath = savePartToDir(manuscriptFile, versionDir, "manuscript_");
                 }
 
-                // 课程设计：若没有单独生成匿名稿，默认先把匿名稿路径指向同一份文件
-                String fileAnonymousPath = (fileOriginalPath != null ? fileOriginalPath : null);
+                // 匿名手稿：独立上传
+                String fileAnonymousPath = null;
+                if (anonymousFile != null && anonymousFile.getSize() > 0) {
+                    fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
+                }
 
-                // Cover Letter 富文本直接存储到数据库字段
-                String coverLetterHtmlToSave = coverLetterHtml;
+                // CoverLetter：富文本转 PDF
+                String coverPath = null;
+                String remark = null;
+                if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
+                    try {
+                        File coverPdfFile = new File(versionDir, "cover_letter.pdf");
+                        HtmlToPdfConverter.convert(coverLetterHtml, coverPdfFile);
+                        coverPath = coverPdfFile.getAbsolutePath();
+                    } catch (Exception e) {
+                        // 转换失败时保存原始 HTML 作为备份
+                        String htmlPath = saveTextToFile(coverLetterHtml, new File(versionDir, "cover_letter.html"));
+                        coverPath = htmlPath;
+                        remark = "CoverLetter PDF 转换失败，已保存 HTML 原文";
+                    }
+                }
 
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
-                v.setCoverLetterHtml(coverLetterHtmlToSave);
+                v.setCoverLetterPath(coverPath);
+                v.setRemark(remark);
 
                 // 未重新上传文件时，沿用上一版的附件路径
                 if (prevCurrent != null) {
@@ -717,13 +869,15 @@ public class ManuscriptServlet extends HttpServlet {
                     if (v.getFileAnonymousPath() == null || v.getFileAnonymousPath().trim().isEmpty()) {
                         v.setFileAnonymousPath(prevCurrent.getFileAnonymousPath());
                     }
-                    // 如果没有新的 Cover Letter 内容，沿用上一版
-                    if (v.getCoverLetterHtml() == null || v.getCoverLetterHtml().trim().isEmpty()) {
-                        v.setCoverLetterHtml(prevCurrent.getCoverLetterHtml());
+                    if (v.getCoverLetterPath() == null || v.getCoverLetterPath().trim().isEmpty()) {
+                        v.setCoverLetterPath(prevCurrent.getCoverLetterPath());
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null || v.getResponseLetterPath().trim().isEmpty()) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
+                    }
+                    if (v.getRemark() == null || v.getRemark().trim().isEmpty()) {
+                        v.setRemark(prevCurrent.getRemark());
                     }
                 }
 
@@ -1176,6 +1330,34 @@ public class ManuscriptServlet extends HttpServlet {
     private String sanitizeFilename(String name) {
         if (name == null) return "file";
         return name.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    /**
+     * 检查上传的文件是否为 PDF 格式
+     * @param part 上传的文件
+     * @return 如果是 PDF 文件返回 true
+     */
+    private boolean isPdfFile(Part part) {
+        if (part == null || part.getSize() == 0) {
+            return false;
+        }
+        
+        // 检查文件扩展名
+        String filename = part.getSubmittedFileName();
+        if (filename != null) {
+            String lowerName = filename.toLowerCase();
+            if (!lowerName.endsWith(".pdf")) {
+                return false;
+            }
+        }
+        
+        // 检查 MIME 类型
+        String contentType = part.getContentType();
+        if (contentType != null) {
+            return contentType.equalsIgnoreCase("application/pdf");
+        }
+        
+        return true; // 如果无法确定，默认允许（依赖扩展名检查）
     }
 
     private int getNextVersionNumber(Connection conn, int manuscriptId) throws SQLException {

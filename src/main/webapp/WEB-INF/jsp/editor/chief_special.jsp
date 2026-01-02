@@ -6,13 +6,14 @@
 
 <h2>主编特殊权限</h2>
 <p>
-    说明：终审列表页已取消“撤销/撤稿”入口；涉及改判与撤稿的操作<strong>统一在本页面完成</strong>。
+    本页面提供主编的两项特殊操作：
+    <strong>撤销终审决定（Rescind Decision）</strong> 与 <strong>撤稿（Retract）</strong>。
     <br/>
-    <strong>更改案头初审决定</strong>：针对案头初审阶段的结果（通常表现为状态为 TO_ASSIGN 或“初审退稿”），允许改为“送外审（TO_ASSIGN）”或“初审退稿（REJECTED）”。
+    撤销终审决定：仅对已做出最终决定的稿件（ACCEPTED/REJECTED/REVISION）有效，将状态回退到 FINAL_DECISION_PENDING。
     <br/>
-    <strong>更改终审决定</strong>：仅对已做出终审决定的稿件（ACCEPTED/REJECTED/REVISION 且 FinalDecisionTime 非空）有效，可重新改判。
+    撤稿：将稿件标记为撤稿并归档（Status=ARCHIVED）。
     <br/>
-    <strong>撤稿</strong>：仅允许对<strong>已发表</strong>（Issues.IsPublished=1 且 IssueManuscripts 关联到该稿件）的论文执行撤稿；撤稿后稿件将被归档并在前台/各角色列表中隐藏。
+    注：如需查看审稿流程与附件，请点击“进入工作台”。
 </p>
 
 <c:if test="${empty manuscripts}">
@@ -54,57 +55,23 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">查看详情</a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
 
-                    <!-- 1) 更改案头初审决定：仅对“尚未形成终审决定”的稿件开放（FinalDecisionTime 为空）。
-                         注意：即使稿件已进入 WITH_EDITOR/UNDER_REVIEW/FINAL_DECISION_PENDING 等阶段，主编仍可在此把初审结论改为“送外审/初审退稿”，
-                         系统会同步清空 CurrentEditorId 并将未完成审稿任务置为 EXPIRED，避免编辑/审稿人继续操作。 -->
-                    <c:if test="${m.finalDecisionTime == null}">
-                        <form method="post" action="${pageContext.request.contextPath}/editor/special" style="display:inline">
-                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                            <input type="hidden" name="op" value="changeDesk"/>
+                    <form method="post" action="${pageContext.request.contextPath}/editor/finalDecision" style="display:inline">
+                        <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
 
-                            <select name="deskOp">
-                                <option value="deskAccept">改为：送外审（TO_ASSIGN）</option>
-                                <option value="deskReject">改为：初审退稿（REJECTED）</option>
-                            </select>
-                            <input type="text" name="reason" required size="18" placeholder="必填：原因"/>
-                            <button type="submit" onclick="return confirm('确认更改案头初审决定？更改后编辑/审稿人侧将按新状态同步限制操作。');">
-                                更改初审
+                        <c:if test="${m.currentStatus == 'ACCEPTED' or m.currentStatus == 'REJECTED' or m.currentStatus == 'REVISION'}">
+                            <button type="submit" name="op" value="rescind"
+                                    onclick="return confirm('确认撤销该稿件的终审决定？将回退到 FINAL_DECISION_PENDING。');">
+                                撤销决策
                             </button>
-                        </form>
-                    </c:if>
+                        </c:if>
 
-                    <!-- 2) 更改终审决定：必须是已做出终审决定的稿件 -->
-                    <c:if test="${m.finalDecisionTime != null and (m.currentStatus == 'ACCEPTED' or m.currentStatus == 'REJECTED' or m.currentStatus == 'REVISION')}">
-                        <form method="post" action="${pageContext.request.contextPath}/editor/special" style="display:inline">
-                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                            <input type="hidden" name="op" value="changeFinal"/>
-
-                            <select name="finalOp">
-                                <option value="accept">改为：录用（ACCEPTED）</option>
-                                <option value="reject">改为：退稿（REJECTED）</option>
-                                <option value="revision">改为：修回（REVISION）</option>
-                            </select>
-                            <input type="text" name="reason" required size="18" placeholder="必填：原因"/>
-                            <button type="submit" onclick="return confirm('确认更改终审决定？该操作会同步影响编辑/审稿人侧可操作性，并写入状态历史。');">
-                                更改终审
-                            </button>
-                        </form>
-                    </c:if>
-
-                    <!-- 3) 撤稿：课程口径为 ACCEPTED 即视为已发表（后端仍会二次校验） -->
-                    <c:if test="${m.currentStatus == 'ACCEPTED'}">
-                        <form method="post" action="${pageContext.request.contextPath}/editor/special" style="display:inline">
-                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                            <input type="hidden" name="op" value="retract"/>
-                            <input type="text" name="reason" required size="16" placeholder="撤稿原因"/>
-                            <button type="submit" onclick="return confirm('确认撤稿？本系统口径：ACCEPTED 视为已发表；撤稿后将归档并隐藏。');">
-                                撤稿(ACCEPTED)
-                            </button>
-                        </form>
-                    </c:if>
-
+                        <button type="submit" name="op" value="retract"
+                                onclick="return confirm('确认撤稿并归档该稿件？该操作通常不可逆。');">
+                            撤稿
+                        </button>
+                    </form>
                 </td>
             </tr>
         </c:forEach>

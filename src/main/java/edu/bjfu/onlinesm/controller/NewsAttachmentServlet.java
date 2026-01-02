@@ -2,7 +2,7 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.NewsDAO;
 import edu.bjfu.onlinesm.model.News;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 @WebServlet(name = "NewsAttachmentServlet", urlPatterns = {"/news/attachment"})
 public class NewsAttachmentServlet extends HttpServlet {
@@ -18,7 +17,7 @@ public class NewsAttachmentServlet extends HttpServlet {
     private final NewsDAO newsDAO = new NewsDAO();
 
     // 与 NewsAdminServlet 中保持一致
-    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();
+    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String NEWS_SUB_DIR = "news";
 
     @Override

@@ -42,15 +42,24 @@
     --space-12: 48px;
 }
 
+/* ========== 核心修改：将背景移到html根元素，解决滚动断层 ========== */
+html {
+    height: 100%;
+    /* 保留原有渐变样式，新增固定附着+覆盖尺寸 */
+    background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(0, 90, 156, 0.08), rgba(0, 90, 156, 0.00) 55%),
+        radial-gradient(900px 600px at 95% 0%, rgba(11, 18, 32, 0.06), rgba(11, 18, 32, 0.00) 60%),
+        var(--bg);
+    background-attachment: fixed; /* 背景固定在视口，不随滚动偏移 */
+    background-size: cover;       /* 自适应覆盖整个视口，避免截断 */
+}
+
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 
 body {
     margin: 0;
-    background:
-            radial-gradient(1200px 700px at 10% -10%, rgba(0, 90, 156, 0.08), rgba(0, 90, 156, 0.00) 55%),
-            radial-gradient(900px 600px at 95% 0%, rgba(11, 18, 32, 0.06), rgba(11, 18, 32, 0.00) 60%),
-            var(--bg);
+    /* 移除body原有背景样式，解决断层核心 */
     color: var(--text);
     font-family: var(--font-sans);
     line-height: 1.55;
@@ -846,4 +855,3 @@ tbody tr:hover td {
     cursor: not-allowed !important;
     pointer-events: none;
 }
-

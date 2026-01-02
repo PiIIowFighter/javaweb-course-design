@@ -7,7 +7,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import edu.bjfu.onlinesm.util.UploadPathUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -18,7 +18,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
-import edu.bjfu.onlinesm.util.UploadPathUtil;
 
 /**
  * 个人信息管理：
@@ -40,8 +39,15 @@ import edu.bjfu.onlinesm.util.UploadPathUtil;
 public class ProfileServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
-    private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDir();   // 根目录（与 src 同级的 upload 目录）
-    private static final String PROFILE_SUB_DIR = "profile";       // 子目录
+
+    /**
+     * 上传目录统一由 UploadPathUtil 管理：
+     *  - 头像: {base}/avatars
+     *  - 简历: {base}/resumes
+     *
+     * 同时为历史版本兼容：以前把头像/简历放到 {base}/profile 下，读取时会同时尝试该目录。
+     */
+    private static final String LEGACY_PROFILE_SUB_DIR = "profile";
 
 
     @Override
@@ -135,10 +141,12 @@ public class ProfileServlet extends HttpServlet {
 
     private void saveProfileFiles(HttpServletRequest req, int userId) throws IOException, ServletException {
         
-        File dir = new File(BASE_UPLOAD_DIR, PROFILE_SUB_DIR);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
+        // 统一目录：
+        // - 头像：{base}/avatars
+        // - 简历：{base}/resumes
+        // 目录创建/权限检查在 UploadPathUtil 内完成
+        File avatarDir = UploadPathUtil.getAvatarDir(getServletContext()).toFile();
+        File resumeDir = UploadPathUtil.getResumeDir(getServletContext()).toFile();
 
         Part avatarPart = null;
         Part resumePart = null;
@@ -155,13 +163,13 @@ public class ProfileServlet extends HttpServlet {
 
         if (avatarPart != null && avatarPart.getSize() > 0) {
             String ext = getExtension(avatarPart.getSubmittedFileName());
-            File dest = new File(dir, "user_" + userId + "_avatar" + ext);
+            File dest = new File(avatarDir, "user_" + userId + "_avatar" + ext);
             avatarPart.write(dest.getAbsolutePath());
         }
 
         if (resumePart != null && resumePart.getSize() > 0) {
             String ext = getExtension(resumePart.getSubmittedFileName());
-            File dest = new File(dir, "user_" + userId + "_resume" + ext);
+            File dest = new File(resumeDir, "user_" + userId + "_resume" + ext);
             resumePart.write(dest.getAbsolutePath());
         }
     }
@@ -173,8 +181,14 @@ public class ProfileServlet extends HttpServlet {
             return;
         }
 
-        File dir = new File(BASE_UPLOAD_DIR, PROFILE_SUB_DIR);
-        File file = findFileWithPrefix(dir, "user_" + current.getUserId() + "_avatar");
+        File avatarDir = UploadPathUtil.getAvatarDir(getServletContext()).toFile();
+        File legacyProfileDir = new File(UploadPathUtil.getLegacyBaseDir(getServletContext()), LEGACY_PROFILE_SUB_DIR);
+
+        File file = findFileWithPrefix(avatarDir, "user_" + current.getUserId() + "_avatar");
+        if (file == null) {
+            // 兼容旧目录：{legacyBase}/profile
+            file = findFileWithPrefix(legacyProfileDir, "user_" + current.getUserId() + "_avatar");
+        }
         if (file == null || !file.exists()) {
             // 没有上传头像：返回默认头像（避免 <img> 显示 alt 文本“用户头像”）
             streamDefaultAvatar(req, resp);
@@ -223,15 +237,21 @@ public class ProfileServlet extends HttpServlet {
         }
     }
 
-private void streamResume(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void streamResume(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         User current = getCurrentUser(req);
         if (current == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        File dir = new File(BASE_UPLOAD_DIR, PROFILE_SUB_DIR);
-        File file = findFileWithPrefix(dir, "user_" + current.getUserId() + "_resume");
+        File resumeDir = UploadPathUtil.getResumeDir(getServletContext()).toFile();
+        // 兼容旧目录：/var/lib/tomcat9/uploads/profile
+        File legacyProfileDir = new File(UploadPathUtil.getLegacyBaseDir(getServletContext()), LEGACY_PROFILE_SUB_DIR);
+
+        File file = findFileWithPrefix(resumeDir, "user_" + current.getUserId() + "_resume");
+        if (file == null) {
+            file = findFileWithPrefix(legacyProfileDir, "user_" + current.getUserId() + "_resume");
+        }
         if (file == null || !file.exists()) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;

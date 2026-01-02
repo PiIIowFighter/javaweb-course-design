@@ -48,22 +48,48 @@ public final class MailTemplates {
         body.append("<p>尊敬的作者 <b>").append(h(author.getFullName())).append("</b>：</p>");
         body.append("<p>您的稿件（").append(h(manuscriptCode)).append("）在形式审查中未通过，已退回修改。</p>");
         body.append("<p>稿件标题：").append(h(m.getTitle())).append("</p>");
+        body.append("<hr/>");
+        body.append("<h3>问题列表</h3>");
         if (issues != null && !issues.trim().isEmpty()) {
-            body.append("<p><b>问题列表：</b></p><pre style=\"white-space:pre-wrap;\">")
-                    .append(h(issues.trim()))
-                    .append("</pre>");
+            body.append("<div style=\"background-color:#f9f9f9;padding:15px;border-left:4px solid #dc3545;margin:10px 0;\">");
+            body.append("<p style=\"margin:0 0 10px 0;color:#dc3545;\"><b>以下检查项不符合标准：</b></p>");
+            body.append("<ul style=\"margin:0;padding-left:20px;\">");
+            String[] issueList = issues.split("；");
+            for (String issue : issueList) {
+                if (issue != null && !issue.trim().isEmpty()) {
+                    body.append("<li style=\"margin-bottom:5px;\">").append(h(issue.trim())).append("</li>");
+                }
+            }
+            body.append("</ul>");
+            body.append("</div>");
         } else {
             body.append("<p><b>问题列表：</b>（编辑部未填写具体问题，请登录系统查看退回原因/补充材料）</p>");
         }
+        body.append("<hr/>");
+        body.append("<h3>修改指南</h3>");
+        body.append("<p>请根据以下要求修改您的稿件：</p>");
+        body.append("<ul>");
+        body.append("<li><b>作者信息：</b>确保通讯作者邮箱应为机构邮箱（优先使用.edu或.org域名）</li>");
+        body.append("<li><b>摘要字数：</b>摘要字数应在150-700字之间</li>");
+        body.append("<li><b>正文字数：</b>正文字数应在3000-8000字之间</li>");
+        body.append("<li><b>关键词：</b>关键词应在3-7个之间</li>");
+        body.append("<li><b>注释编号：</b>注释编号应符合学术规范</li>");
+        body.append("<li><b>图表格式：</b>图表应清晰可读，格式符合期刊要求</li>");
+        body.append("<li><b>参考文献格式：</b>参考文献应按照期刊要求的格式排版</li>");
+        body.append("</ul>");
         if (guideUrl != null && !guideUrl.trim().isEmpty()) {
-            body.append("<p>修改指南：<a href=\"").append(h(guideUrl.trim())).append("\">")
-                    .append(h(guideUrl.trim())).append("</a></p>");
+            body.append("<p style=\"margin-top:15px;\"><b>详细修改指南：</b><a href=\"").append(h(guideUrl.trim())).append("\" style=\"color:#007bff;text-decoration:none;\">")
+                    .append("点击查看格式指南文档").append("</a></p>");
         }
+        body.append("<hr/>");
+        body.append("<h3>后续操作</h3>");
+        body.append("<p><b>查看待修改稿件：</b>请登录系统后，在稿件列表页面切换到 <b>\"Revision（待修改）\"</b> 标签页，即可查看被退回的稿件。</p>");
+        body.append("<p>请完成修改后在系统中重新提交（Resubmit）。</p>");
         if (!detailUrl.isEmpty()) {
-            body.append("<p>查看稿件详情：<a href=\"").append(h(detailUrl)).append("\">")
+            body.append("<p>查看稿件详情：<a href=\"").append(h(detailUrl)).append("\" style=\"color:#007bff;text-decoration:none;\">")
                     .append(h(detailUrl)).append("</a></p>");
         }
-        body.append("<p>请完成修改后在系统中重新提交（Resubmit）。此邮件由系统自动发送，请勿直接回复。</p>");
+        body.append("<p style=\"color:#6c757d;font-size:12px;margin-top:20px;\">此邮件由系统自动发送，请勿直接回复。</p>");
         return new MailMessage().subject(subject).htmlBody(wrap(body.toString()));
     }
 
@@ -90,6 +116,40 @@ public final class MailTemplates {
                 (inviteUrl.isEmpty() ? "" : ("<p>进入系统提交意见：<a href=\"" + h(inviteUrl) + "\">" + h(inviteUrl) + "</a></p>")) +
                 "<p>感谢您的支持！此邮件由系统自动发送，请勿直接回复。</p>";
         return new MailMessage().subject(subject).htmlBody(wrap(body));
+    }
+
+
+    public static MailMessage reviewerRemindCustom(MailConfig cfg,
+                                                   User reviewer,
+                                                   Manuscript m,
+                                                   Review r,
+                                                   String extraText) {
+        String subject = "催审提醒：稿件 #" + m.getManuscriptId();
+        String inviteUrl = link(cfg.baseUrl(), "/reviewer/invitation?id=" + r.getReviewId());
+
+        StringBuilder body = new StringBuilder();
+        body.append("<p>尊敬的审稿人 <b>").append(h(reviewer.getFullName())).append("</b>：</p>");
+
+        if (extraText != null && !extraText.trim().isEmpty()) {
+            body.append("<p>").append(h(extraText.trim())).append("</p>");
+        } else {
+            body.append("<p>这是对您审稿任务的提醒：</p>");
+        }
+
+        body.append("<p><b>标题：</b>").append(h(m.getTitle())).append("</p>");
+        if (r.getDueAt() != null) {
+            body.append("<p><b>截止日期：</b>").append(h(fmt(r.getDueAt()))).append("</p>");
+        }
+        if (!inviteUrl.isEmpty()) {
+            body.append("<p>进入系统提交意见：<a href=\"")
+                    .append(h(inviteUrl))
+                    .append("\">")
+                    .append(h(inviteUrl))
+                    .append("</a></p>");
+        }
+        body.append("<p>感谢您的支持！此邮件由系统自动发送，请勿直接回复。</p>");
+
+        return new MailMessage().subject(subject).htmlBody(wrap(body.toString()));
     }
 
     public static MailMessage reviewerResponseToEditor(MailConfig cfg, User editor, User reviewer, Manuscript m, boolean accepted) {
