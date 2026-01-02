@@ -28,7 +28,11 @@
         <c:choose>
             <c:when test="${not empty call.content}">
                 <!-- 允许存 HTML：这里用 out 防注入；如确需渲染 HTML，可改为 c:out escapeXml=false 并自行保证安全 -->
-                <p style="white-space:pre-wrap;"><c:out value="${call.content}"/></p>
+                                <div class="ql-snow richtext-view">
+                    <div class="ql-editor">
+                        <c:out value="${call.content}" escapeXml="false"/>
+                    </div>
+                </div>
             </c:when>
             <c:otherwise>
                 <p>暂无内容。</p>

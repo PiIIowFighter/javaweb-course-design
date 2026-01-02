@@ -15,6 +15,9 @@
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/main.css"/>
+    <!-- Quill Snow theme (for rich-text rendering, read-only & editor) -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/quill.snow.css"/>
+
 </head>
 <body class="${not empty sessionScope.currentUser ? 'authed' : ''}">
 <header class="site-header">

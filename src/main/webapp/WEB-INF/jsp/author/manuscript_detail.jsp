@@ -31,8 +31,10 @@
             <!-- 摘要 -->
             <div class="stack">
                 <p><strong>摘要：</strong></p>
-                <div style="padding: 12px; background: rgba(255,255,255,0.65); border: 1px solid var(--border); border-radius: var(--radius-sm);">
-                    <c:out value="${manuscript.abstractText}" escapeXml="false"/>
+                                <div class="ql-snow richtext-view">
+                    <div class="ql-editor">
+                        <c:out value="${manuscript.abstractText}" escapeXml="false"/>
+                    </div>
                 </div>
             </div>
 

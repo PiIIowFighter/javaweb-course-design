@@ -330,86 +330,161 @@ public class ReviewerServlet extends HttpServlet {
      * 审稿人提交评审意见。
      */
     private void handleSubmitReview(HttpServletRequest req,
-            HttpServletResponse resp)
+                                HttpServletResponse resp)
         throws ServletException, IOException {
-        
-        User current = getCurrentUser(req);
-        
-        String reviewIdStr = req.getParameter("reviewId");
-        String recommendation = req.getParameter("recommendation");
-        
-        // 给编辑的意见（富文本）
-        String confidentialToEditor = req.getParameter("confidentialToEditor");
-        
-        // 给作者的意见（富文本）
-        String commentsToAuthor = req.getParameter("commentsToAuthor");
-        // 兼容旧字段
-        if (commentsToAuthor == null || commentsToAuthor.trim().isEmpty()) {
+
+    User current = getCurrentUser(req);
+
+    String reviewIdStr = req.getParameter("reviewId");
+    if (isBlank(reviewIdStr)) {
+        // 兼容：有的表单传 id
+        reviewIdStr = req.getParameter("id");
+    }
+
+    String recommendation = req.getParameter("recommendation");
+
+    // 给编辑的意见（富文本）
+    String confidentialToEditor = req.getParameter("confidentialToEditor");
+
+    // 给作者的意见（富文本）
+    String commentsToAuthor = req.getParameter("commentsToAuthor");
+    // 兼容旧字段
+    if (isBlankHtml(commentsToAuthor)) {
         commentsToAuthor = req.getParameter("content");
-        }
-        
-        // 隐藏的关键评价字段
-        String keyEvaluation = req.getParameter("keyEvaluation");
-        if (keyEvaluation == null) keyEvaluation = "";
-        
-        // 多维评分
-        String s1 = req.getParameter("scoreOriginality");
-        String s2 = req.getParameter("scoreSignificance");
-        String s3 = req.getParameter("scoreMethodology");
-        String s4 = req.getParameter("scorePresentation");
-        String overallScoreStr = req.getParameter("score");  // 使用自动计算的总体分
-        
-        // 参数验证
-        if (reviewIdStr == null || recommendation == null || 
-        confidentialToEditor == null || commentsToAuthor == null ||
-        s1 == null || s2 == null || s3 == null || s4 == null) {
-        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少必要参数");
+    }
+
+    // 隐藏的关键评价字段（可选）
+    String keyEvaluation = req.getParameter("keyEvaluation");
+    if (keyEvaluation == null) keyEvaluation = "";
+
+    // === 必填校验 ===
+    if (isBlank(reviewIdStr)) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 reviewId 参数");
         return;
+    }
+    if (isBlank(recommendation)) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "请选择推荐结论（recommendation 为必填）");
+        return;
+    }
+    if (isBlankHtml(confidentialToEditor)) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "请填写给编辑的保密意见（confidentialToEditor 为必填）");
+        return;
+    }
+    if (isBlankHtml(commentsToAuthor)) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "请填写给作者的意见（commentsToAuthor 为必填）");
+        return;
+    }
+
+    try {
+        int reviewId = Integer.parseInt(reviewIdStr.trim());
+
+        // === 评分（0-10 整数） ===
+        Double scoreOriginality = parseScoreInt(req.getParameter("scoreOriginality"), "原创性");
+        Double scoreSignificance = parseScoreInt(req.getParameter("scoreSignificance"), "重要性/影响力");
+        Double scoreMethodology = parseScoreInt(req.getParameter("scoreMethodology"), "方法/技术质量");
+        Double scorePresentation = parseScoreInt(req.getParameter("scorePresentation"), "表达/结构");
+
+        double sum = scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation;
+        int cnt = 4;
+
+        // 新增维度（若表单提供，则要求全部填写）
+        String pExp = req.getParameter("scoreExperimentation");
+        String pLit = req.getParameter("scoreLiteratureReview");
+        String pCon = req.getParameter("scoreConclusions");
+        String pInt = req.getParameter("scoreAcademicIntegrity");
+        String pPra = req.getParameter("scorePracticality");
+
+        boolean hasAnyNew =
+                !isBlank(pExp) || !isBlank(pLit) || !isBlank(pCon) || !isBlank(pInt) || !isBlank(pPra);
+
+        if (hasAnyNew) {
+            Double scoreExperimentation = parseScoreInt(pExp, "实验/数据分析");
+            Double scoreLiteratureReview = parseScoreInt(pLit, "文献综述");
+            Double scoreConclusions = parseScoreInt(pCon, "结论与讨论");
+            Double scoreAcademicIntegrity = parseScoreInt(pInt, "学术规范性");
+            Double scorePracticality = parseScoreInt(pPra, "实用性");
+
+            sum += scoreExperimentation + scoreLiteratureReview + scoreConclusions + scoreAcademicIntegrity + scorePracticality;
+            cnt += 5;
         }
-        
-        try {
-        int reviewId = Integer.parseInt(reviewIdStr);
-        Double scoreOriginality = Double.parseDouble(s1.trim());
-        Double scoreSignificance = Double.parseDouble(s2.trim());
-        Double scoreMethodology = Double.parseDouble(s3.trim());
-        Double scorePresentation = Double.parseDouble(s4.trim());
-        Double scoreOverall = overallScoreStr != null ? 
-                 Double.parseDouble(overallScoreStr.trim()) : 
-                 (scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation) / 4.0;
-        
-        // 分数范围校验
-        checkScoreRange(scoreOriginality);
-        checkScoreRange(scoreSignificance);
-        checkScoreRange(scoreMethodology);
-        checkScoreRange(scorePresentation);
+
+        // === 总体分锁死：忽略前端传入的 score，统一服务端按维度均值重算 ===
+        Double scoreOverall = Math.round((sum / cnt) * 10.0) / 10.0; // 1 位小数
         checkScoreRange(scoreOverall);
-        
-        // 提交评审
+
+        // === 提交评审 ===
         reviewDAO.submitReviewV2(
-                  reviewId,
+                reviewId,
                 current.getUserId(),
                 commentsToAuthor.trim(),          // 给作者的意见
                 confidentialToEditor.trim(),      // 给编辑的保密意见
-                keyEvaluation.trim(),             // 关键评价
-                scoreOverall,                     // 总体分
+                keyEvaluation.trim(),             // 关键评价（可空）
+                scoreOverall,                     // 总体分（服务端重算）
                 scoreOriginality,                 // 原创性评分
                 scoreSignificance,                // 重要性评分
                 scoreMethodology,                 // 方法学评分
                 scorePresentation,                // 呈现质量评分
                 recommendation.trim());           // 推荐结论
-        
-        // 清除本地草稿
+
         req.getSession().setAttribute("successMsg", "评审意见已成功提交！");
         resp.sendRedirect(req.getContextPath() + "/reviewer/history");
-        
-        } catch (NumberFormatException e) {
-        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误：请确保评分为数字");
-        } catch (IllegalArgumentException e) {
+
+    } catch (NumberFormatException e) {
+        resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "参数格式错误：请确保评分为数字且 reviewId 为整数");
+    } catch (IllegalArgumentException e) {
         resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-        } catch (SQLException e) {
+    } catch (SQLException e) {
         throw new ServletException("提交评审意见时数据库出错", e);
-        }
     }
+    }
+
+    private Double parseScoreInt(String s, String fieldLabel) {
+    if (isBlank(s)) {
+        throw new IllegalArgumentException("请填写评分：" + fieldLabel);
+    }
+    double v;
+    try {
+        v = Double.parseDouble(s.trim());
+    } catch (NumberFormatException ex) {
+        throw new IllegalArgumentException("评分【" + fieldLabel + "】必须为数字（0-10 整数）。");
+    }
+    if (v < 0 || v > 10) {
+        throw new IllegalArgumentException("评分【" + fieldLabel + "】必须在 0~10 范围内。");
+    }
+    if (Math.floor(v) != v) {
+        throw new IllegalArgumentException("评分【" + fieldLabel + "】必须为整数（0-10）。");
+    }
+    return v;
+}
+
+
+    private boolean isBlank(String s) {
+    return s == null || s.trim().isEmpty();
+}
+
+
+    private boolean isBlankHtml(String html) {
+    if (isBlank(html)) return true;
+    String text = stripHtml(html);
+    return text.trim().isEmpty();
+}
+
+
+    private String stripHtml(String html) {
+    if (html == null) return "";
+    String t = html;
+    // 去掉 script/style，防止误判
+    t = t.replaceAll("(?is)<script.*?>.*?</script>", " ");
+    t = t.replaceAll("(?is)<style.*?>.*?</style>", " ");
+    // 去掉标签
+    t = t.replaceAll("(?s)<[^>]*>", " ");
+    // 常见空白实体
+    t = t.replace("&nbsp;", " ");
+    // 合并空白
+    t = t.replaceAll("\\s+", " ");
+    return t;
+}
+
 
     private void checkScoreRange(Double v) {
         if (v == null || v < 0 || v > 10) {

@@ -83,6 +83,9 @@ public class ManuscriptServlet extends HttpServlet {
                 case "/edit":
                     handleEditDraft(req, resp, current);
                     break;
+                case "/resubmitEdit":
+                    handleResubmitEditForm(req, resp, current);
+                    break;
                 case "/detail":
                     handleDetail(req, resp, current);
                     break;
@@ -139,6 +142,58 @@ public class ManuscriptServlet extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
     }
 
+
+
+    /**
+     * 作者在 RETURNED/REVISION 状态下进入“修改并重新提交”页面（新页面，参考 /manuscripts/submit）。
+     */
+    private void handleResubmitEditForm(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"AUTHOR".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有作者可以修改稿件");
+            return;
+        }
+
+        Integer manuscriptId = parseInt(req.getParameter("id"));
+        if (manuscriptId == null) {
+            manuscriptId = parseInt(req.getParameter("manuscriptId"));
+        }
+        if (manuscriptId == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少稿件ID");
+            return;
+        }
+
+        Manuscript m = manuscriptDAO.findById(manuscriptId);
+        if (m == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件");
+            return;
+        }
+        if (!Objects.equals(m.getSubmitterId(), current.getUserId())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只能修改自己投稿的稿件");
+            return;
+        }
+        if (!("RETURNED".equals(m.getCurrentStatus()) || "REVISION".equals(m.getCurrentStatus()))) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "当前稿件状态不允许修改");
+            return;
+        }
+
+        List<Journal> journals = journalDAO.findAll();
+        req.setAttribute("journals", journals);
+        if (m.getJournalId() != null) {
+            req.setAttribute("journal", journalDAO.findById(m.getJournalId()));
+        }
+
+        req.setAttribute("manuscript", m);
+        req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
+        req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
+        req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
+
+        req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
+    }
+
+
+
     /**
      * 投稿表单回显（基于当前请求中已解析出的临时数据），用于校验失败时不丢失用户输入。
      */
@@ -161,6 +216,42 @@ public class ManuscriptServlet extends HttpServlet {
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
     }
+
+
+
+    /**
+     * 作者在 RETURNED/REVISION 状态下进入“修改并重新提交”页面（新页面，参考 /manuscripts/submit）。
+     */
+
+
+    /**
+     * Resubmit 表单回显（校验失败时不丢失用户输入）。
+     */
+    private void forwardResubmitFormWithTempData(HttpServletRequest req, HttpServletResponse resp,
+                                                Manuscript manuscript,
+                                                List<ManuscriptAuthor> authors,
+                                                List<ManuscriptRecommendedReviewer> recommendedReviewers)
+            throws ServletException, IOException, SQLException {
+
+        List<Journal> journals = journalDAO.findAll();
+        req.setAttribute("journals", journals);
+        req.setAttribute("manuscript", manuscript);
+        req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
+        req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
+
+        if (manuscript != null && manuscript.getJournalId() != null) {
+            req.setAttribute("journal", journalDAO.findById(manuscript.getJournalId()));
+        }
+
+        if (manuscript != null && manuscript.getManuscriptId() != null) {
+            req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
+        }
+
+        req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
+    }
+
+    
+
 
     /**
      * 检查“推荐审稿人”是否存在不完整行：只要某行被填写（姓名/邮箱/理由任一不为空），则必须同时提供姓名与邮箱。
@@ -783,7 +874,8 @@ public class ManuscriptServlet extends HttpServlet {
             // Resubmit 也是“提交”性质操作：若填写了推荐审稿人，则必须姓名+邮箱齐全。
             String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
             if (recRowError != null) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, recRowError);
+                req.setAttribute("error", recRowError);
+                forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
                 return;
             }
 
@@ -793,11 +885,13 @@ public class ManuscriptServlet extends HttpServlet {
 
             // PDF 格式验证
             if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "手稿文件必须是 PDF 格式。");
+                req.setAttribute("error", "手稿文件必须是 PDF 格式。");
+                forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
                 return;
             }
             if (anonymousFile != null && anonymousFile.getSize() > 0 && !isPdfFile(anonymousFile)) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "匿名手稿必须是 PDF 格式。");
+                req.setAttribute("error", "匿名手稿必须是 PDF 格式。");
+                forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
                 return;
             }
 

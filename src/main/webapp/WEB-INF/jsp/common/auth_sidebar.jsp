@@ -108,8 +108,8 @@
                 <a class="side-link ${fn:contains(uri, '/editor/formalCheck') ? 'active' : ''}" href="${ctx}/editor/formalCheck">
                     <i class="bi bi-clipboard-check" aria-hidden="true"></i> 形式审查 / 格式检查
                 </a>
-                <a class="side-link ${fn:contains(uri, '/editor/desk') ? 'active' : ''}" href="${ctx}/editor/desk">
-                    <i class="bi bi-search" aria-hidden="true"></i> 案头稿件
+                <a class="side-link ${fn:contains(uri, '/editor/formalCheck/history') ? 'active' : ''}" href="${ctx}/editor/formalCheck/history">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史
                 </a>
                 <a class="side-link ${fn:contains(uri, '/admin/news') ? 'active' : ''}" href="${ctx}/admin/news/list">
                     <i class="bi bi-megaphone" aria-hidden="true"></i> 新闻 / 公告管理

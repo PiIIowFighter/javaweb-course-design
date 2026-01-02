@@ -33,7 +33,13 @@
         </tr>
         <tr>
             <th>摘要</th>
-            <td style="white-space:pre-wrap;"><c:out value="${manuscript.abstractText}"/></td>
+            <td>
+                <div class="ql-snow richtext-view">
+                    <div class="ql-editor">
+                        <c:out value="${manuscript.abstractText}" escapeXml="false"/>
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <th>关键词</th>

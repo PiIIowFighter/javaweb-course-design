@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <div class="grid grid-2">
+    <div class="grid grid-3">
         <!-- 形式审查 / 格式检查 -->
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/formalCheck">
@@ -25,6 +25,19 @@
             </p>
             <small>
                 <i class="bi bi-arrow-right" aria-hidden="true"></i> 进入形式审查工作台
+            </small>
+        </a>
+
+        <!-- 审查历史 -->
+        <a class="card" style="text-decoration:none;"
+           href="${pageContext.request.contextPath}/editor/formalCheck/history">
+            <h3><i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史</h3>
+            <p>
+                查看编辑部管理员历史提交的形式审查记录（通过 / 退回）、反馈意见与查重信息，
+                便于追溯审查过程与统计审查质量。
+            </p>
+            <small>
+                <i class="bi bi-arrow-right" aria-hidden="true"></i> 打开审查历史
             </small>
         </a>
 

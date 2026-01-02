@@ -39,7 +39,13 @@
         <tr><th>当前状态</th><td><c:out value="${manuscript.currentStatus}"/></td></tr>
         <tr><th>投稿时间</th><td><c:out value="${manuscript.submitTime}"/></td></tr>
         <tr><th>决策</th><td><c:out value="${manuscript.decision}"/></td></tr>
-        <tr><th>摘要</th><td><c:out value="${manuscript.abstractText}"/></td></tr>
+        <tr><th>摘要</th><td>
+                <div class="ql-snow richtext-view">
+                    <div class="ql-editor">
+                        <c:out value="${manuscript.abstractText}" escapeXml="false"/>
+                    </div>
+                </div>
+            </td></tr>
     </table>
 
     <h3>作者列表</h3>

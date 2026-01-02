@@ -43,7 +43,11 @@
         <h3>摘要</h3>
         <c:choose>
             <c:when test="${not empty article.abstractText}">
-                <p style="white-space:pre-wrap;"><c:out value="${article.abstractText}"/></p>
+                                <div class="ql-snow richtext-view">
+                    <div class="ql-editor">
+                        <c:out value="${article.abstractText}" escapeXml="false"/>
+                    </div>
+                </div>
             </c:when>
             <c:otherwise>
                 <p>暂无摘要。</p>

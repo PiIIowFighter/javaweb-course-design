@@ -77,6 +77,35 @@ public class NotificationDAO {
 
 
     /**
+     * 详情：按通知 ID 查。
+     * 用于通知详情页展示、权限校验、标记已读等。
+     */
+    public Notification findById(int notificationId) throws SQLException {
+        ensureTable();
+
+        String sql = "SELECT NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt " +
+                "FROM dbo.Notifications WHERE NotificationId=?";
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, notificationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapRow(rs);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 兼容调用方可能传入 Integer（例如 Servlet 参数解析）。
+     */
+    public Notification findById(Integer notificationId) throws SQLException {
+        if (notificationId == null) return null;
+        return findById(notificationId.intValue());
+    }
+
+
+    /**
      * 我发送的通知（用于“已发送”列表）。
      */
     public List<Notification> listByCreator(int createdByUserId, int limit) throws SQLException {

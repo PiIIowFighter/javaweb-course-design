@@ -48,6 +48,9 @@
                     <a href="${pageContext.request.contextPath}/admin/journals/calls/list?journalId=${j.journalId}">征稿通知</a>
                 </td>
                 <td>
+                    <a class="btn btn-primary" style="margin-right:8px;" href="${pageContext.request.contextPath}/admin/journals/basic/edit?journalId=${j.journalId}">
+                        编辑名称/ISSN/IF
+                    </a>
                     <form method="post" action="${pageContext.request.contextPath}/admin/journals/basic/delete"
                           onsubmit="return confirm('确定删除该期刊？删除后相关页面/期次/征稿可能因外键约束失败。');"
                           style="display:inline;">

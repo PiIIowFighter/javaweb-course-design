@@ -7,7 +7,7 @@
 <h2>主编全览（系统内所有稿件）</h2>
 <p>
     该页面用于主编查看系统内全部稿件的当前状态与关键时间点。
-    如需查看稿件的<strong>审稿流程 / 评审记录 / 版本与附件</strong>，请点击“进入工作台”进入稿件详情页。
+    如需查看稿件的<strong>审稿流程 / 评审记录 / 版本与附件</strong>，请进入稿件详情页。
 </p>
 
 <c:if test="${empty manuscripts}">
@@ -58,7 +58,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
+                    --
                 </td>
             </tr>
         </c:forEach>

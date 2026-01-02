@@ -116,6 +116,21 @@ public class EditorServlet extends HttpServlet {
                     handleFormalCheckList(req, resp, current);
                     break;
 
+                case "/formalCheck/review":
+                    // 编辑部管理员：进入单篇稿件的形式审查页面
+                    handleFormalCheckReviewPage(req, resp, current);
+                    break;
+
+                case "/formalCheck/history":
+                    // 编辑部管理员：查看历史形式审查记录
+                    handleFormalCheckHistoryPage(req, resp, current);
+                    break;
+
+                case "/formalCheck/history/detail":
+                    // 编辑部管理员：查看单条形式审查记录详情
+                    handleFormalCheckHistoryDetailPage(req, resp, current);
+                    break;
+
                 case "/desk":
                     // 编辑部“案头稿件”列表（形式审查完毕，进入 DESK_REVIEW_INITIAL）
                     handleDeskList(req, resp, current);
@@ -217,6 +232,116 @@ public class EditorServlet extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_list.jsp")
                 .forward(req, resp);
     }
+
+    private void handleFormalCheckReviewPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以进入形式审查页面。");
+            return;
+        }
+
+        String midStr = req.getParameter("manuscriptId");
+        if (midStr == null || midStr.trim().isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/editor/formalCheck");
+            return;
+        }
+
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(midStr.trim());
+        } catch (Exception e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 参数无效。");
+            return;
+        }
+
+        Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+        if (manuscript == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
+            return;
+        }
+
+        // 若直接访问审查页，且仍为 SUBMITTED，则自动推进到 FORMAL_CHECK（与“开始审查”按钮效果一致）
+        if ("SUBMITTED".equalsIgnoreCase(manuscript.getCurrentStatus())) {
+            manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
+            manuscript.setCurrentStatus("FORMAL_CHECK");
+        }
+
+        FormalCheckResult latest = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+
+        req.setAttribute("manuscript", manuscript);
+        req.setAttribute("formalCheckResult", latest);
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_review.jsp").forward(req, resp);
+    }
+
+    private void handleFormalCheckHistoryPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以查看审查历史。");
+            return;
+        }
+
+        List<FormalCheckResult> history = formalCheckResultDAO.findByReviewerId(current.getUserId());
+        java.util.Map<Integer, Manuscript> manuscriptMap = new java.util.HashMap<>();
+        if (history != null) {
+            for (FormalCheckResult r : history) {
+                if (r == null || r.getManuscriptId() == null) continue;
+                int mid = r.getManuscriptId();
+                if (!manuscriptMap.containsKey(mid)) {
+                    try {
+                        Manuscript m = manuscriptDAO.findById(mid);
+                        if (m != null) manuscriptMap.put(mid, m);
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+        req.setAttribute("history", history);
+        req.setAttribute("manuscriptMap", manuscriptMap);
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_history.jsp").forward(req, resp);
+    }
+
+    private void handleFormalCheckHistoryDetailPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以查看审查记录详情。");
+            return;
+        }
+
+        String idStr = req.getParameter("checkId");
+        if (idStr == null || idStr.trim().isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/editor/formalCheck/history");
+            return;
+        }
+
+        int checkId;
+        try {
+            checkId = Integer.parseInt(idStr.trim());
+        } catch (Exception e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "checkId 参数无效。");
+            return;
+        }
+
+        FormalCheckResult result = formalCheckResultDAO.findById(checkId);
+        Manuscript manuscript = null;
+        if (result != null && result.getManuscriptId() != null) {
+            try {
+                manuscript = manuscriptDAO.findById(result.getManuscriptId());
+            } catch (Exception ignore) {
+            }
+        }
+
+        req.setAttribute("result", result);
+        req.setAttribute("manuscript", manuscript);
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_history_detail.jsp").forward(req, resp);
+    }
+
+
+
 
     private void handleDeskList(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
@@ -1273,7 +1398,8 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
         switch (op) {
             case "start":
                 manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
-                break;
+                resp.sendRedirect(req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId);
+                return;
             case "autoCheck":
                 handleAutoCheck(req, resp, manuscriptId);
                 return;
@@ -1371,9 +1497,13 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
 
     private void handleSubmitFormalCheck(HttpServletRequest req, HttpServletResponse resp, User current, int manuscriptId)
             throws SQLException, IOException {
-        
-        resp.setContentType("application/json;charset=UTF-8");
-        PrintWriter out = resp.getWriter();
+
+        // 兼容两类调用：
+        // 1) /editor/formalCheck/review 页面：fetch 提交，期望 JSON
+        // 2) /manuscripts/detail 页面：普通 form 提交，不应把 JSON 显示在浏览器上，应跳转到“审查历史”
+        String ajax = req.getParameter("ajax");
+        boolean wantJson = "1".equals(ajax) || "true".equalsIgnoreCase(ajax);
+
         JSONObject jsonResponse = new JSONObject();
 
         try {
@@ -1381,7 +1511,12 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
             if (manuscript == null) {
                 jsonResponse.put("success", false);
                 jsonResponse.put("message", "稿件不存在");
-                out.print(jsonResponse.toString());
+                if (wantJson) {
+                    resp.setContentType("application/json;charset=UTF-8");
+                    resp.getWriter().print(jsonResponse.toString());
+                } else {
+                    resp.sendRedirect(req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId);
+                }
                 return;
             }
 
@@ -1426,7 +1561,7 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
             }
 
             String checkResult = req.getParameter("checkResult");
-            
+
             boolean hasInvalid = false;
             if (result.getAuthorInfoValid() != null && !result.getAuthorInfoValid()) {
                 hasInvalid = true;
@@ -1449,11 +1584,11 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
             if (result.getReferenceFormatValid() != null && !result.getReferenceFormatValid()) {
                 hasInvalid = true;
             }
-            
+
             if (hasInvalid) {
                 checkResult = "FAIL";
             }
-            
+
             result.setCheckResult(checkResult);
 
             String feedback = req.getParameter("feedback");
@@ -1476,13 +1611,24 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
 
             jsonResponse.put("success", true);
             jsonResponse.put("message", "形式审查结果已提交");
-            
+
         } catch (Exception e) {
             jsonResponse.put("success", false);
             jsonResponse.put("message", "提交失败：" + e.getMessage());
         }
 
-        out.print(jsonResponse.toString());
+        if (wantJson) {
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.getWriter().print(jsonResponse.toString());
+        } else {
+            // 普通 form 提交：不展示 JSON，直接进入“审查历史”
+            if (jsonResponse.optBoolean("success", false)) {
+                resp.sendRedirect(req.getContextPath() + "/editor/formalCheck/history");
+            } else {
+                // 失败则回到稿件详情页（避免吞掉错误）
+                resp.sendRedirect(req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId);
+            }
+        }
     }
 
     private void handleReturnForRevision(HttpServletRequest req, HttpServletResponse resp, User current, int manuscriptId)

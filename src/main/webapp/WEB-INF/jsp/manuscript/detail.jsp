@@ -60,9 +60,11 @@
         <tr>
             <th>摘要（HTML）</th>
             <td>
-                <div style="border:1px solid #eee; padding:8px; min-height:60px;">
-                    <c:out value="${manuscript.abstractText}" escapeXml="false"/>
-                </div>
+                                    <div class="ql-snow richtext-view">
+                        <div class="ql-editor">
+                            <c:out value="${manuscript.abstractText}" escapeXml="false"/>
+                        </div>
+                    </div>
             </td>
         </tr>
         <tr>
@@ -516,259 +518,17 @@
     <h2>待修改</h2>
     <p>
         当前稿件状态为 <strong><c:out value="${manuscript.currentStatus}"/></strong>。
-        请先在下方对稿件信息进行修改（包括元数据、作者列表、文件等），确认无误后再点击
-        <strong>Resubmit（重新提交）</strong>。
+        请在新页面中按“新建投稿”的完整逻辑对元数据、作者列表、附件、Cover Letter（富文本转 PDF）等进行修改，
+        然后重新提交（Resubmit）。
     </p>
 
-    <c:if test="${not empty error}">
-        <div style="padding:8px;border:1px solid #c00;color:#c00;margin:10px 0;">
-            <c:out value="${error}"/>
-        </div>
-    </c:if>
+    <div class="actions" style="margin:12px 0;">
+        <a class="btn-primary" href="${ctx}/manuscripts/resubmitEdit?id=${manuscript.manuscriptId}" style="text-decoration:none;">
+            进入修改页面（推荐）
+        </a>
+        <a class="btn-quiet" href="${ctx}/manuscripts/list" style="text-decoration:none;">返回列表</a>
+    </div>
 
-    <form id="resubmitForm" action="${ctx}/manuscripts/resubmit" method="post" enctype="multipart/form-data">
-        <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-
-        <fieldset style="margin:12px 0;">
-            <legend><b>1. 元数据</b></legend>
-
-            <p>
-                <label>标题：
-                    <input type="text" name="title" size="80" value="<c:out value='${manuscript.title}'/>" required/>
-                </label>
-            </p>
-
-            <p>
-                <label>期刊ID：
-                    <input type="number" name="journalId" value="<c:out value='${manuscript.journalId}'/>" />
-                </label>
-            </p>
-
-            <p>
-                <label>研究主题：
-                    <input type="text" name="subjectArea" size="80" value="<c:out value='${manuscript.subjectArea}'/>"/>
-                </label>
-            </p>
-
-            <p>
-                <label>项目资助情况：</label><br/>
-                <textarea name="fundingInfo" rows="3" cols="80"><c:out value="${manuscript.fundingInfo}"/></textarea>
-            </p>
-
-            <p>
-                <label>关键词：</label><br/>
-                <input type="text" name="keywords" size="80" value="<c:out value='${manuscript.keywords}'/>"/>
-            </p>
-
-            <p>
-                <label>摘要（支持富文本）：</label>
-                <div id="abstractEditor2" contenteditable="true"
-                     style="border:1px solid #ccc; padding:8px; min-height:120px; background:#fff;">
-                    <c:out value="${manuscript.abstractText}" escapeXml="false"/>
-                </div>
-                <input type="hidden" id="abstractHidden2" name="abstract"/>
-            </p>
-        </fieldset>
-
-        <fieldset style="margin:12px 0;">
-            <legend><b>2. 作者列表</b></legend>
-
-            <table id="authorsTable2" border="1" cellpadding="4" cellspacing="0" style="width:100%; background:#fff;">
-                <thead>
-                <tr>
-                    <th style="width:60px;">顺序</th>
-                    <th style="width:90px;">通讯作者</th>
-                    <th>姓名</th>
-                    <th>单位</th>
-                    <th style="width:90px;">学历</th>
-                    <th style="width:90px;">职称</th>
-                    <th style="width:120px;">职位</th>
-                    <th style="width:180px;">邮箱</th>
-                    <th style="width:80px;">操作</th>
-                </tr>
-                </thead>
-                <tbody>
-                <c:choose>
-                    <c:when test="${not empty authors}">
-                        <c:forEach var="a" items="${authors}" varStatus="st">
-                            <tr>
-                                <td><c:out value="${st.index + 1}"/></td>
-                                <td style="text-align:center;">
-                                    <input type="radio" name="correspondingIndex" value="${st.index}"
-                                           <c:if test="${a.corresponding}">checked</c:if> />
-                                </td>
-                                <td><input type="text" name="authorName" value="<c:out value='${a.fullName}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="authorAffiliation" value="<c:out value='${a.affiliation}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="authorDegree" value="<c:out value='${a.degree}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="authorTitle" value="<c:out value='${a.title}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="authorPosition" value="<c:out value='${a.position}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="authorEmail" value="<c:out value='${a.email}'/>" style="width:98%;"/></td>
-                                <td style="text-align:center;">
-                                    <button type="button" onclick="removeRow2(this)">删除</button>
-                                </td>
-                            </tr>
-                        </c:forEach>
-                    </c:when>
-                    <c:otherwise>
-                        <tr>
-                            <td>1</td>
-                            <td style="text-align:center;"><input type="radio" name="correspondingIndex" value="0" checked/></td>
-                            <td><input type="text" name="authorName" style="width:98%;" placeholder="作者姓名"/></td>
-                            <td><input type="text" name="authorAffiliation" style="width:98%;" placeholder="单位/学院"/></td>
-                            <td><input type="text" name="authorDegree" style="width:98%;" placeholder="本科/硕士/博士"/></td>
-                            <td><input type="text" name="authorTitle" style="width:98%;" placeholder="讲师/副教授/教授"/></td>
-                            <td><input type="text" name="authorPosition" style="width:98%;" placeholder="职位"/></td>
-                            <td><input type="text" name="authorEmail" style="width:98%;" placeholder="邮箱"/></td>
-                            <td style="text-align:center;"><button type="button" onclick="removeRow2(this)">删除</button></td>
-                        </tr>
-                    </c:otherwise>
-                </c:choose>
-                </tbody>
-            </table>
-
-            <div style="margin-top:8px;">
-                <button type="button" onclick="addAuthorRow2()">+ 添加作者</button>
-            </div>
-        </fieldset>
-
-        <fieldset style="margin:12px 0;">
-            <legend><b>3. 文件上传</b></legend>
-
-            <p>
-                <label>上传修回后的手稿文件（可选）：</label>
-                <input type="file" name="manuscriptFile" accept=".pdf,.doc,.docx"/>
-                <c:if test="${not empty currentVersion and not empty currentVersion.fileOriginalPath}">
-                    <span style="margin-left:10px;">
-                        当前版本：<a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">预览/下载</a>
-                    </span>
-                </c:if>
-            </p>
-
-            <p>
-                <label>上传修回后的 Cover Letter（可选）：</label>
-                <input type="file" name="coverFile" accept=".pdf,.doc,.docx,.html,.htm"/>
-                <c:if test="${not empty currentVersion and not empty currentVersion.coverLetterPath}">
-                    <span style="margin-left:10px;">
-                        当前版本：<a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">预览/下载</a>
-                    </span>
-                </c:if>
-            </p>
-
-            <p>
-                <label>Cover Letter（富文本，可选）：</label>
-                <div id="coverEditor2" contenteditable="true"
-                     style="border:1px solid #ccc; padding:8px; min-height:120px; background:#fff;"></div>
-                <input type="hidden" id="coverHidden2" name="coverLetterHtml"/>
-            </p>
-        </fieldset>
-
-        <fieldset style="margin:12px 0;">
-            <legend><b>4. 推荐审稿人（可选）</b></legend>
-
-            <table id="reviewersTable2" border="1" cellpadding="4" cellspacing="0" style="width:100%; background:#fff;">
-                <thead>
-                <tr>
-                    <th style="width:40px;">#</th>
-                    <th style="width:180px;">姓名</th>
-                    <th style="width:220px;">邮箱</th>
-                    <th>推荐理由</th>
-                    <th style="width:80px;">操作</th>
-                </tr>
-                </thead>
-                <tbody>
-                <c:choose>
-                    <c:when test="${not empty recommendedReviewers}">
-                        <c:forEach var="r" items="${recommendedReviewers}" varStatus="st">
-                            <tr>
-                                <td><c:out value="${st.index + 1}"/></td>
-                                <td><input type="text" name="recReviewerName" value="<c:out value='${r.fullName}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="recReviewerEmail" value="<c:out value='${r.email}'/>" style="width:98%;"/></td>
-                                <td><input type="text" name="recReviewerReason" value="<c:out value='${r.reason}'/>" style="width:98%;"/></td>
-                                <td style="text-align:center;"><button type="button" onclick="removeRow2(this)">删除</button></td>
-                            </tr>
-                        </c:forEach>
-                    </c:when>
-                    <c:otherwise>
-                        <tr>
-                            <td>1</td>
-                            <td><input type="text" name="recReviewerName" style="width:98%;" placeholder="姓名"/></td>
-                            <td><input type="text" name="recReviewerEmail" style="width:98%;" placeholder="邮箱"/></td>
-                            <td><input type="text" name="recReviewerReason" style="width:98%;" placeholder="推荐理由"/></td>
-                            <td style="text-align:center;"><button type="button" onclick="removeRow2(this)">删除</button></td>
-                        </tr>
-                    </c:otherwise>
-                </c:choose>
-                </tbody>
-            </table>
-
-            <div style="margin-top:8px;">
-                <button type="button" onclick="addReviewerRow2()">+ 添加推荐审稿人</button>
-            </div>
-        </fieldset>
-
-        <p style="margin-top:14px;">
-            <button type="submit" onclick="return confirm('确认 Resubmit？将进入后续处理流程。');">Resubmit（重新提交）</button>
-        </p>
-    </form>
-
-    <script>
-        function removeRow2(btn) {
-            var tr = btn.closest('tr');
-            if (!tr) return;
-            var tbody = tr.parentNode;
-            tbody.removeChild(tr);
-            renumberTables2();
-        }
-
-        function addAuthorRow2() {
-            var tbody = document.querySelector('#authorsTable2 tbody');
-            var index = tbody.querySelectorAll('tr').length;
-            var tr = document.createElement('tr');
-            tr.innerHTML = '' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td style="text-align:center;"><input type="radio" name="correspondingIndex" value="' + index + '"></td>' +
-                '<td><input type="text" name="authorName" style="width:98%;" placeholder="作者姓名"></td>' +
-                '<td><input type="text" name="authorAffiliation" style="width:98%;" placeholder="单位/学院"></td>' +
-                '<td><input type="text" name="authorDegree" style="width:98%;" placeholder="本科/硕士/博士"></td>' +
-                '<td><input type="text" name="authorTitle" style="width:98%;" placeholder="讲师/副教授/教授"></td>' +
-                '<td><input type="text" name="authorPosition" style="width:98%;" placeholder="职位"></td>' +
-                '<td><input type="text" name="authorEmail" style="width:98%;" placeholder="邮箱"></td>' +
-                '<td style="text-align:center;"><button type="button" onclick="removeRow2(this)">删除</button></td>';
-            tbody.appendChild(tr);
-        }
-
-        function addReviewerRow2() {
-            var tbody = document.querySelector('#reviewersTable2 tbody');
-            var index = tbody.querySelectorAll('tr').length;
-            var tr = document.createElement('tr');
-            tr.innerHTML = '' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td><input type="text" name="recReviewerName" style="width:98%;" placeholder="姓名"></td>' +
-                '<td><input type="text" name="recReviewerEmail" style="width:98%;" placeholder="邮箱"></td>' +
-                '<td><input type="text" name="recReviewerReason" style="width:98%;" placeholder="推荐理由"></td>' +
-                '<td style="text-align:center;"><button type="button" onclick="removeRow2(this)">删除</button></td>';
-            tbody.appendChild(tr);
-        }
-
-        function renumberTables2() {
-            var authorRows = document.querySelectorAll('#authorsTable2 tbody tr');
-            authorRows.forEach(function(tr, idx) {
-                tr.children[0].innerText = (idx + 1);
-                var radio = tr.querySelector('input[type=radio][name=correspondingIndex]');
-                if (radio) radio.value = idx;
-            });
-
-            var reviewerRows = document.querySelectorAll('#reviewersTable2 tbody tr');
-            reviewerRows.forEach(function(tr, idx) {
-                tr.children[0].innerText = (idx + 1);
-            });
-        }
-
-        document.getElementById('resubmitForm').addEventListener('submit', function() {
-            document.getElementById('abstractHidden2').value = document.getElementById('abstractEditor2').innerHTML;
-            document.getElementById('coverHidden2').value = document.getElementById('coverEditor2').innerHTML;
-        });
-    </script>
 </c:if>
 
 <!-- ====================== 只有编辑 / 主编 且 稿件已进入外审相关阶段 时显示审稿相关内容 ====================== -->

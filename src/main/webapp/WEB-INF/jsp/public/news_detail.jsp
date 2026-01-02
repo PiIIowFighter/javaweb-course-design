@@ -29,7 +29,11 @@
     </c:if>
     <c:if test="${not empty news}">
         <div class="richtext">
-            <pre class="pre-wrap"><c:out value="${news.content}"/></pre>
+            <div class="ql-snow richtext-view">
+                <div class="ql-editor">
+                    <c:out value="${news.content}" escapeXml="false"/>
+                </div>
+            </div>
         </div>
         <c:if test="${not empty news.attachmentPath}">
             <p style="margin-top: 12px;">

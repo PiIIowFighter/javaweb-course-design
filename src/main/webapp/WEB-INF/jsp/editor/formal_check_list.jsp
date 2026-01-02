@@ -32,37 +32,25 @@
                 <td><c:out value="${m.manuscriptId}"/></td>
                 <td><c:out value="${m.title}"/></td>
                 <td><c:out value="${m.currentStatus}"/></td>
-                                <td><c:out value="${m.submitTime}"/></td>
+                <td><c:out value="${m.submitTime}"/></td>
                 <td>
-                    <a class="btn btn-quiet" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}">进入工作台</a>
-                    <!-- 仅编辑部管理员显示实际操作按钮 -->
                     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN'}">
-                        <form method="post" action="${ctx}/editor/formalCheck" style="display:inline">
-                            <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                            <c:choose>
-                                <c:when test="${m.currentStatus == 'SUBMITTED'}">
-                                    <button type="submit" name="op" value="start">
-                                        开始形式审查
-                                    </button>
-                                    <button type="submit" name="op" value="return"
-                                            onclick="return confirm('确认将该稿件退回作者修改格式？');">
-                                        直接退回作者
-                                    </button>
-                                </c:when>
-                                <c:when test="${m.currentStatus == 'FORMAL_CHECK'}">
-                                    <button type="submit" name="op" value="approve">
-                                        格式合格，送主编案头
-                                    </button>
-                                    <button type="submit" name="op" value="return"
-                                            onclick="return confirm('确认将该稿件退回作者修改格式？');">
-                                        退回作者修改格式
-                                    </button>
-                                </c:when>
-                                <c:otherwise>
-                                    <!-- 其他状态不展示可点击操作 -->
-                                </c:otherwise>
-                            </c:choose>
-                        </form>
+                        <c:choose>
+                            <c:when test="${m.currentStatus == 'SUBMITTED'}">
+                                <!-- 一开始仅保留“点击开始审查”按钮；点击后由后端更新状态并跳转到稿件详情页 -->
+                                <form method="post" action="${ctx}/editor/formalCheck" style="display:inline">
+                                    <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
+                                    <button class="btn btn-primary" type="submit" name="op" value="start">点击开始审查</button>
+                                </form>
+                            </c:when>
+                            <c:when test="${m.currentStatus == 'FORMAL_CHECK'}">
+                                <!-- 审查进行中：直接进入稿件详情页继续审查 -->
+                                <a class="btn btn-primary" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}">进入审查</a>
+                            </c:when>
+                            <c:otherwise>
+                                --
+                            </c:otherwise>
+                        </c:choose>
                     </c:if>
                 </td>
             </tr>

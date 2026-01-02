@@ -855,3 +855,19 @@ tbody tr:hover td {
     cursor: not-allowed !important;
     pointer-events: none;
 }
+
+/* Quill rich-text (read-only) */
+.ql-snow.richtext-view {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.65);
+}
+.ql-snow.richtext-view .ql-editor {
+    padding: 12px;
+    font-family: inherit;
+    line-height: 1.7;
+}
+.ql-snow.richtext-view .ql-editor p { margin: 0 0 0.75em; }
+.ql-snow.richtext-view .ql-editor p:last-child { margin-bottom: 0; }
+.ql-snow.richtext-view .ql-editor img { max-width: 100%; height: auto; }
+.ql-snow.richtext-view .ql-editor pre { white-space: pre-wrap; }

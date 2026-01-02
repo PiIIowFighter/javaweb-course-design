@@ -175,7 +175,7 @@
                         <a style="margin-left:6px;" href="${ctx}/manuscripts/edit?id=${m.manuscriptId}"><i class="bi bi-pencil" aria-hidden="true"></i> 继续编辑</a>
                     </c:if>
                     <c:if test="${m.currentStatus == 'RETURNED' or m.currentStatus == 'REVISION'}">
-                        <a style="margin-left:6px;" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 进入修改</a>
+                        <a style="margin-left:6px;" href="${ctx}/manuscripts/resubmitEdit?id=${m.manuscriptId}"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 进入修改</a>
                     </c:if>
                 </td>
             </tr>

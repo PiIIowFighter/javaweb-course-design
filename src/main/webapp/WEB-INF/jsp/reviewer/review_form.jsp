@@ -78,7 +78,7 @@
         <strong>重要提醒：</strong>提交评审意见后，您将无法再查看该稿件的脱密版文件。
     </div>
 
-<form method="post" action="${ctx}/reviewer/submit" id="reviewForm" novalidate onsubmit="return prepareForm()">
+<form method="post" action="${ctx}/reviewer/submit" id="reviewForm" onsubmit="return prepareForm()">
     <input type="hidden" name="reviewId" value="${rid}"/>
     <input type="hidden" name="id" value="${rid}"/>
 
@@ -284,8 +284,7 @@
                             <i class="fas fa-calculator"></i> <strong>总体分（自动计算）</strong>
                         </label>
                         <div class="input-group">
-                            <input type="number" name="score" id="score" class="form-control" 
-                                   min="0" max="10" step="1" required readonly value="5"/>
+                            <input type="number" name="score" id="score" class="form-control" min="0" max="10" step="0.1" required readonly tabindex="-1" onfocus="this.blur()" value="5"/>
                             <span class="input-group-text">/10</span>
                         </div>
                         <input type="hidden" name="scoreOverall" id="scoreOverall" value="5"/>
@@ -345,11 +344,11 @@
                 <input type="hidden" name="content" id="contentCompat"/>
                 
                 <%-- 新增维度的隐藏字段（如果需要兼容旧后端） --%>
-                <input type="hidden" name="scoreExperimentation" id="scoreExperimentationCompat" value="5"/>
-                <input type="hidden" name="scoreLiteratureReview" id="scoreLiteratureReviewCompat" value="5"/>
-                <input type="hidden" name="scoreConclusions" id="scoreConclusionsCompat" value="5"/>
-                <input type="hidden" name="scoreAcademicIntegrity" id="scoreAcademicIntegrityCompat" value="5"/>
-                <input type="hidden" name="scorePracticality" id="scorePracticalityCompat" value="5"/>
+                <input type="hidden" name="scoreExperimentationCompat" id="scoreExperimentationCompat" value="5"/>
+                <input type="hidden" name="scoreLiteratureReviewCompat" id="scoreLiteratureReviewCompat" value="5"/>
+                <input type="hidden" name="scoreConclusionsCompat" id="scoreConclusionsCompat" value="5"/>
+                <input type="hidden" name="scoreAcademicIntegrityCompat" id="scoreAcademicIntegrityCompat" value="5"/>
+                <input type="hidden" name="scorePracticalityCompat" id="scorePracticalityCompat" value="5"/>
             </div>
         </div>
     </div>
@@ -466,89 +465,97 @@
     } else {
         initQuillIfAvailable();
     }
-// 更新总体分 - 基于所有9个维度计算
+// 更新总体分（自动计算）：仅统计可见评分输入 .score-input（0~10）
     function updateOverallScore() {
-        console.log('updateOverallScore called');
-        
-        // 所有评分字段的name
-        const scoreFields = [
-            'scoreOriginality', 'scoreSignificance', 'scoreMethodology', 'scorePresentation',
-            'scoreExperimentation', 'scoreLiteratureReview', 'scoreConclusions', 
-            'scoreAcademicIntegrity', 'scorePracticality'
-        ];
-        
-        let total = 0;
-        let validCount = 0;
-        
-        // 遍历所有评分字段
-        scoreFields.forEach(fieldName => {
-            // 使用jQuery选择器获取所有同名的input
-            const inputs = document.querySelectorAll(`input[name="${fieldName}"]`);
-            
-            inputs.forEach(input => {
-                const value = parseFloat(input.value);
-                console.log(`Field ${fieldName}: value=${input.value}, parsed=${value}`);
-                
-                if (!isNaN(value) && value >= 0 && value <= 10) {
-                    total += value;
-                    validCount++;
-                }
-            });
+        const inputs = Array.from(document.querySelectorAll('.score-input'));
+        let sum = 0;
+        let cnt = 0;
+
+        inputs.forEach(input => {
+            const v = parseFloat(input.value);
+            if (!isNaN(v) && isFinite(v)) {
+                sum += v;
+                cnt += 1;
+            }
         });
-        
-        console.log(`Total: ${total}, Count: ${validCount}`);
-        
-        if (validCount > 0) {
-            const average = total / validCount;
-            const roundedAverage = Math.round(average * 10) / 10; // 保留1位小数
-            
-            // 更新显示字段和隐藏字段
-            const scoreDisplay = document.getElementById('score');
-            const scoreHidden = document.getElementById('scoreOverall');
-            
-            if (scoreDisplay) {
-                scoreDisplay.value = roundedAverage;
-                console.log(`Updated score display to: ${roundedAverage}`);
-            }
-            
-            if (scoreHidden) {
-                scoreHidden.value = roundedAverage;
-                console.log(`Updated score hidden to: ${roundedAverage}`);
-            }
-            
-            // 同时更新新增维度的隐藏字段
-            const hiddenFields = [
-                'scoreExperimentation', 'scoreLiteratureReview', 'scoreConclusions',
-                'scoreAcademicIntegrity', 'scorePracticality'
-            ];
-            
-            hiddenFields.forEach(fieldName => {
-                const input = document.querySelector(`input[name="${fieldName}"]`);
-                const hiddenInput = document.getElementById(`${fieldName}Compat`);
-                
-                if (input && hiddenInput) {
-                    const value = parseFloat(input.value);
-                    if (!isNaN(value) && value >= 0 && value <= 10) {
-                        hiddenInput.value = value;
-                    } else {
-                        hiddenInput.value = 5; // 默认值
-                    }
-                }
-            });
-        }
+
+        if (cnt === 0) return;
+
+        const avg = Math.round((sum / cnt) * 10) / 10; // 保留 1 位小数
+        const scoreDisplay = document.getElementById('score');
+        const scoreHidden = document.getElementById('scoreOverall');
+        if (scoreDisplay) scoreDisplay.value = avg;
+        if (scoreHidden) scoreHidden.value = avg;
+
+        // 同步兼容隐藏字段（不参与总体分计算）
+        const compatMap = {
+            scoreExperimentation: 'scoreExperimentationCompat',
+            scoreLiteratureReview: 'scoreLiteratureReviewCompat',
+            scoreConclusions: 'scoreConclusionsCompat',
+            scoreAcademicIntegrity: 'scoreAcademicIntegrityCompat',
+            scorePracticality: 'scorePracticalityCompat'
+        };
+        Object.keys(compatMap).forEach(name => {
+            const src = document.querySelector(`input.score-input[name="${name}"]`);
+            const dst = document.getElementById(compatMap[name]);
+            if (src && dst) dst.value = src.value;
+        });
     }
 
-    // 准备表单提交（保留原逻辑）
+    function markInvalid(el, invalid) {
+        if (!el) return;
+        if (invalid) el.classList.add('is-invalid');
+        else el.classList.remove('is-invalid');
+    }
+
+    function isBlankHtml(html) {
+        if (!html) return true;
+        const text = html
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return text.length === 0;
+    }
+
+    function validateScores() {
+        const inputs = Array.from(document.querySelectorAll('.score-input'));
+        let ok = true;
+
+        inputs.forEach(input => {
+            const v = parseFloat(input.value);
+            const isInteger = Number.isFinite(v) && Math.floor(v) === v;
+            const bad = !(Number.isFinite(v) && v >= 0 && v <= 10 && isInteger);
+            markInvalid(input, bad);
+            if (bad) ok = false;
+        });
+
+        return ok;
+    }
+
+    // 准备表单提交：做必填校验 + 锁死总体分（服务端也会重算）
     function prepareForm() {
-        console.log('prepareForm called');
-        // 同步 Quill 内容到隐藏字段
+        // 同步 Quill 内容到 textarea
         if (typeof syncQuillToTextarea === "function") {
             syncQuillToTextarea();
         }
 
-        // 校验【给编辑的保密意见】与【给作者的意见】必填
-        var confidentialTa = document.getElementById('confidentialToEditor');
-        var commentsTa = document.getElementById('commentsToAuthor');
+        // 每次提交前先重算一次总体分
+        updateOverallScore();
+
+        // 1) 推荐结论必选
+        const recommendation = document.getElementById('recommendation');
+        if (!recommendation || !recommendation.value) {
+            alert('请选择推荐结论');
+            markInvalid(recommendation, true);
+            if (recommendation) recommendation.focus();
+            return false;
+        }
+        markInvalid(recommendation, false);
+
+        // 2) 给编辑/给作者意见必填（富文本）
+        const confidentialTa = document.getElementById('confidentialToEditor');
+        const commentsTa = document.getElementById('commentsToAuthor');
 
         if (confidentialQuill) {
             if (confidentialQuill.getText().trim().length === 0) {
@@ -556,7 +563,7 @@
                 return false;
             }
         } else {
-            if (!confidentialTa || confidentialTa.value.trim().length === 0) {
+            if (!confidentialTa || isBlankHtml(confidentialTa.value)) {
                 alert("请填写【给编辑的保密意见】");
                 return false;
             }
@@ -568,131 +575,70 @@
                 return false;
             }
         } else {
-            if (!commentsTa || commentsTa.value.trim().length === 0) {
+            if (!commentsTa || isBlankHtml(commentsTa.value)) {
                 alert("请填写【给作者的意见】");
                 return false;
             }
         }
 
-        // 同步兼容字段
-        const commentsEl = document.getElementById('commentsToAuthor');
+        // 3) 同步兼容字段 content（旧后端）
         const compatEl = document.getElementById('contentCompat');
-        if (commentsEl && compatEl) {
-            compatEl.value = commentsEl.value;
-            console.log('Updated content compat field');
+        if (commentsTa && compatEl) {
+            compatEl.value = commentsTa.value;
         }
-        
-        // 验证表单
+
+        // 4) 评分必填且 0-10 整数
+        if (!validateScores()) {
+            alert('请确保所有评分都已填写且在 0-10 范围内（整数）。');
+            return false;
+        }
+
+        // 5) HTML5 兜底校验（如果浏览器支持）
         const form = document.getElementById('reviewForm');
-        if (!form.checkValidity()) {
-            // 触发浏览器原生提示（更直观）
+        if (form && !form.checkValidity()) {
             if (form.reportValidity) form.reportValidity();
             else alert('请填写所有必填字段');
             return false;
         }
-        
-        // 验证评分是否在0-10范围内
-        const scoreInputs = document.querySelectorAll('.score-input');
-        let allValid = true;
-        scoreInputs.forEach(input => {
-            const value = parseFloat(input.value);
-            if (isNaN(value) || value < 0 || value > 10) {
-                allValid = false;
-                input.classList.add('is-invalid');
-            } else {
-                input.classList.remove('is-invalid');
-            }
-        });
-        
-        if (!allValid) {
-            alert('请确保所有评分都在0-10的范围内');
-            return false;
-        }
-        
-        // 确认提交
+
+        // 6) 二次确认 + 防重复提交
         if (!confirm('确定提交评审意见吗？提交后将无法修改。')) {
             return false;
         }
-        
-        // 禁用提交按钮防止重复提交
+
         const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
-        
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+        }
+
         return true;
     }
-    
-    // 页面加载完成后的初始化
+
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOMContentLoaded');
-        
-        // 初始计算总体分
-        updateOverallScore();
-        
-        // 为所有评分输入框绑定实时计算事件
-        const scoreInputs = document.querySelectorAll('.score-input');
-        console.log(`Found ${scoreInputs.length} score inputs`);
-        
-        scoreInputs.forEach(input => {
-            // 移除原有的事件监听器，避免重复绑定
-            const newInput = input.cloneNode(true);
-            input.parentNode.replaceChild(newInput, input);
-            
-            // 为新input绑定事件
-            newInput.addEventListener('input', updateOverallScore);
-            newInput.addEventListener('change', updateOverallScore);
-            
-            // 添加键盘事件，确保输入限制
-            newInput.addEventListener('keydown', function(e) {
-                // 允许控制键、删除键、箭头键等
-                if ([8, 9, 13, 27, 46].includes(e.keyCode) || 
-                    (e.keyCode >= 37 && e.keyCode <= 40)) {
-                    return;
-                }
-                
-                // 确保输入的是数字
-                if ((e.keyCode < 48 || e.keyCode > 57) && 
-                    (e.keyCode < 96 || e.keyCode > 105)) {
-                    e.preventDefault();
-                }
-            });
+        // 总体分输入框只展示，不允许键入
+        const scoreEl = document.getElementById('score');
+        if (scoreEl) {
+            scoreEl.addEventListener('keydown', function(e) { e.preventDefault(); });
+            scoreEl.addEventListener('focus', function() { scoreEl.blur(); });
+        }
+
+        // 绑定评分输入变化事件
+        document.querySelectorAll('.score-input').forEach(input => {
+            input.addEventListener('input', updateOverallScore);
+            input.addEventListener('change', updateOverallScore);
         });
-        
-        // 为推荐结论添加事件，确保选择了选项
-        const recommendationSelect = document.getElementById('recommendation');
-        if (recommendationSelect) {
-            recommendationSelect.addEventListener('change', function() {
-                if (this.value) {
-                    this.classList.remove('is-invalid');
-                } else {
-                    this.classList.add('is-invalid');
-                }
+
+        // 推荐结论：选择后清除错误样式
+        const recommendation = document.getElementById('recommendation');
+        if (recommendation) {
+            recommendation.addEventListener('change', function() {
+                markInvalid(recommendation, !recommendation.value);
             });
         }
-        
-        // 为表单添加提交前的验证
-        const form = document.getElementById('reviewForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const recommendation = document.getElementById('recommendation');
-                if (!recommendation || !recommendation.value) {
-                    e.preventDefault();
-                    alert('请选择推荐结论');
-                    recommendation.classList.add('is-invalid');
-                    return false;
-                }
-            });
-        }
-            }
-);
-            }
-        }, 1000);
-    });
-    
-    // 页面完全加载后再次计算，确保所有元素已加载
-    window.addEventListener('load', function() {
-        console.log('Window loaded');
-        setTimeout(updateOverallScore, 500);
+
+        // 初次计算
+        updateOverallScore();
     });
 </script>
 

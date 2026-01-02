@@ -20,7 +20,7 @@
            href="${pageContext.request.contextPath}/editor/overview">
             <h3><i class="bi bi-eye" aria-hidden="true"></i> 系统全览</h3>
             <p>
-                查看系统内所有稿件的当前状态与历史流转轨迹，通过“进入工作台”进入稿件详情页，
+                查看系统内所有稿件的当前状态与历史流转轨迹，并可进入稿件详情页，
                 可查看版本、附件与评审记录，便于整体把控刊物运行。
             </p>
             <small>
