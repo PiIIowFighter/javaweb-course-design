@@ -17,12 +17,7 @@
             <p class="card-subtitle" style="margin-top:10px;">未读：<c:out value="${unreadCount}"/> 条</p>
         </div>
         <div class="actions" style="margin:0">
-            <c:if test="${box ne 'sent'}">
-                <form action="${ctx}/notifications/markAllRead" method="post" style="margin:0">
-                    <button class="btn" type="submit"><i class="bi bi-check2-all" aria-hidden="true"></i> 全部标记已读</button>
-                </form>
-            </c:if>
-            <c:if test="${canSend}">
+<c:if test="${canSend}">
                 <a class="btn" href="${ctx}/notifications/send"><i class="bi bi-send" aria-hidden="true"></i> 发送通知</a>
             </c:if>
         </div>
@@ -42,15 +37,16 @@
                     <div class="muted">暂无已发送通知。</div>
                 </c:when>
                 <c:otherwise>
-                    <table>
+                    <table style="table-layout:fixed; width:100%;">
                         <thead>
                         <tr>
                             <th style="width:220px;">接收人</th>
                             <th style="width:110px;">对方状态</th>
-                            <th>标题</th>
+                            <th style="width:260px;">标题</th>
                             <th>内容</th>
                             <th style="width:160px;">发送时间</th>
                             <th style="width:160px;">已读时间</th>
+                            <th style="width:140px;">操作</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -73,9 +69,10 @@
                                     </c:choose>
                                 </td>
                                 <td>
-                                    <div style="font-weight:600;">
-                                        <c:out value="${n.title}"/>
-                                    </div>
+                                    <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+									    <c:out value="${n.title}"/>
+									</div>
+
                                     <div class="muted" style="font-size:12px; margin-top:6px;">
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
@@ -84,13 +81,22 @@
                                         </c:if>
                                     </div>
                                 </td>
-                                <td style="white-space:pre-wrap;"><c:out value="${n.content}"/></td>
+                                <td>
+    <div style="max-width:520px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        <c:out value="${n.content}"/>
+    </div>
+</td>
                                 <td><c:out value="${n.createdAt}"/></td>
                                 <td>
                                     <c:choose>
                                         <c:when test="${not empty n.readAt}"><c:out value="${n.readAt}"/></c:when>
                                         <c:otherwise>-</c:otherwise>
                                     </c:choose>
+                                </td>
+                                <td>
+                                    <a class="btn" href="${ctx}/notifications/view?id=${n.notificationId}&box=sent">
+                                        <i class="bi bi-eye" aria-hidden="true"></i> 查看详情
+                                    </a>
                                 </td>
                             </tr>
                         </c:forEach>
@@ -107,11 +113,11 @@
                     <div class="muted">暂无通知。</div>
                 </c:when>
                 <c:otherwise>
-                    <table>
+                    <table style="table-layout:fixed; width:100%;">
                         <thead>
                         <tr>
                             <th style="width:110px;">状态</th>
-                            <th>标题</th>
+                            <th style="width:260px;">标题</th>
                             <th>内容</th>
                             <th style="width:160px;">时间</th>
                             <th style="width:140px;">操作</th>
@@ -127,9 +133,10 @@
                                     </c:choose>
                                 </td>
                                 <td>
-                                    <div style="font-weight:600;">
-                                        <c:out value="${n.title}"/>
-                                    </div>
+                                    <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+									    <c:out value="${n.title}"/>
+									</div>
+
                                     <div class="muted" style="font-size:12px; margin-top:6px;">
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
@@ -138,18 +145,19 @@
                                         </c:if>
                                     </div>
                                 </td>
-                                <td style="white-space:pre-wrap;"><c:out value="${n.content}"/></td>
+                                <td>
+    <div style="max-width:520px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        <c:out value="${n.content}"/>
+    </div>
+</td>
                                 <td>
                                     <c:out value="${n.createdAt}"/>
                                 </td>
                                 <td>
-                                    <c:if test="${not n.read}">
-                                        <form action="${ctx}/notifications/markRead" method="post" style="margin:0">
-                                            <input type="hidden" name="id" value="${n.notificationId}"/>
-                                            <button class="btn" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> 标记已读</button>
-                                        </form>
-                                    </c:if>
-                                </td>
+    <a class="btn" href="${ctx}/notifications/view?id=${n.notificationId}&box=inbox">
+        <i class="bi bi-eye" aria-hidden="true"></i> 查看详情
+    </a>
+</td>
                             </tr>
                         </c:forEach>
                         </tbody>

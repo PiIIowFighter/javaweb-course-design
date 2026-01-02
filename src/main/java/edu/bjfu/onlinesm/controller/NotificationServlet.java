@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
+import java.util.Objects;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -45,6 +46,10 @@ public class NotificationServlet extends HttpServlet {
             handleList(req, resp, current);
             return;
         }
+        if ("/view".equals(path)) {
+            handleView(req, resp, current);
+            return;
+        }
         if ("/send".equals(path)) {
             handleSendForm(req, resp, current);
             return;
@@ -68,6 +73,10 @@ public class NotificationServlet extends HttpServlet {
         }
         if ("/markAllRead".equals(path)) {
             handleMarkAllRead(req, resp, current);
+            return;
+        }
+        if ("/view".equals(path)) {
+            handleView(req, resp, current);
             return;
         }
         if ("/send".equals(path)) {
@@ -108,15 +117,87 @@ public class NotificationServlet extends HttpServlet {
     }
     
 
-    private void handleMarkRead(HttpServletRequest req, HttpServletResponse resp, User current) throws IOException {
+        private void handleView(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException {
         Integer id = parseInt(req.getParameter("id"));
+        if (id == null) {
+            resp.sendRedirect(req.getContextPath() + "/notifications");
+            return;
+        }
+
+        String box = trim(req.getParameter("box"));
+        if (box == null || box.isEmpty()) box = "inbox";
+        box = box.toLowerCase();
+
+        try {
+            Notification n = notificationDAO.findById(id);
+            if (n == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "通知不存在");
+                return;
+            }
+
+            boolean isRecipient = Objects.equals(n.getRecipientUserId(), current.getUserId());
+            boolean isCreator   = Objects.equals(n.getCreatedByUserId(), current.getUserId());
+
+            if (!isRecipient && !isCreator) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权限查看该通知");
+                return;
+            }
+
+            if (!"inbox".equals(box) && !"sent".equals(box)) {
+                box = isCreator ? "sent" : "inbox";
+            }
+
+            req.setAttribute("notification", n);
+            req.setAttribute("box", box);
+            req.setAttribute("isRecipient", isRecipient);
+            req.setAttribute("isCreator", isCreator);
+            req.setAttribute("unreadCount", notificationDAO.countUnread(current.getUserId()));
+            req.setAttribute("canSend", canSendManual(current));
+            req.setAttribute("pageTitle", "通知详情");
+
+            // 发送者/接收者信息（用于详情页展示名称）
+            if (n.getCreatedByUserId() != null) {
+                try {
+                    req.setAttribute("senderUser", userDAO.findById(n.getCreatedByUserId()));
+                } catch (Exception ignore) {
+                }
+            }
+            if (n.getRecipientUserId() != null) {
+                try {
+                    req.setAttribute("recipientUser", userDAO.findById(n.getRecipientUserId()));
+                } catch (Exception ignore) {
+                }
+            }
+
+            req.getRequestDispatcher("/WEB-INF/jsp/common/notification_detail.jsp").forward(req, resp);
+        } catch (SQLException e) {
+            throw new ServletException("读取通知详情失败", e);
+        }
+    }
+
+private void handleMarkRead(HttpServletRequest req, HttpServletResponse resp, User current) throws IOException {
+        Integer id = parseInt(req.getParameter("id"));
+        String box = trim(req.getParameter("box"));
+        if (box == null || box.isEmpty()) box = "inbox";
+        String redirect = trim(req.getParameter("redirect"));
+
         if (id != null) {
             try {
-                notificationDAO.markRead(current.getUserId(), id);
+                Notification n = notificationDAO.findById(id);
+                if (n != null && Objects.equals(n.getRecipientUserId(), current.getUserId())) {
+                    notificationDAO.markRead(current.getUserId(), id);
+                }
+
             } catch (SQLException ignore) {
             }
         }
-        resp.sendRedirect(req.getContextPath() + "/notifications");
+
+        if ("view".equalsIgnoreCase(redirect) && id != null) {
+            resp.sendRedirect(req.getContextPath() + "/notifications/view?id=" + id + "&box=" + url(box));
+        } else {
+            resp.sendRedirect(req.getContextPath() + "/notifications?box=" + url(box));
+        }
     }
 
     private void handleMarkAllRead(HttpServletRequest req, HttpServletResponse resp, User current) throws IOException {
