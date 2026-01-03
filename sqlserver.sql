@@ -1483,3 +1483,68 @@ PRINT '============================================================';
 PRINT '形式审查功能数据库同步脚本执行完成！';
 PRINT '============================================================';
 GO
+
+/* =========================================================
+   [PATCH] 专刊关联（投稿时选择专刊）
+   - 为 dbo.Manuscripts 增加 IssueId（FK -> dbo.Issues.IssueId）
+   - 对历史/已有稿件：若 IssueId 为空，默认赋值为“同一期刊下第一个专刊（IssueType='SPECIAL'）”，
+     若不存在 SPECIAL，则赋值为同一期刊下第一个 Issue。
+   ========================================================= */
+
+-- 1) 增加列（兼容：多次执行不报错）
+IF COL_LENGTH('dbo.Manuscripts','IssueId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Manuscripts ADD IssueId INT NULL;
+END
+GO
+
+-- 2) 历史数据兜底：把 IssueId 为空的稿件补齐（优先 SPECIAL）
+;WITH FirstIssuePerJournal AS (
+    SELECT
+        JournalId,
+        MIN(CASE WHEN IssueType = 'SPECIAL' THEN IssueId END) AS FirstSpecialIssueId,
+        MIN(IssueId) AS FirstIssueId
+    FROM dbo.Issues
+    GROUP BY JournalId
+)
+UPDATE m
+SET m.IssueId = COALESCE(f.FirstSpecialIssueId, f.FirstIssueId)
+FROM dbo.Manuscripts m
+LEFT JOIN FirstIssuePerJournal f ON f.JournalId = m.JournalId
+WHERE m.IssueId IS NULL;
+GO
+
+-- 如果仍为空（例如 JournalId 为空或无对应 Issues），则兜底为全局第一个 Issue（仍优先 SPECIAL）
+DECLARE @GlobalFirstIssueId INT =
+(
+    SELECT TOP 1 IssueId
+    FROM dbo.Issues
+    ORDER BY CASE WHEN IssueType = 'SPECIAL' THEN 0 ELSE 1 END, IssueId
+);
+IF @GlobalFirstIssueId IS NOT NULL
+BEGIN
+    UPDATE dbo.Manuscripts
+    SET IssueId = @GlobalFirstIssueId
+    WHERE IssueId IS NULL;
+END
+GO
+
+-- 3) 外键与索引（兼容：多次执行不报错）
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Manuscripts_Issues_IssueId')
+BEGIN
+    ALTER TABLE dbo.Manuscripts WITH CHECK
+    ADD CONSTRAINT FK_Manuscripts_Issues_IssueId FOREIGN KEY (IssueId)
+    REFERENCES dbo.Issues (IssueId);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Manuscripts_IssueId' AND object_id = OBJECT_ID('dbo.Manuscripts')
+)
+BEGIN
+    CREATE INDEX IX_Manuscripts_IssueId ON dbo.Manuscripts(IssueId);
+END
+GO
+
