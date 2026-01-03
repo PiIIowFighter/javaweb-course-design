@@ -48,6 +48,11 @@
                     <span>文章与专刊</span>
                 </a>
 
+                <a href="${pageContext.request.contextPath}/editorial-board">
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                    <span>编委会</span>
+                </a>
+
                 <a href="${pageContext.request.contextPath}/guide">
                     <i class="bi bi-book" aria-hidden="true"></i>
                     <span>用户指南</span>
@@ -70,10 +75,6 @@
                         <c:set var="currentRoleCode"
                                value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
 
-                        <a href="${pageContext.request.contextPath}/dashboard">
-                            <i class="bi bi-grid" aria-hidden="true"></i>
-                            <span>工作台</span>
-                        </a>
 
                         <c:if test="${currentRoleCode == 'AUTHOR'}">
                             <a class="nav-cta" href="${pageContext.request.contextPath}/manuscripts/submit">
@@ -87,10 +88,6 @@
                             <span>个人信息</span>
                         </a>
 
-                        <a href="${pageContext.request.contextPath}/notifications"
-                           class="nav-icon-link" title="通知中心">
-                            <i class="bi bi-bell" aria-hidden="true"></i>
-                        </a>
 
                         <a href="${pageContext.request.contextPath}/auth/logout">
                             <i class="bi bi-box-arrow-right" aria-hidden="true"></i>

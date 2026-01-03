@@ -33,67 +33,14 @@
             <span class="badge">Timeline: <c:out value="${journal.timeline}"/></span>
         </c:if>
         <span class="grow"></span>
-        <a class="btn-primary" style="text-decoration:none;" href="${ctx}/about">
+        <a class="btn-primary" style="text-decoration:none;" href="${ctx}/about/aims">
             <i class="bi bi-info-circle" aria-hidden="true"></i>
             查看期刊介绍
         </a>
     </div>
 </div>
 
-<!-- 首页结构导航（按需求图中的 4 个模块） -->
-<div class="card home-menu" style="margin-top: var(--space-6);">
-    <div class="home-menu-row">
-        <div class="home-menu-title">
-            <a style="text-decoration:none;" href="${ctx}/publish">论文发表</a>
-        </div>
-        <div class="home-menu-desc">
-            下面提供三个子菜单链接，包括：
-            <a class="home-menu-link-accent" href="${ctx}/manuscripts/submit">Submit your article</a>，
-            <a class="home-menu-link" href="${ctx}/guide">Guide for authors</a>，
-            <a class="home-menu-link" href="${ctx}/calls">Call for papers</a>。
-        </div>
-    </div>
-
-    <div class="home-menu-row">
-        <div class="home-menu-title">
-            <a style="text-decoration:none;" href="${ctx}/issues?type=latest">文章与专刊</a>
-        </div>
-        <div class="home-menu-desc">
-            在期刊上已发表的期刊列表和链接，具体分为
-            <a class="home-menu-link" href="${ctx}/issues?type=latest">Latest Issues</a>、
-            <a class="home-menu-link" href="${ctx}/issues?type=special">Special Issues</a>、
-            <a class="home-menu-link" href="${ctx}/issues?type=all">All Issues</a>
-            三种。进入每个 Issue 后以列表形式展示所包含的文章（当前为占位实现）。
-        </div>
-    </div>
-
-    <div class="home-menu-row">
-        <div class="home-menu-title">
-            <a style="text-decoration:none;" href="${ctx}/guide">用户指南</a>
-        </div>
-        <div class="home-menu-desc">
-            为用户提供详细的期刊介绍和投稿指南，应基本包括
-            <a class="home-menu-link" href="${ctx}/about/aims">About the journal</a>、
-            <a class="home-menu-link" href="${ctx}/about/policies">Ethics and policies</a>、
-            <a class="home-menu-link" href="${ctx}/guide/writing">Writing</a>、
-            <a class="home-menu-link" href="${ctx}/guide/formatting">Writing and formatting</a>
-            等内容（Writing/Formatting 当前为占位页）。
-        </div>
-    </div>
-
-    <div class="home-menu-row" style="border-bottom: 0;">
-        <div class="home-menu-title">
-            <a style="text-decoration:none;" href="${ctx}/auth/login">系统登录/提交论文</a>
-        </div>
-        <div class="home-menu-desc">
-            提供系统登录功能，区分作者、审稿人、编辑、管理员等不同角色。
-            <a class="home-menu-link" href="${ctx}/auth/login">登录</a> /
-            <a class="home-menu-link" href="${ctx}/auth/register">注册</a>，
-            登录后可进入 <a class="home-menu-link" href="${ctx}/dashboard">工作台</a>，并进行
-            <a class="home-menu-link-accent" href="${ctx}/manuscripts/submit">提交论文</a>。
-        </div>
-    </div>
-</div>
+<!-- 首页中间的“结构导航说明”模块按需求删除（避免占位文案影响观感） -->
 
 <div class="grid grid-2" style="margin-top: var(--space-6);">
 
@@ -104,7 +51,7 @@
                 <h2 class="card-title">期刊编委会</h2>
                 <p class="card-subtitle">编委照片（占位）与简介来自 dbo.EditorialBoard + dbo.Users</p>
             </div>
-            <a href="${ctx}/about" style="white-space:nowrap; text-decoration:none;">
+            <a href="${ctx}/editorial-board" style="white-space:nowrap; text-decoration:none;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
@@ -116,7 +63,12 @@
             <ul class="list">
                 <c:forEach var="m" items="${boardMembers}" begin="0" end="5">
                     <li class="list-item">
-                        <span class="avatar" aria-hidden="true"><i class="bi bi-person"></i></span>
+                        <!-- 公开头像：根据 userId 读取 /uploads/avatars 下的头像文件，找不到则返回默认头像 -->
+                        <span class="avatar" aria-hidden="true" style="overflow:hidden;">
+                            <img src="${ctx}/public/avatar?userId=${m.userId}"
+                                 alt="avatar"
+                                 style="width:100%;height:100%;object-fit:cover;display:block;"/>
+                        </span>
                         <div>
                             <div class="list-title">
                                 <c:out value="${m.fullName}"/>
@@ -128,11 +80,16 @@
                                 <c:out value="${m.affiliation}"/>
                                 <c:if test="${not empty m.section}"> · <c:out value="${m.section}"/></c:if>
                             </div>
+                            <c:if test="${not empty m.bio}">
+                                <div class="list-meta" style="margin-top:4px;">
+                                    <c:out value="${fn:length(m.bio) > 80 ? fn:substring(m.bio, 0, 80) : m.bio}"/>
+                                    <c:if test="${fn:length(m.bio) > 80}">...</c:if>
+                                </div>
+                            </c:if>
                         </div>
                     </li>
                 </c:forEach>
             </ul>
-            <small>说明：当前数据库结构未包含“照片/头像字段”，因此首页使用通用头像图标占位。</small>
         </c:if>
     </div>
 
@@ -238,19 +195,54 @@
         <div class="card-header">
             <div>
                 <h2 class="card-title">征稿通知</h2>
-                <p class="card-subtitle">Call for papers · Special issues（当前为占位）</p>
+                <p class="card-subtitle">Call for papers（来自 dbo.CallForPapers 已发布数据）</p>
             </div>
             <a href="${ctx}/calls" style="white-space:nowrap; text-decoration:none;">
-                查看详情 <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
 
-        <p>
-            当前数据库与后端尚未实现 “Call for papers / Special issue” 管理。
-            可以后续新增表（如 dbo.SpecialIssues / dbo.CallForPapers）以及管理页面后再接入。
-        </p>
+        <c:if test="${empty callForPapers}">
+            <p>暂无已发布征稿通知。你可以在【超级管理员 → 期刊管理 → 征稿通知】里新增并勾选发布。</p>
+        </c:if>
 
-        <div class="actions">
+        <c:if test="${not empty callForPapers}">
+            <ul class="list">
+                <c:forEach var="c" items="${callForPapers}" begin="0" end="5">
+                    <li class="list-item">
+                        <span class="avatar" aria-hidden="true" style="overflow:hidden;">
+                            <c:choose>
+                                <c:when test="${not empty c.coverImagePath}">
+                                    <img src="${ctx}/journal/asset?type=call_cover&id=${c.callId}"
+                                         alt="cover"
+                                         style="width:100%;height:100%;object-fit:cover;display:block;"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <i class="bi bi-megaphone" aria-hidden="true"></i>
+                                </c:otherwise>
+                            </c:choose>
+                        </span>
+
+                        <div>
+                            <div class="list-title">
+                                <a style="text-decoration:none;" href="${ctx}/calls?view=detail&id=${c.callId}">
+                                    <c:out value="${c.title}"/>
+                                </a>
+                            </div>
+                            <div class="list-meta">
+                                <c:if test="${c.deadline != null}">截稿：<c:out value="${c.deadline}"/></c:if>
+                                <c:if test="${c.endDate != null && c.deadline == null}">截止：<c:out value="${c.endDate}"/></c:if>
+                                <c:if test="${not empty c.attachmentPath}">
+                                    · <a style="text-decoration:none;" href="${ctx}/journal/asset?type=call_attachment&id=${c.callId}">附件</a>
+                                </c:if>
+                            </div>
+                        </div>
+                    </li>
+                </c:forEach>
+            </ul>
+        </c:if>
+
+        <div class="actions" style="margin-top: var(--space-3);">
             <a class="btn-primary" style="text-decoration:none;" href="${ctx}/manuscripts/submit">
                 <i class="bi bi-upload" aria-hidden="true"></i> Submit your article
             </a>

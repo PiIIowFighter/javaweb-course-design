@@ -52,6 +52,10 @@ public class ManuscriptServlet extends HttpServlet {
     /** 与 ProfileServlet 保持一致的上传根目录 */
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
+
+    // ====== 文章与专刊（Issue）关联 ======
+    private final IssueDAO issueDAO = new IssueDAO();
+    private final IssueManuscriptDAO issueManuscriptDAO = new IssueManuscriptDAO();
     /** 与 ProfileServlet 保持一致的上传根目录 */
     private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
@@ -134,11 +138,34 @@ public class ManuscriptServlet extends HttpServlet {
         List<Journal> journals = journalDAO.findAll();
         req.setAttribute("journals", journals);
         req.setAttribute("manuscript", draft);
+
+        // 专刊（Issue）下拉：按当前稿件期刊加载已发布 SPECIAL（若无则为空）
+        Integer journalId = null;
+        if (draft != null && draft.getJournalId() != null) {
+            journalId = draft.getJournalId();
+        } else if (journals != null && !journals.isEmpty() && journals.get(0) != null) {
+            journalId = journals.get(0).getJournalId();
+        }
+        if (journalId != null) {
+            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(journalId, 0));
+        } else {
+            req.setAttribute("specialIssues", java.util.Collections.emptyList());
+        }
+
         if (draft != null) {
             req.setAttribute("authors", authorDAO.findByManuscriptId(draft.getManuscriptId()));
             req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(draft.getManuscriptId()));
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(draft.getManuscriptId()));
+
+            // 回显已关联的 Issue（如果有）
+            Issue linked = issueDAO.findLinkedIssueByManuscriptId(draft.getManuscriptId());
+            if (linked != null) {
+                draft.setIssueId(linked.getIssueId());
+                draft.setIssueTitle(linked.getTitle());
+                req.setAttribute("linkedIssue", linked);
+            }
         }
+
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
     }
 
@@ -170,7 +197,7 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
         if (!Objects.equals(m.getSubmitterId(), current.getUserId())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只能修改自己投稿的稿件");
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只能修改自己的稿件");
             return;
         }
         if (!("RETURNED".equals(m.getCurrentStatus()) || "REVISION".equals(m.getCurrentStatus()))) {
@@ -182,6 +209,17 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("journals", journals);
         if (m.getJournalId() != null) {
             req.setAttribute("journal", journalDAO.findById(m.getJournalId()));
+            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(m.getJournalId(), 0));
+        } else {
+            req.setAttribute("specialIssues", java.util.Collections.emptyList());
+        }
+
+        // 回显已关联 Issue
+        Issue linked = issueDAO.findLinkedIssueByManuscriptId(manuscriptId);
+        if (linked != null) {
+            m.setIssueId(linked.getIssueId());
+            m.setIssueTitle(linked.getTitle());
+            req.setAttribute("linkedIssue", linked);
         }
 
         req.setAttribute("manuscript", m);
@@ -724,6 +762,13 @@ public class ManuscriptServlet extends HttpServlet {
                     manuscriptDAO.updateMetadataAndStatus(conn, m, isFinalSubmit ? "SUBMITTED" : "DRAFT", isFinalSubmit);
                 }
 
+                // 保存专刊关联（IssueManuscripts）：未选择则默认关联该期刊的“第一个已发布专刊（SPECIAL 优先）”
+                Integer issueId = m.getIssueId();
+                if (issueId == null && m.getJournalId() != null) {
+                    issueId = issueDAO.findDefaultPublishedIssueId(conn, m.getJournalId());
+                }
+                issueManuscriptDAO.setIssueForManuscript(conn, manuscriptId, issueId);
+
                 // 作者 / 推荐审稿人：每次以“全量覆盖”方式保存
                 authorDAO.deleteByManuscriptId(conn, manuscriptId);
                 authorDAO.insertBatch(conn, manuscriptId, authors);
@@ -899,6 +944,13 @@ public class ManuscriptServlet extends HttpServlet {
                 conn.setAutoCommit(false);
 
                 manuscriptDAO.updateAndResubmit(conn, toUpdate, fromStatus);
+
+                // 更新专刊关联（IssueManuscripts）
+                Integer issueId = toUpdate.getIssueId();
+                if (issueId == null && toUpdate.getJournalId() != null) {
+                    issueId = issueDAO.findDefaultPublishedIssueId(conn, toUpdate.getJournalId());
+                }
+                issueManuscriptDAO.setIssueForManuscript(conn, manuscriptId, issueId);
 
                 authorDAO.deleteByManuscriptId(conn, manuscriptId);
                 authorDAO.insertBatch(conn, manuscriptId, authors);

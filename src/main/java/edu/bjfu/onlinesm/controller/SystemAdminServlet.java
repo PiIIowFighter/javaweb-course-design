@@ -93,6 +93,7 @@ public class SystemAdminServlet extends HttpServlet {
         java.util.List<String> columnNames = new java.util.ArrayList<>();
         java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
         java.util.List<String> pkColumns = new java.util.ArrayList<>();
+        java.util.List<String> autoIncColumns = new java.util.ArrayList<>();
         String message = null;
         String error = null;
 
@@ -115,61 +116,129 @@ public class SystemAdminServlet extends HttpServlet {
                     }
                 }
 
-                // 处理更新操作（POST + action=updateRow）
+                
+                // 处理维护操作（POST + action=updateRow/deleteRow/insertRow）
                 if ("POST".equalsIgnoreCase(req.getMethod())) {
                     String action = req.getParameter("action");
-                    if ("updateRow".equals(action)) {
-                        selectedTable = req.getParameter("table");
-                        if (selectedTable != null && tableNames.contains(selectedTable)) {
-                            // 获取主键列
-                            try (java.sql.ResultSet pkRs = meta.getPrimaryKeys(catalog, schema, selectedTable)) {
-                                while (pkRs.next()) {
-                                    String col = pkRs.getString("COLUMN_NAME");
-                                    if (col != null && !col.trim().isEmpty()) {
-                                        pkColumns.add(col);
-                                    }
-                                }
-                            }
-                            // 若没有配置主键，则退化为使用第一列作为“主键”
-                            if (pkColumns.isEmpty()) {
-                                try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
-                                    if (colRs.next()) {
-                                        String firstCol = colRs.getString("COLUMN_NAME");
-                                        if (firstCol != null && !firstCol.trim().isEmpty()) {
-                                            pkColumns.add(firstCol);
-                                        }
-                                    }
-                                }
-                            }
+                    selectedTable = req.getParameter("table");
 
-                            // 获取所有列名，用于构造 UPDATE 语句
+                    if (action != null && (selectedTable == null || !tableNames.contains(selectedTable))) {
+                        error = "非法的表名或表不存在。";
+                    } else if (action != null) {
+
+                        // 获取主键列
+                        pkColumns.clear();
+                        try (java.sql.ResultSet pkRs = meta.getPrimaryKeys(catalog, schema, selectedTable)) {
+                            while (pkRs.next()) {
+                                String col = pkRs.getString("COLUMN_NAME");
+                                if (col != null && !col.trim().isEmpty()) {
+                                    pkColumns.add(col);
+                                }
+                            }
+                        }
+                        // 若没有配置主键，则退化为使用第一列作为“主键”
+                        if (pkColumns.isEmpty()) {
                             try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
-                                while (colRs.next()) {
-                                    String col = colRs.getString("COLUMN_NAME");
-                                    if (col != null && !col.trim().isEmpty()) {
-                                        columnNames.add(col);
+                                if (colRs.next()) {
+                                    String firstCol = colRs.getString("COLUMN_NAME");
+                                    if (firstCol != null && !firstCol.trim().isEmpty()) {
+                                        pkColumns.add(firstCol);
                                     }
                                 }
                             }
+                        }
 
-                            if (!columnNames.isEmpty() && !pkColumns.isEmpty()) {
+                        // 读取列信息：列名 + 是否自增（IDENTITY）
+                        columnNames.clear();
+                        java.util.Set<String> autoIncSet = new java.util.HashSet<>();
+                        try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
+                            while (colRs.next()) {
+                                String col = colRs.getString("COLUMN_NAME");
+                                if (col == null || col.trim().isEmpty()) continue;
+                                columnNames.add(col);
+
+                                String isAuto = null;
+                                try {
+                                    isAuto = colRs.getString("IS_AUTOINCREMENT");
+                                } catch (Exception ignore) {
+                                    // 某些驱动可能不支持该字段，忽略即可
+                                }
+                                if (isAuto != null && "YES".equalsIgnoreCase(isAuto)) {
+                                    autoIncSet.add(col);
+                                }
+                            }
+                        }
+
+                        if (!pkColumns.isEmpty()) {
+                            if ("updateRow".equals(action)) {
+                                // UPDATE：不允许更新主键列与自增列（否则会触发 SQL Server 的 identity 更新错误）
+                                java.util.List<String> updatableCols = new java.util.ArrayList<>();
+                                for (String col : columnNames) {
+                                    if (pkColumns.contains(col)) continue;
+                                    if (autoIncSet.contains(col)) continue;
+                                    updatableCols.add(col);
+                                }
+
+                                if (updatableCols.isEmpty()) {
+                                    message = "该表没有可更新字段（主键/自增列不可直接更新）。";
+                                } else {
+                                    StringBuilder sql = new StringBuilder();
+                                    sql.append("UPDATE ").append("[").append(selectedTable).append("]").append(" SET ");
+                                    java.util.List<Object> params = new java.util.ArrayList<>();
+
+                                    boolean first = true;
+                                    for (String col : updatableCols) {
+                                        String paramName = "col_" + col;
+                                        String value = req.getParameter(paramName);
+
+                                        if (!first) {
+                                            sql.append(", ");
+                                        }
+                                        sql.append("[").append(col).append("] = ?");
+
+                                        // 空串视为 NULL（便于清空字段；如需保留空串，可自行调整）
+                                        if (value != null && value.trim().isEmpty()) {
+                                            value = null;
+                                        }
+                                        params.add(value);
+                                        first = false;
+                                    }
+
+                                    sql.append(" WHERE ");
+                                    boolean firstPk = true;
+                                    for (String pk : pkColumns) {
+                                        String pkParamName = "pk_" + pk;
+                                        String pkVal = req.getParameter(pkParamName);
+                                        if (!firstPk) {
+                                            sql.append(" AND ");
+                                        }
+                                        sql.append("[").append(pk).append("] = ?");
+                                        params.add(pkVal);
+                                        firstPk = false;
+                                    }
+
+                                    try (java.sql.PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                                        for (int i = 0; i < params.size(); i++) {
+                                            ps.setObject(i + 1, params.get(i));
+                                        }
+                                        int updated = ps.executeUpdate();
+                                        message = "已更新 " + updated + " 行记录（表 " + selectedTable + "）。";
+                                        edu.bjfu.onlinesm.util.OperationLogger.log(
+                                                req,
+                                                "SYSTEM_DB",
+                                                "UPDATE_ROW",
+                                                "更新表 " + selectedTable + " 中的一行数据"
+                                        );
+                                    } catch (SQLException e) {
+                                        error = "更新失败： " + e.getMessage();
+                                    }
+                                }
+                            } else if ("deleteRow".equals(action)) {
+                                // DELETE：按主键删除
                                 StringBuilder sql = new StringBuilder();
-                                sql.append("UPDATE ").append("[").append(selectedTable).append("]").append(" SET ");
+                                sql.append("DELETE FROM ").append("[").append(selectedTable).append("]").append(" WHERE ");
                                 java.util.List<Object> params = new java.util.ArrayList<>();
 
-                                boolean first = true;
-                                for (String col : columnNames) {
-                                    String paramName = "col_" + col;
-                                    String value = req.getParameter(paramName);
-                                    if (!first) {
-                                        sql.append(", ");
-                                    }
-                                    sql.append("[").append(col).append("] = ?");
-                                    params.add(value);
-                                    first = false;
-                                }
-
-                                sql.append(" WHERE ");
                                 boolean firstPk = true;
                                 for (String pk : pkColumns) {
                                     String pkParamName = "pk_" + pk;
@@ -186,38 +255,103 @@ public class SystemAdminServlet extends HttpServlet {
                                     for (int i = 0; i < params.size(); i++) {
                                         ps.setObject(i + 1, params.get(i));
                                     }
-                                    int updated = ps.executeUpdate();
-                                    message = "已更新 " + updated + " 行记录（表 " + selectedTable + "）。";
+                                    int deleted = ps.executeUpdate();
+                                    message = "已删除 " + deleted + " 行记录（表 " + selectedTable + "）。";
                                     edu.bjfu.onlinesm.util.OperationLogger.log(
                                             req,
                                             "SYSTEM_DB",
-                                            "UPDATE_ROW",
-                                            "更新表 " + selectedTable + " 中的一行数据"
+                                            "DELETE_ROW",
+                                            "删除表 " + selectedTable + " 中的一行数据"
                                     );
+                                } catch (SQLException e) {
+                                    error = "删除失败： " + e.getMessage();
                                 }
-                            } else {
-                                error = "未能识别表 " + selectedTable + " 的主键或列信息，无法执行更新。";
+                            } else if ("insertRow".equals(action)) {
+                                // INSERT：跳过自增列（IDENTITY）
+                                java.util.List<String> insertCols = new java.util.ArrayList<>();
+                                for (String col : columnNames) {
+                                    if (autoIncSet.contains(col)) continue;
+                                    insertCols.add(col);
+                                }
+
+                                if (insertCols.isEmpty()) {
+                                    error = "该表不存在可插入的列（可能全部为自增/生成列）。";
+                                } else {
+                                    StringBuilder sql = new StringBuilder();
+                                    sql.append("INSERT INTO ").append("[").append(selectedTable).append("] (");
+                                    boolean first = true;
+                                    for (String col : insertCols) {
+                                        if (!first) sql.append(", ");
+                                        sql.append("[").append(col).append("]");
+                                        first = false;
+                                    }
+                                    sql.append(") VALUES (");
+                                    for (int i = 0; i < insertCols.size(); i++) {
+                                        if (i > 0) sql.append(", ");
+                                        sql.append("?");
+                                    }
+                                    sql.append(")");
+
+                                    java.util.List<Object> params = new java.util.ArrayList<>();
+                                    for (String col : insertCols) {
+                                        String paramName = "new_" + col;
+                                        String value = req.getParameter(paramName);
+                                        if (value != null && value.trim().isEmpty()) {
+                                            value = null;
+                                        }
+                                        params.add(value);
+                                    }
+
+                                    try (java.sql.PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                                        for (int i = 0; i < params.size(); i++) {
+                                            ps.setObject(i + 1, params.get(i));
+                                        }
+                                        int inserted = ps.executeUpdate();
+                                        message = "已新增 " + inserted + " 行记录（表 " + selectedTable + "）。";
+                                        edu.bjfu.onlinesm.util.OperationLogger.log(
+                                                req,
+                                                "SYSTEM_DB",
+                                                "INSERT_ROW",
+                                                "向表 " + selectedTable + " 新增一行数据"
+                                        );
+                                    } catch (SQLException e) {
+                                        error = "新增失败： " + e.getMessage();
+                                    }
+                                }
                             }
                         } else {
-                            error = "非法的表名或表不存在。";
+                            error = "未能识别表 " + selectedTable + " 的主键或列信息，无法执行操作。";
                         }
                     }
                 }
 
-                // 重新读取选中表的数据（GET 或 更新之后）
+// 重新读取选中表的数据（GET 或 更新之后）
                 if (selectedTable != null && tableNames.contains(selectedTable)) {
                     // 列名
+                    
                     columnNames.clear();
+                    autoIncColumns.clear();
                     try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
                         while (colRs.next()) {
                             String col = colRs.getString("COLUMN_NAME");
-                            if (col != null && !col.trim().isEmpty()) {
-                                columnNames.add(col);
+                            if (col == null || col.trim().isEmpty()) {
+                                continue;
+                            }
+                            columnNames.add(col);
+
+                            String isAuto = null;
+                            try {
+                                isAuto = colRs.getString("IS_AUTOINCREMENT");
+                            } catch (Exception ignore) {
+                                // ignore
+                            }
+                            if (isAuto != null && "YES".equalsIgnoreCase(isAuto)) {
+                                autoIncColumns.add(col);
                             }
                         }
                     }
 
-                    // 主键列
+// 主键列
                     pkColumns.clear();
                     try (java.sql.ResultSet pkRs = meta.getPrimaryKeys(catalog, schema, selectedTable)) {
                         while (pkRs.next()) {
@@ -256,6 +390,7 @@ public class SystemAdminServlet extends HttpServlet {
         req.setAttribute("columnNames", columnNames);
         req.setAttribute("rows", rows);
         req.setAttribute("pkColumns", pkColumns);
+        req.setAttribute("autoIncColumns", autoIncColumns);
         req.setAttribute("message", message);
         req.setAttribute("error", error);
 

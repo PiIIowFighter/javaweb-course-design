@@ -72,14 +72,20 @@ public class ManuscriptDAO {
      */
     public Manuscript insertWithStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
         String sql = "INSERT INTO dbo.Manuscripts " +
-                "(JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
-                "VALUES (?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "SYSUTCDATETIME()" : "NULL") + ")";
+                "(JournalId, IssueId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
+                "VALUES (?,?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "SYSUTCDATETIME()" : "NULL") + ")";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             int idx = 1;
             if (m.getJournalId() != null) {
                 ps.setInt(idx++, m.getJournalId());
+            } else {
+                ps.setNull(idx++, Types.INTEGER);
+            }
+
+            if (m.getIssueId() != null) {
+                ps.setInt(idx++, m.getIssueId());
             } else {
                 ps.setNull(idx++, Types.INTEGER);
             }
@@ -130,7 +136,7 @@ public class ManuscriptDAO {
         }
         
         String sql = "UPDATE dbo.Manuscripts SET " +
-                "JournalId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
+                "JournalId = ?, IssueId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
                 "Status = ?, " +
                 (setSubmitTime ? "SubmitTime = ISNULL(SubmitTime, SYSUTCDATETIME()), " : "") +
                 "LastStatusTime = SYSUTCDATETIME() " +
@@ -143,6 +149,12 @@ public class ManuscriptDAO {
             } else {
                 ps.setNull(idx++, Types.INTEGER);
             }
+            if (m.getIssueId() != null) {
+                ps.setInt(idx++, m.getIssueId());
+            } else {
+                ps.setNull(idx++, Types.INTEGER);
+            }
+
             ps.setString(idx++, m.getTitle());
             ps.setString(idx++, m.getAbstractText());
             ps.setString(idx++, m.getKeywords());
@@ -177,8 +189,12 @@ public class ManuscriptDAO {
      * 查询指定作者的所有稿件。
      */
     public List<Manuscript> findBySubmitter(int submitterId) throws SQLException {
-        String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
-                     "FROM dbo.Manuscripts WHERE SubmitterId = ? ORDER BY ManuscriptId DESC";
+        String sql = "SELECT m.ManuscriptId, m.JournalId, m.IssueId, i.Title AS IssueTitle, " +
+                     "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
+                     "m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
+                     "FROM dbo.Manuscripts m " +
+                     "LEFT JOIN dbo.Issues i ON i.IssueId = m.IssueId " +
+                     "WHERE m.SubmitterId = ? ORDER BY m.ManuscriptId DESC";
 
         List<Manuscript> list = new ArrayList<>();
         try (Connection conn = DbUtil.getConnection();
@@ -197,8 +213,12 @@ public class ManuscriptDAO {
      * 按主键查询单个稿件，供详情页使用。
      */
     public Manuscript findById(int manuscriptId) throws SQLException {
-        String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime " +
-                     "FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+        String sql = "SELECT m.ManuscriptId, m.JournalId, m.IssueId, i.Title AS IssueTitle, " +
+                     "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
+                     "m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
+                     "FROM dbo.Manuscripts m " +
+                     "LEFT JOIN dbo.Issues i ON i.IssueId = m.IssueId " +
+                     "WHERE m.ManuscriptId = ?";
 
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1050,6 +1070,19 @@ public class ManuscriptDAO {
         int journalId = rs.getInt("JournalId");
         if (!rs.wasNull()) {
             m.setJournalId(journalId);
+        }
+
+        // 专刊（可选列/别名）：IssueId / IssueTitle
+        try {
+            if (hasColumn(rs, "IssueId")) {
+                Object v = rs.getObject("IssueId");
+                if (v != null) m.setIssueId(((Number) v).intValue());
+            }
+            if (hasColumn(rs, "IssueTitle")) {
+                m.setIssueTitle(rs.getString("IssueTitle"));
+            }
+        } catch (SQLException ignored) {
+            // ignore
         }
         m.setSubmitterId(rs.getInt("SubmitterId"));
         m.setTitle(rs.getString("Title"));

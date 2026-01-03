@@ -89,9 +89,10 @@ public class IssueDAO {
 
     public List<Manuscript> listIssueArticles(int issueId) throws SQLException {
         // 关联表 IssueManuscripts + Manuscripts
+        // 注意：dbo.Manuscripts 在本项目中并不存在 ResearchTopic / ManuscriptFilePath / CoverLetterPath 等列，
+        // 这里仅选择实际存在并页面会用到的字段，避免“列名无效”导致页面 500。
         String sql = "SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, " +
-                "m.ResearchTopic, m.FundingInfo, m.ManuscriptFilePath, m.CoverLetterPath, m.Status, m.SubmitTime, " +
-                "m.Decision, m.FinalDecisionTime " +
+                "m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
                 "FROM dbo.IssueManuscripts im " +
                 "JOIN dbo.Manuscripts m ON m.ManuscriptId = im.ManuscriptId " +
                 "WHERE im.IssueId = ? " +
@@ -112,7 +113,9 @@ public class IssueDAO {
                     m.setAbstractText(rs.getString("Abstract"));
                     m.setKeywords(rs.getString("Keywords"));
                     m.setSubjectArea(rs.getString("SubjectArea"));
-                    m.setFundingInfo(rs.getString("FundingInfo"));                    m.setCurrentStatus(rs.getString("Status"));
+                    m.setFundingInfo(rs.getString("FundingInfo"));
+                    m.setAuthorList(rs.getString("AuthorList"));
+                    m.setCurrentStatus(rs.getString("Status"));
 
                     Timestamp st = rs.getTimestamp("SubmitTime");
                     if (st != null) m.setSubmitTime(st.toLocalDateTime());
@@ -129,7 +132,8 @@ public class IssueDAO {
         return list;
     }
 
-    // -------------------- 后台维护（admin） --------------------
+
+// -------------------- 后台维护（admin） --------------------
 
     public List<Issue> listAllByJournal(int journalId) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
@@ -299,4 +303,52 @@ public class IssueDAO {
         }
         return false;
     }
+
+    /**
+     * 根据稿件ID查询其关联的专刊/卷期（dbo.IssueManuscripts -> dbo.Issues），取第一个关联。
+     */
+    public Issue findLinkedIssueByManuscriptId(int manuscriptId) throws SQLException {
+        String sql = "SELECT TOP 1 i.IssueId, i.JournalId, i.IssueType, i.Title, i.Year, i.PublishDate " +
+                "FROM dbo.IssueManuscripts im " +
+                "JOIN dbo.Issues i ON i.IssueId = im.IssueId " +
+                "WHERE im.ManuscriptId = ? " +
+                "ORDER BY im.OrderNo ASC, im.AddedAt DESC, i.IssueId ASC";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, manuscriptId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Issue i = new Issue();
+                    i.setIssueId(rs.getInt("IssueId"));
+                    i.setJournalId(rs.getInt("JournalId"));
+                    i.setIssueType(rs.getString("IssueType"));
+                    i.setTitle(rs.getString("Title"));
+                    int y = rs.getInt("Year");
+                    if (!rs.wasNull()) i.setYear(y);
+                    Date d = rs.getDate("PublishDate");
+                    if (d != null) i.setPublishDate(d.toLocalDate());
+                    return i;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 在事务连接内获取某期刊的默认 IssueId：
+     * 优先取已发布 SPECIAL；若不存在则取任一已发布 Issue；仍不存在则返回 null。
+     */
+    public Integer findDefaultPublishedIssueId(Connection conn, int journalId) throws SQLException {
+        String sql = "SELECT TOP 1 IssueId FROM dbo.Issues " +
+                "WHERE JournalId=? AND IsPublished=1 " +
+                "ORDER BY CASE WHEN IssueType=N'SPECIAL' THEN 0 ELSE 1 END, IssueId ASC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, journalId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return null;
+    }
+
 }

@@ -23,6 +23,17 @@
                 <p><strong>稿件编号：</strong><c:out value="${manuscript.manuscriptId}"/></p>
                 <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
                 <p><strong>期刊ID：</strong><c:out value="${manuscript.journalId}"/></p>
+                <p><strong>所属专刊：</strong>
+                    <c:choose>
+                        <c:when test="${not empty linkedIssue}">
+                            <a href="${ctx}/issues?view=detail&id=${linkedIssue.issueId}"><c:out value="${linkedIssue.title}"/></a>
+                        </c:when>
+                        <c:when test="${not empty manuscript.issueTitle}">
+                            <c:out value="${manuscript.issueTitle}"/>
+                        </c:when>
+                        <c:otherwise>（默认 / 未关联）</c:otherwise>
+                    </c:choose>
+                </p>
                 <p><strong>当前状态：</strong><c:out value="${manuscript.currentStatus}"/></p>
                 <p><strong>提交时间：</strong><c:out value="${manuscript.submitTime}"/></p>
                 <p><strong>关键词：</strong><c:out value="${manuscript.keywords}"/></p>

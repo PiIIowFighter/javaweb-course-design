@@ -24,7 +24,27 @@
             </div>
         </div>
 
-        <h3>内容</h3>
+	        <c:if test="${not empty call.coverImagePath}">
+	            <div style="border-radius: 16px; overflow:hidden; border: 1px solid rgba(0,0,0,.08);">
+	                <img src="${ctx}/journal/asset?type=call_cover&id=${call.callId}"
+	                     alt="cover"
+	                     style="width:100%; max-height: 320px; object-fit: cover; display:block;"/>
+	            </div>
+	        </c:if>
+
+	        <c:if test="${not empty call.attachmentPath}">
+	            <div class="notice">
+	                <i class="bi bi-paperclip" aria-hidden="true"></i>
+	                <div>
+	                    附件：
+	                    <a style="text-decoration:none;" href="${ctx}/journal/asset?type=call_attachment&id=${call.callId}">
+	                        点击下载
+	                    </a>
+	                </div>
+	            </div>
+	        </c:if>
+
+	        <h3>内容</h3>
         <c:choose>
             <c:when test="${not empty call.content}">
                 <!-- 允许存 HTML：这里用 out 防注入；如确需渲染 HTML，可改为 c:out escapeXml=false 并自行保证安全 -->

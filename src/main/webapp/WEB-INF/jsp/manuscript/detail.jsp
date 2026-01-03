@@ -46,6 +46,24 @@
             <td><c:out value="${manuscript.journalId}"/></td>
         </tr>
         <tr>
+            <th>所属专刊</th>
+            <td>
+                <c:choose>
+                    <c:when test="${not empty linkedIssue}">
+                        <a href="${pageContext.request.contextPath}/issues?view=detail&id=${linkedIssue.issueId}">
+                            <c:out value="${linkedIssue.title}"/>
+                        </a>
+                    </c:when>
+                    <c:when test="${not empty manuscript.issueTitle}">
+                        <c:out value="${manuscript.issueTitle}"/>
+                    </c:when>
+                    <c:otherwise>
+                        （默认 / 未关联）
+                    </c:otherwise>
+                </c:choose>
+            </td>
+        </tr>
+        <tr>
             <th>研究主题</th>
             <td><c:out value="${manuscript.subjectArea}"/></td>
         </tr>

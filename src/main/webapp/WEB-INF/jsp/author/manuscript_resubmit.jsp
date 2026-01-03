@@ -34,6 +34,20 @@
             </div>
 
             <div class="form-row">
+                <label for="issueId">选择专刊（可选）</label>
+                <select id="issueId" name="issueId">
+                    <option value="">（不选择 / 默认）</option>
+                    <c:forEach var="iss" items="${specialIssues}">
+                        <option value="${iss.issueId}"
+                                <c:if test="${not empty manuscript && manuscript.issueId == iss.issueId}">selected</c:if>>
+                            <c:out value="${iss.title}"/>
+                        </option>
+                    </c:forEach>
+                </select>
+                <div class="help">未选择则系统默认关联第一个已发布专刊（SPECIAL 优先）。</div>
+            </div>
+
+            <div class="form-row">
                 <label for="title">标题</label>
                 <input id="title" type="text" name="title"
                        value="${manuscript.title}"

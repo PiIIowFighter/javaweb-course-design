@@ -103,9 +103,13 @@
                         <div class="grid grid-2">
                             <c:forEach var="m" items="${boardMembers}">
                                 <div class="card mini">
-                                    <div class="media">
-                                        <div class="avatar" aria-hidden="true"><i class="bi bi-person-circle"></i></div>
-                                        <div>
+								<div class="media">
+									<div class="avatar" aria-hidden="true" style="overflow:hidden;">
+										<img src="${ctx}/public/avatar?userId=${m.userId}"
+										     alt="avatar"
+										     style="width:100%;height:100%;object-fit:cover;display:block;"/>
+									</div>
+									<div>
                                             <div><b><c:out value="${m.position}"/></b></div>
                                             <div class="muted"><c:out value="${m.fullName}"/></div>
                                             <c:if test="${not empty m.affiliation}">

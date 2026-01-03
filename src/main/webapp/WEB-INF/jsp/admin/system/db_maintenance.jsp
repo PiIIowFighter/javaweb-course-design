@@ -81,6 +81,49 @@
             提示：每一行都是一个独立的表单，修改需要的字段后点击“保存本行”即可更新数据库。
         </p>
 
+
+        <h4 style="margin-top:12px;">新增一行</h4>
+        <form action="${pageContext.request.contextPath}/admin/system/db" method="post">
+            <input type="hidden" name="table" value="${selectedTable}"/>
+
+            <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;margin-bottom:10px;">
+                <thead>
+                <tr>
+                    <th>操作</th>
+                    <c:forEach items="${columnNames}" var="col">
+                        <th><c:out value="${col}"/></th>
+                    </c:forEach>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>
+                        <button type="submit" name="action" value="insertRow">新增</button>
+                    </td>
+                    <c:forEach items="${columnNames}" var="col">
+                        <td>
+                            <c:choose>
+                                <c:when test="${not empty autoIncColumns && autoIncColumns.contains(col)}">
+                                    <input type="text"
+                                           value="(IDENTITY 自动生成)"
+                                           style="width:120px;background:#f3f3f3;"
+                                           readonly="readonly"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <input type="text"
+                                           name="new_${col}"
+                                           value=""
+                                           style="width:120px;"/>
+                                </c:otherwise>
+                            </c:choose>
+                        </td>
+                    </c:forEach>
+                </tr>
+                </tbody>
+            </table>
+            <p style="color:#999;margin:0 0 6px 0;">说明：自增(IDENTITY)列会自动生成，无需填写。</p>
+        </form>
+
         <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
             <thead>
             <tr>
@@ -95,19 +138,33 @@
                 <form action="${pageContext.request.contextPath}/admin/system/db" method="post">
                     <tr>
                         <td>
-                            <input type="hidden" name="action" value="updateRow"/>
                             <input type="hidden" name="table" value="${selectedTable}"/>
                             <c:forEach items="${pkColumns}" var="pk">
                                 <input type="hidden" name="pk_${pk}" value="${row[pk]}"/>
                             </c:forEach>
-                            <button type="submit">保存本行</button>
+
+                            <button type="submit" name="action" value="updateRow">保存本行</button>
+                            <button type="submit" name="action" value="deleteRow"
+                                    onclick="return confirm('确认删除本行数据吗？');">删除本行</button>
                         </td>
+
                         <c:forEach items="${columnNames}" var="col">
                             <td>
-                                <input type="text"
-                                       name="col_${col}"
-                                       value="${row[col]}"
-                                       style="width:120px;"/>
+                                <c:choose>
+                                    <c:when test="${pkColumns.contains(col) || (not empty autoIncColumns && autoIncColumns.contains(col))}">
+                                        <input type="text"
+                                               name="col_${col}"
+                                               value="${row[col]}"
+                                               style="width:120px;background:#f3f3f3;"
+                                               readonly="readonly"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <input type="text"
+                                               name="col_${col}"
+                                               value="${row[col]}"
+                                               style="width:120px;"/>
+                                    </c:otherwise>
+                                </c:choose>
                             </td>
                         </c:forEach>
                     </tr>

@@ -24,7 +24,18 @@
         <ul class="list">
             <c:forEach var="c" items="${calls}">
                 <li class="list-item">
-                    <span class="avatar" aria-hidden="true"><i class="bi bi-megaphone"></i></span>
+                    <span class="avatar" aria-hidden="true" style="overflow:hidden;">
+                        <c:choose>
+                            <c:when test="${not empty c.coverImagePath}">
+                                <img src="${ctx}/journal/asset?type=call_cover&id=${c.callId}"
+                                     alt="cover"
+                                     style="width:100%;height:100%;object-fit:cover;display:block;"/>
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-megaphone" aria-hidden="true"></i>
+                            </c:otherwise>
+                        </c:choose>
+                    </span>
                     <div>
                         <div class="list-title">
                             <a style="text-decoration:none;" href="${ctx}/calls?view=detail&id=${c.callId}">
@@ -35,6 +46,9 @@
                             <c:if test="${c.deadline != null}">Deadline：<c:out value="${c.deadline}"/> · </c:if>
                             <c:if test="${c.startDate != null}">Start：<c:out value="${c.startDate}"/> · </c:if>
                             <c:if test="${c.endDate != null}">End：<c:out value="${c.endDate}"/></c:if>
+                            <c:if test="${not empty c.attachmentPath}">
+                                · <a style="text-decoration:none;" href="${ctx}/journal/asset?type=call_attachment&id=${c.callId}">附件</a>
+                            </c:if>
                         </div>
                     </div>
                 </li>

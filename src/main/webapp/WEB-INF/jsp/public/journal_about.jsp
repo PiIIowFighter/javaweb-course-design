@@ -42,8 +42,7 @@
         </div>
     </c:if>
 
-    <h3 style="margin-top: var(--space-6);">期刊编委会介绍</h3>
-    <p class="card-subtitle">说明：当前数据库结构未包含“编委照片/头像字段”，这里统一用通用头像图标占位。</p>
+	<h3 style="margin-top: var(--space-6);">期刊编委会介绍</h3>
 
     <c:if test="${empty boardMembers}">
         <p>暂无编委会成员数据（dbo.EditorialBoard 为空）。</p>
@@ -53,7 +52,11 @@
             <c:forEach var="m" items="${boardMembers}">
                 <div class="card" style="padding: var(--space-5);">
                     <div style="display:flex; gap: var(--space-4); align-items:flex-start;">
-                        <span class="avatar" aria-hidden="true"><i class="bi bi-person"></i></span>
+						<span class="avatar" aria-hidden="true" style="overflow:hidden;">
+							<img src="${ctx}/public/avatar?userId=${m.userId}"
+							     alt="avatar"
+							     style="width:100%;height:100%;object-fit:cover;display:block;"/>
+						</span>
                         <div>
                             <div style="font-weight: 700;">
                                 <c:out value="${m.fullName}"/>
