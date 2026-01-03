@@ -2,6 +2,7 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.User;
+import edu.bjfu.onlinesm.util.mail.MailService;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.security.SecureRandom;
 
 /**
  * 负责登录、注册、注销等基本认证流程。
@@ -32,6 +34,13 @@ import java.sql.SQLException;
 public class AuthServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
+
+    // === Register email OTP (simple session-based) ===
+    private static final String OTP_SESSION_CODE = "register_email_code";
+    private static final String OTP_SESSION_EMAIL = "register_email_code_email";
+    private static final String OTP_SESSION_EXPIRE_AT = "register_email_code_expire_at";
+    private static final long OTP_TTL_MILLIS = 5L * 60L * 1000L; // 5 minutes
+    private static final SecureRandom OTP_RNG = new SecureRandom();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -134,10 +143,18 @@ public class AuthServlet extends HttpServlet {
      */
     
     private void handleRegister(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        // If user clicks "发送验证码" (AJAX or fallback), do NOT submit registration.
+        String op = trim(req.getParameter("op"));
+        if (op != null && "sendCode".equalsIgnoreCase(op)) {
+            handleSendRegisterEmailCode(req, resp);
+            return;
+        }
+
         String username = trim(req.getParameter("username"));
         String password = trim(req.getParameter("password"));
         String confirmPassword = trim(req.getParameter("confirmPassword"));
         String email = trim(req.getParameter("email"));
+        String emailCode = trim(req.getParameter("emailCode"));
         String fullName = trim(req.getParameter("fullName"));
         String affiliation = trim(req.getParameter("affiliation"));
         String researchArea = trim(req.getParameter("researchArea"));
@@ -155,6 +172,23 @@ public class AuthServlet extends HttpServlet {
         }
         if (!password.equals(confirmPassword)) {
             req.setAttribute("error", "两次输入的密码不一致。");
+            req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
+            return;
+        }
+
+        // Email & verification code required
+        if (isEmpty(email)) {
+            req.setAttribute("error", "邮箱不能为空，请先填写邮箱并发送验证码。");
+            req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
+            return;
+        }
+        if (isEmpty(emailCode)) {
+            req.setAttribute("error", "请输入邮箱验证码。");
+            req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
+            return;
+        }
+        if (!validateRegisterEmailCode(req.getSession(false), email, emailCode)) {
+            req.setAttribute("error", "邮箱验证码错误或已过期，请重新发送验证码。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
             return;
         }
@@ -180,8 +214,8 @@ public class AuthServlet extends HttpServlet {
             user.setFullName(defaultString(fullName));
             user.setAffiliation(defaultString(affiliation));
             user.setResearchArea(defaultString(researchArea));
-            // 新注册用户默认状态为 PENDING，需管理员审核激活
-            user.setStatus("PENDING");
+            // 按需求：新注册用户直接激活
+            user.setStatus("ACTIVE");
 
             if ("REVIEWER".equals(targetRoleCode)) {
                 userDAO.createUserWithRole(user, "REVIEWER");
@@ -189,12 +223,82 @@ public class AuthServlet extends HttpServlet {
                 userDAO.registerAuthor(user);
             }
 
-            // 不自动登录，提示等待管理员审核
-            req.setAttribute("message", "注册成功，您的账户已提交审核，请等待系统管理员激活后再登录。");
+            // 清理验证码，避免重复使用
+            HttpSession s = req.getSession(false);
+            if (s != null) {
+                s.removeAttribute(OTP_SESSION_CODE);
+                s.removeAttribute(OTP_SESSION_EMAIL);
+                s.removeAttribute(OTP_SESSION_EXPIRE_AT);
+            }
+
+            // 不自动登录，提示可直接登录
+            req.setAttribute("message", "注册成功，账号已激活，可直接登录。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
         } catch (SQLException e) {
             throw new ServletException("注册时访问数据库出错", e);
         }
+    }
+
+    /**
+     * 发送注册邮箱验证码（6位数字）。
+     * - 用 session 存储验证码与过期时间；
+     * - 支持 AJAX：直接返回 text/plain，不刷新页面。
+     */
+    private void handleSendRegisterEmailCode(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String email = trim(req.getParameter("email"));
+        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType("text/plain;charset=UTF-8");
+
+        if (isEmpty(email)) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().write("请先填写邮箱");
+            return;
+        }
+
+        String code = generate6DigitCode();
+        long expireAt = System.currentTimeMillis() + OTP_TTL_MILLIS;
+        HttpSession session = req.getSession(true);
+        session.setAttribute(OTP_SESSION_CODE, code);
+        session.setAttribute(OTP_SESSION_EMAIL, email);
+        session.setAttribute(OTP_SESSION_EXPIRE_AT, expireAt);
+
+        String subject = "注册验证码";
+        String body = "您的注册验证码为：" + code + "\n\n" +
+                "验证码 5 分钟内有效，请勿泄露给他人。";
+        MailService.sendText(email, subject, body);
+
+        resp.getWriter().write("验证码已发送，请查收邮箱（5分钟有效）");
+    }
+
+    private static boolean validateRegisterEmailCode(HttpSession session, String email, String codeInput) {
+        if (session == null) return false;
+        Object codeObj = session.getAttribute(OTP_SESSION_CODE);
+        Object emailObj = session.getAttribute(OTP_SESSION_EMAIL);
+        Object expObj = session.getAttribute(OTP_SESSION_EXPIRE_AT);
+        if (!(codeObj instanceof String) || !(emailObj instanceof String) || expObj == null) return false;
+        String code = (String) codeObj;
+        String codeEmail = (String) emailObj;
+        long expireAt;
+        if (expObj instanceof Long) {
+            expireAt = (Long) expObj;
+        } else if (expObj instanceof String) {
+            try {
+                expireAt = Long.parseLong((String) expObj);
+            } catch (Exception e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        if (expireAt <= System.currentTimeMillis()) return false;
+        if (email == null || !email.equalsIgnoreCase(codeEmail)) return false;
+        return codeInput != null && codeInput.trim().equals(code);
+    }
+
+    private static String generate6DigitCode() {
+        int v = OTP_RNG.nextInt(900000) + 100000; // 100000 - 999999
+        return String.valueOf(v);
     }
 
     /**

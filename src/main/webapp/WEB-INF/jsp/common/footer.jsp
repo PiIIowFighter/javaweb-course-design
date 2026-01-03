@@ -104,8 +104,8 @@
                 } catch (e) {
                     // ignore storage errors
                 }
-                // 不在这里修改 disabled 或文本，避免影响表单提交逻辑
-                // 页面重新加载后，applyState 会根据 localStorage 自动恢复倒计时状态
+                // 立刻开始倒计时（适配 AJAX 不刷新页面的场景；表单提交刷新也不受影响）
+                applyState();
             });
         }
 
