@@ -49,25 +49,27 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
-    /** 与 ProfileServlet 保持一致的上传根目录 */
+    // 与 ProfileServlet 保持一致的上传根目录
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
-
-    // ====== 文章与专刊（Issue）关联 ======
+    // 文章与专刊（Issue）关联
     private final IssueDAO issueDAO = new IssueDAO();
     private final IssueManuscriptDAO issueManuscriptDAO = new IssueManuscriptDAO();
-    /** 与 ProfileServlet 保持一致的上传根目录 */
+    // 与 ProfileServlet 保持一致的上传根目录
     private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
 
+    // 路由分发，处理前端请求
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        User current = getCurrentUser(req);
+        // 检查用户登陆状态
+    	User current = getCurrentUser(req);
         if (current == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
             return;
         }
 
+        // 检查请求名，按名分发
         String path = req.getPathInfo();
         if (path == null || "/".equals(path)) {
             path = "/list";
@@ -76,42 +78,46 @@ public class ManuscriptServlet extends HttpServlet {
         try {
             switch (path) {
                 case "/list":
-                    handleAuthorList(req, resp, current);
+                    handleAuthorList(req, resp, current);			// 显示作者的稿件列表
                     break;
                 case "/exportCsv":
-                    handleExportCsv(req, resp, current);
+                    handleExportCsv(req, resp, current);			// 导出稿件数据为 CSV
                     break;
                 case "/submit":
-                    handleSubmitForm(req, resp, current, null);
+                    handleSubmitForm(req, resp, current, null);		// 显示投稿表单页面
                     break;
                 case "/edit":
-                    handleEditDraft(req, resp, current);
+                    handleEditDraft(req, resp, current);			// 编辑草稿状态的稿件
                     break;
                 case "/resubmitEdit":
-                    handleResubmitEditForm(req, resp, current);
+                    handleResubmitEditForm(req, resp, current);		// 显示"修改后重新提交"表单
                     break;
                 case "/detail":
-                    handleDetail(req, resp, current);
+                    handleDetail(req, resp, current);				// 查看稿件详情
                     break;
                 case "/track":
-                    handleTrackStatus(req, resp, current);
+                    handleTrackStatus(req, resp, current);			// 追踪稿件状态时间线
                     break;
                 default:
-                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);	// 其他情况，只能404了
             }
         } catch (SQLException e) {
             throw new ServletException("访问数据库出错", e);
         }
     }
 
+    
+    // 处理表单提交
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        User current = getCurrentUser(req);
+        // 依旧检查用户登陆状态
+    	User current = getCurrentUser(req);
         if (current == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
             return;
         }
 
+        // 只有两种情况：稿件首次提交和再次提交
         String path = req.getPathInfo();
         if (path == null || "/".equals(path)) {
             path = "/submit";
@@ -129,35 +135,42 @@ public class ManuscriptServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 投稿页面（新建或编辑草稿）。
+    
+    /*
+     * 准备投稿表单页面所需的所有数据
+     * 靠 draft 参数判断新建投稿还是编辑草稿
      */
     private void handleSubmitForm(HttpServletRequest req, HttpServletResponse resp, User current, Manuscript draft)
             throws ServletException, IOException, SQLException {
-
+    	// 有点冗余，期刊已确定
         List<Journal> journals = journalDAO.findAll();
         req.setAttribute("journals", journals);
         req.setAttribute("manuscript", draft);
 
-        // 专刊（Issue）下拉：按当前稿件期刊加载已发布 SPECIAL（若无则为空）
+        // 确定期刊
         Integer journalId = null;
-        if (draft != null && draft.getJournalId() != null) {
+        if (draft != null && draft.getJournalId() != null) {	// 草稿已有期刊
             journalId = draft.getJournalId();
         } else if (journals != null && !journals.isEmpty() && journals.get(0) != null) {
-            journalId = journals.get(0).getJournalId();
+            journalId = journals.get(0).getJournalId();			// 默认数据库中记录的第一个期刊
         }
+        // 根据期刊加载专刊
         if (journalId != null) {
-            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(journalId, 0));
+            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(journalId, 0));	//寻找数据库中对应期刊的所有专刊
         } else {
             req.setAttribute("specialIssues", java.util.Collections.emptyList());
         }
 
+        // 编辑草稿模式特有信息
         if (draft != null) {
+        	// 作者列表
             req.setAttribute("authors", authorDAO.findByManuscriptId(draft.getManuscriptId()));
+            // 推荐审稿人
             req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(draft.getManuscriptId()));
+            // 当前版本
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(draft.getManuscriptId()));
 
-            // 回显已关联的 Issue（如果有）
+            // 已关联的 Issue
             Issue linked = issueDAO.findLinkedIssueByManuscriptId(draft.getManuscriptId());
             if (linked != null) {
                 draft.setIssueId(linked.getIssueId());
@@ -170,18 +183,18 @@ public class ManuscriptServlet extends HttpServlet {
     }
 
 
-
-    /**
-     * 作者在 RETURNED/REVISION 状态下进入“修改并重新提交”页面（新页面，参考 /manuscripts/submit）。
+    /*
+     * 稿件被退回或需要修改时，进入修改页面
      */
     private void handleResubmitEditForm(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
-
+    	// 权限检查
         if (!"AUTHOR".equals(current.getRoleCode())) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有作者可以修改稿件");
             return;
         }
 
+        // 获取稿件id
         Integer manuscriptId = parseInt(req.getParameter("id"));
         if (manuscriptId == null) {
             manuscriptId = parseInt(req.getParameter("manuscriptId"));
@@ -191,6 +204,7 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+        // 从数据库中查找稿件，状态检查
         Manuscript m = manuscriptDAO.findById(manuscriptId);
         if (m == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件");
@@ -205,6 +219,7 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+        // 准备期刊和专刊数据（作者可能想要修改）
         List<Journal> journals = journalDAO.findAll();
         req.setAttribute("journals", journals);
         if (m.getJournalId() != null) {
@@ -214,7 +229,7 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("specialIssues", java.util.Collections.emptyList());
         }
 
-        // 回显已关联 Issue
+        // 已关联的 Issue
         Issue linked = issueDAO.findLinkedIssueByManuscriptId(manuscriptId);
         if (linked != null) {
             m.setIssueId(linked.getIssueId());
@@ -222,6 +237,7 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("linkedIssue", linked);
         }
 
+        // 其他稿件信息
         req.setAttribute("manuscript", m);
         req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
@@ -231,9 +247,8 @@ public class ManuscriptServlet extends HttpServlet {
     }
 
 
-
-    /**
-     * 投稿表单回显（基于当前请求中已解析出的临时数据），用于校验失败时不丢失用户输入。
+    /*
+     * 投稿表单回显（用于表单验证失败时保持现有数据）
      */
     private void forwardSubmitFormWithTempData(HttpServletRequest req, HttpServletResponse resp,
                                               Manuscript manuscript,
@@ -246,8 +261,7 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", manuscript);
         req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
-
-        // 若是编辑草稿时校验失败，可继续展示当前版本信息
+        // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
         }
@@ -256,14 +270,8 @@ public class ManuscriptServlet extends HttpServlet {
     }
 
 
-
-    /**
-     * 作者在 RETURNED/REVISION 状态下进入“修改并重新提交”页面（新页面，参考 /manuscripts/submit）。
-     */
-
-
-    /**
-     * Resubmit 表单回显（校验失败时不丢失用户输入）。
+    /*
+     * 重新提交投稿表单回显（用于表单验证失败时保持现有数据）
      */
     private void forwardResubmitFormWithTempData(HttpServletRequest req, HttpServletResponse resp,
                                                 Manuscript manuscript,
@@ -276,34 +284,35 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", manuscript);
         req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
-
-        if (manuscript != null && manuscript.getJournalId() != null) {
-            req.setAttribute("journal", journalDAO.findById(manuscript.getJournalId()));
-        }
-
+        // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
         }
-
+        
+        // 修改时期刊信息不可更改
+        if (manuscript != null && manuscript.getJournalId() != null) {
+            req.setAttribute("journal", journalDAO.findById(manuscript.getJournalId()));
+        }
+ 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
     }
 
     
-
-
-    /**
-     * 检查“推荐审稿人”是否存在不完整行：只要某行被填写（姓名/邮箱/理由任一不为空），则必须同时提供姓名与邮箱。
-     * 返回首个错误提示；若无错误返回 null。
+    /*
+     * 推荐审稿人是否完整
+     * 返回错误提示，无错误返回 null
      */
     private String findFirstIncompleteRecommendedReviewerRow(HttpServletRequest req) {
         String[] names = req.getParameterValues("recReviewerName");
         String[] emails = req.getParameterValues("recReviewerEmail");
         String[] reasons = req.getParameterValues("recReviewerReason");
 
+        // 没推荐审稿人
         if (names == null && emails == null && reasons == null) {
             return null;
         }
 
+        // 推荐审稿人信息不完整
         int max = 0;
         if (names != null) max = Math.max(max, names.length);
         if (emails != null) max = Math.max(max, emails.length);
@@ -314,19 +323,22 @@ public class ManuscriptServlet extends HttpServlet {
             String e = (emails == null ? null : getArrayValue(emails, i));
             String r = (reasons == null ? null : getArrayValue(reasons, i));
 
-            boolean allEmpty = (n == null || n.isEmpty()) && (e == null || e.isEmpty()) && (r == null || r.isEmpty());
-            if (allEmpty) continue;
-
-            if (n == null || n.isEmpty() || e == null || e.isEmpty()) {
-                return "推荐审稿人第 " + (i + 1) + " 行信息不完整：已填写内容但“姓名/邮箱”未同时填写，请补全或删除该行。";
+            boolean anyFilled = (n != null && !n.isEmpty()) || 
+                               (e != null && !e.isEmpty()) || 
+                               (r != null && !r.isEmpty());
+            
+            boolean complete = (n != null && !n.isEmpty()) && 
+                              (e != null && !e.isEmpty());
+            
+            if (anyFilled && !complete) {
+                return "推荐审稿人填写不完整，请重新填写。";
             }
         }
         return null;
     }
 
-    /**
-     * 编辑草稿：仅允许作者编辑自己的 DRAFT。
-     * GET /manuscripts/edit?id=xxx
+    /*
+     * 编辑草稿页面
      */
     private void handleEditDraft(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
@@ -736,6 +748,29 @@ public class ManuscriptServlet extends HttpServlet {
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
             Part anonymousFile = safeGetPart(req, "anonymousFile");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
+
+            // 最终提交时，必须上传稿件文件（新稿件或之前未上传过的情况）
+            if (isFinalSubmit) {
+                // 检查是否有之前上传的文件
+                ManuscriptVersion prevVersion = null;
+                if (manuscriptId != null) {
+                    prevVersion = versionDAO.findCurrentByManuscriptId(manuscriptId);
+                }
+                boolean hasExistingManuscript = prevVersion != null && prevVersion.getFileOriginalPath() != null && !prevVersion.getFileOriginalPath().trim().isEmpty();
+                boolean hasExistingAnonymous = prevVersion != null && prevVersion.getFileAnonymousPath() != null && !prevVersion.getFileAnonymousPath().trim().isEmpty();
+                
+                // 如果没有上传新文件，且之前也没有文件，则报错
+                if ((manuscriptFile == null || manuscriptFile.getSize() == 0) && !hasExistingManuscript) {
+                    req.setAttribute("error", "最终提交前必须上传手稿文件（PDF 格式）。");
+                    forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                    return;
+                }
+                if ((anonymousFile == null || anonymousFile.getSize() == 0) && !hasExistingAnonymous) {
+                    req.setAttribute("error", "最终提交前必须上传匿名手稿文件（PDF 格式）。");
+                    forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                    return;
+                }
+            }
 
             // PDF 格式验证
             if (manuscriptFile != null && manuscriptFile.getSize() > 0 && !isPdfFile(manuscriptFile)) {

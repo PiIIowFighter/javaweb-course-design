@@ -51,7 +51,6 @@
         <%-- Incomplete（草稿）分组：只显示草稿相关状态 --%>
         <c:if test="${group == 'incomplete'}">
             <option value="DRAFT" ${statusFilter == 'DRAFT' ? 'selected="selected"' : ''}>DRAFT - 编辑中</option>
-            <option value="INCOMPLETE" ${statusFilter == 'INCOMPLETE' ? 'selected="selected"' : ''}>INCOMPLETE - 未完成</option>
         </c:if>
         <%-- Processing（处理中）分组：显示处理流程中的状态 --%>
         <c:if test="${group == 'processing'}">

@@ -46,7 +46,7 @@
                         </option>
                     </c:forEach>
                 </select>
-                <div class="help">提示：专刊数据来自 dbo.Issues（IsPublished=1 且 IssueType='SPECIAL'）。未选择则系统默认关联第一个已发布专刊（SPECIAL 优先）。</div>
+                <div class="help">提示：未选择则系统默认关联第一个已发布专刊（SPECIAL 优先）。</div>
             </div>
 
             <div class="form-row">
