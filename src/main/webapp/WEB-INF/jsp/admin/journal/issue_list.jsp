@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
@@ -20,7 +21,8 @@
 </c:if>
 
 <c:if test="${not empty issues}">
-    <table border="1" cellpadding="6" cellspacing="0" style="background:#fff; width:100%; max-width: 1200px;">
+    <div class="table-wrap">
+    <table class="table-fixed" border="1" cellpadding="6" cellspacing="0" style="min-width: 980px;">
         <thead>
         <tr>
             <th style="width:80px;">IssueId</th>
@@ -39,8 +41,32 @@
         <c:forEach var="i" items="${issues}">
             <tr>
                 <td>${i.issueId}</td>
-                <td><c:out value="${i.issueType}"/></td>
-                <td><c:out value="${i.title}"/></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${i.issueType == 'LATEST'}"><span class="badge">LATEST</span></c:when>
+                        <c:when test="${i.issueType == 'SPECIAL'}"><span class="badge">SPECIAL</span></c:when>
+                        <c:otherwise><span class="badge"><c:out value="${i.issueType}"/></span></c:otherwise>
+                    </c:choose>
+                </td>
+                <td class="cell-wrap">
+                    <c:set var="_rawTitle" value="${i.title}"/>
+                    <c:set var="_lowerTitle" value="${fn:toLowerCase(_rawTitle)}"/>
+                    <c:choose>
+                        <c:when test="${i.issueType == 'SPECIAL'}">
+                            <c:choose>
+                                <c:when test="${fn:startsWith(_lowerTitle, 'special issue:') || fn:startsWith(_lowerTitle, 'special issue：')}">
+                                    <c:out value="${_rawTitle}"/>
+                                </c:when>
+                                <c:otherwise>
+                                    Special Issue: <c:out value="${_rawTitle}"/>
+                                </c:otherwise>
+                            </c:choose>
+                        </c:when>
+                        <c:otherwise>
+                            <c:out value="${_rawTitle}"/>
+                        </c:otherwise>
+                    </c:choose>
+                </td>
                 <td><c:out value="${i.volume}"/></td>
                 <td><c:out value="${i.number}"/></td>
                 <td><c:out value="${i.year}"/></td>
@@ -74,6 +100,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
 </c:if>
 
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

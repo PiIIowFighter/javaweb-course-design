@@ -1548,3 +1548,25 @@ BEGIN
 END
 GO
 
+/* =========================================================
+   用户菜单入口权限表（可选增强）
+   兼容旧库：如果表已存在但缺少 Granted 列，则补齐。
+   ========================================================= */
+IF OBJECT_ID('dbo.UserMenuPermissions','U') IS NULL
+BEGIN
+    CREATE TABLE dbo.UserMenuPermissions(
+        UserId INT NOT NULL,
+        PermissionKey NVARCHAR(100) NOT NULL,
+        Granted BIT NOT NULL CONSTRAINT DF_UserMenuPermissions_Granted DEFAULT(1),
+        CONSTRAINT PK_UserMenuPermissions PRIMARY KEY(UserId, PermissionKey)
+    );
+END
+ELSE
+BEGIN
+    IF COL_LENGTH('dbo.UserMenuPermissions','Granted') IS NULL
+    BEGIN
+        ALTER TABLE dbo.UserMenuPermissions
+        ADD Granted BIT NOT NULL CONSTRAINT DF_UserMenuPermissions_Granted DEFAULT(1);
+    END
+END
+GO

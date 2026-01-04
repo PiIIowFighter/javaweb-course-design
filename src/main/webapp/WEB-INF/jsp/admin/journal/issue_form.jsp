@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
@@ -32,10 +33,33 @@
         </label>
     </p>
 
+    <c:set var="_rawTitle" value="${issue.title}"/>
+    <c:set var="_cleanTitle" value="${_rawTitle}"/>
+    <c:if test="${issue != null && issue.issueType == 'SPECIAL' && not empty _rawTitle}">
+        <c:set var="_lowerTitle" value="${fn:toLowerCase(_rawTitle)}"/>
+        <c:choose>
+            <c:when test="${fn:startsWith(_lowerTitle, 'special issue:')}">
+                <c:set var="_cleanTitle" value="${fn:trim(fn:substring(_rawTitle, fn:length('Special Issue:'), fn:length(_rawTitle)))}"/>
+            </c:when>
+            <c:when test="${fn:startsWith(_lowerTitle, 'special issue：')}">
+                <c:set var="_cleanTitle" value="${fn:trim(fn:substring(_rawTitle, fn:length('Special Issue：'), fn:length(_rawTitle)))}"/>
+            </c:when>
+            <c:when test="${fn:startsWith(_rawTitle, '专刊:')}">
+                <c:set var="_cleanTitle" value="${fn:trim(fn:substring(_rawTitle, fn:length('专刊:'), fn:length(_rawTitle)))}"/>
+            </c:when>
+            <c:when test="${fn:startsWith(_rawTitle, '专刊：')}">
+                <c:set var="_cleanTitle" value="${fn:trim(fn:substring(_rawTitle, fn:length('专刊：'), fn:length(_rawTitle)))}"/>
+            </c:when>
+        </c:choose>
+    </c:if>
+
     <p>
         <label>标题：
-            <input type="text" name="title" value="<c:out value='${issue.title}'/>" style="width: 620px;" required/>
+            <input type="text" name="title" value="<c:out value='${_cleanTitle}'/>" style="width: 620px;" required/>
         </label>
+        <c:if test="${issue != null && issue.issueType == 'SPECIAL'}">
+            <br/><span style="color:#666; font-size:0.9em;">专刊标题无需手动输入 “Special Issue:”/“专刊：” 前缀，系统会自动统一展示。</span>
+        </c:if>
     </p>
 
     <p>

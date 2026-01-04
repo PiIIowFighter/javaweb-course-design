@@ -76,12 +76,28 @@
                                value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
 
 
-                        <c:if test="${currentRoleCode == 'AUTHOR'}">
+                        <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_SUBMIT']}">
                             <a class="nav-cta" href="${pageContext.request.contextPath}/manuscripts/submit">
                                 <i class="bi bi-upload" aria-hidden="true"></i>
                                 <span>提交论文</span>
                             </a>
                         </c:if>
+
+                        <!-- 消息中心（通知中心）：小铃铛 + 未读红点数字 -->
+                        <a class="nav-icon" href="${pageContext.request.contextPath}/notifications" aria-label="消息中心">
+                            <span class="notif-icon" aria-hidden="true">
+                                <i class="bi bi-bell" aria-hidden="true"></i>
+                                <c:if test="${not empty requestScope.unreadNotificationCount and requestScope.unreadNotificationCount > 0}">
+                                    <span class="notif-badge">
+                                        <c:choose>
+                                            <c:when test="${requestScope.unreadNotificationCount > 99}">99+</c:when>
+                                            <c:otherwise><c:out value="${requestScope.unreadNotificationCount}"/></c:otherwise>
+                                        </c:choose>
+                                    </span>
+                                </c:if>
+                            </span>
+                            <span>消息</span>
+                        </a>
 
                         <a href="${pageContext.request.contextPath}/profile">
                             <i class="bi bi-person" aria-hidden="true"></i>
@@ -121,7 +137,7 @@
     <div class="container">
         <c:if test="${not empty sessionScope.currentUser}">
             <div class="layout">
-                <jsp:include page="/WEB-INF/jsp/common/auth_sidebar.jsp"/>
+                <jsp:include page="/WEB-INF/jsp/common/sidebar.jsp"/>
                 <section class="content">
                     <div class="content-inner">
         </c:if>

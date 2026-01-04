@@ -45,7 +45,7 @@
                         <c:when test="${not empty m.fullName}">${m.fullName}</c:when>
                         <c:otherwise>${m.username}</c:otherwise>
                     </c:choose>
-                    <span style="color:#666;">(${m.username})</span>
+                    <span style="color:#666; margin-left:6px;"><c:out value="${m.username}"/></span>
                 </td>
                 <td>${m.roleCode}</td>
                 <td>${m.position}</td>

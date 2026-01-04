@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
@@ -42,7 +43,26 @@
                     <c:forEach var="iss" items="${specialIssues}">
                         <option value="${iss.issueId}"
                                 <c:if test="${not empty manuscript && manuscript.issueId == iss.issueId}">selected</c:if>>
-                            <c:out value="${iss.title}"/>
+                            <c:set var="_rawTitle" value="${iss.title}"/>
+                            <c:set var="_lowerTitle" value="${fn:toLowerCase(_rawTitle)}"/>
+                            <c:choose>
+                                <c:when test="${fn:startsWith(_lowerTitle, 'special issue:') || fn:startsWith(_lowerTitle, 'special issue：')}">
+                                    <c:out value="${_rawTitle}"/>
+                                </c:when>
+                                <c:otherwise>
+                                    Special Issue: <c:out value="${_rawTitle}"/>
+                                </c:otherwise>
+                            </c:choose>
+
+                            <c:if test="${iss.year != null || iss.volume != null || iss.number != null}">
+                                （
+                                <c:if test="${iss.year != null}">Year <c:out value="${iss.year}"/></c:if>
+                                <c:if test="${iss.volume != null}"><c:if test="${iss.year != null}"> · </c:if>Vol <c:out value="${iss.volume}"/></c:if>
+                                <c:if test="${iss.number != null}">
+                                    <c:if test="${iss.year != null || iss.volume != null}"> · </c:if>No <c:out value="${iss.number}"/>
+                                </c:if>
+                                ）
+                            </c:if>
                         </option>
                     </c:forEach>
                 </select>

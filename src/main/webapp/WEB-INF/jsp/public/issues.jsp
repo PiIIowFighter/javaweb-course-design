@@ -49,7 +49,23 @@
                     <div>
                         <div class="list-title">
                             <a style="text-decoration:none;" href="${ctx}/issues?view=detail&id=${it.issueId}">
-                                <c:out value="${it.title}"/>
+                                <c:set var="_rawTitle" value="${it.title}"/>
+                                <c:set var="_lowerTitle" value="${fn:toLowerCase(_rawTitle)}"/>
+                                <c:choose>
+                                    <c:when test="${it.issueType == 'SPECIAL'}">
+                                        <c:choose>
+                                            <c:when test="${fn:startsWith(_lowerTitle, 'special issue:') || fn:startsWith(_lowerTitle, 'special issue：')}">
+                                                <c:out value="${_rawTitle}"/>
+                                            </c:when>
+                                            <c:otherwise>
+                                                Special Issue: <c:out value="${_rawTitle}"/>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:out value="${_rawTitle}"/>
+                                    </c:otherwise>
+                                </c:choose>
                             </a>
                         </div>
                         <div class="list-meta">

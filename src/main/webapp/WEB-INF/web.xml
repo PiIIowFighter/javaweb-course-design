@@ -32,6 +32,16 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
+    <!-- 顶栏消息中心：为已登录用户计算未读通知数，用于小铃铛红点数字 -->
+    <filter>
+        <filter-name>notificationBadgeFilter</filter-name>
+        <filter-class>edu.bjfu.onlinesm.util.NotificationBadgeFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>notificationBadgeFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <!-- 登录/注销 -->
     <servlet>
         <servlet-name>AuthServlet</servlet-name>

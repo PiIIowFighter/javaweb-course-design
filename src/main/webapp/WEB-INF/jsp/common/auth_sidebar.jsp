@@ -27,11 +27,8 @@
             </div>
         </div>
         <div class="sidebar-user-actions">
-            <a class="side-link" href="${ctx}/profile">
-                <i class="bi bi-person" aria-hidden="true"></i> 个人信息
-            </a>
-            <a class="side-link" href="${ctx}/auth/logout">
-                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> 退出登录
+            <a class="side-link ${fn:contains(uri, '/dashboard') ? 'active' : ''}" href="${ctx}/dashboard">
+                <i class="bi bi-speedometer2" aria-hidden="true"></i> 工作台
             </a>
         </div>
     </div>
