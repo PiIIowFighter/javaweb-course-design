@@ -2,6 +2,7 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.User;
+import edu.bjfu.onlinesm.util.MenuPermissionService;
 import edu.bjfu.onlinesm.util.mail.MailService;
 
 import javax.servlet.ServletException;
@@ -12,7 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.security.SecureRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 负责登录、注册、注销等基本认证流程。
@@ -34,13 +35,12 @@ import java.security.SecureRandom;
 public class AuthServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
+    private final MenuPermissionService menuPermissionService = new MenuPermissionService();
 
     // === Register email OTP (simple session-based) ===
-    private static final String OTP_SESSION_CODE = "register_email_code";
-    private static final String OTP_SESSION_EMAIL = "register_email_code_email";
-    private static final String OTP_SESSION_EXPIRE_AT = "register_email_code_expire_at";
-    private static final long OTP_TTL_MILLIS = 5L * 60L * 1000L; // 5 minutes
-    private static final SecureRandom OTP_RNG = new SecureRandom();
+    private static final String SESSION_REG_OTP_CODE = "REG_OTP_CODE";
+    private static final String SESSION_REG_OTP_EMAIL = "REG_OTP_EMAIL";
+    private static final String SESSION_REG_OTP_EXPIRES_AT = "REG_OTP_EXPIRES_AT"; // long millis
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -127,7 +127,10 @@ public class AuthServlet extends HttpServlet {
             }
 
             // 登录成功
-            req.getSession(true).setAttribute("currentUser", user);
+            HttpSession session = req.getSession(true);
+            session.setAttribute("currentUser", user);
+            // 初始化菜单入口权限（供 header/sidebar/拦截器使用）
+            menuPermissionService.loadIntoSession(session, user);
             resp.sendRedirect(req.getContextPath() + "/dashboard");
         } catch (SQLException e) {
             throw new ServletException("登录时访问数据库出错", e);
@@ -137,16 +140,17 @@ public class AuthServlet extends HttpServlet {
     /**
      * 注册新用户（AUTHOR / REVIEWER）：
      *  1. 校验必填字段、密码长度以及两次密码是否一致；
-     *  2. 检查用户名是否已存在；
-     *  3. 新用户状态置为 PENDING，调用 UserDAO 写入数据库；
-     *  4. 给出“注册成功，待管理员审核激活后方可登录”的提示，不自动登录。
+     *  2. 校验邮箱验证码（5 分钟有效）；
+     *  3. 检查用户名是否已存在；
+     *  4. 新用户状态置为 ACTIVE，调用 UserDAO 写入数据库；
+     *  5. 给出“注册成功，可直接登录”的提示，不自动登录。
      */
     
     private void handleRegister(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // If user clicks "发送验证码" (AJAX or fallback), do NOT submit registration.
+        // "发送验证码" 仅发送邮箱验证码，不执行注册
         String op = trim(req.getParameter("op"));
-        if (op != null && "sendCode".equalsIgnoreCase(op)) {
-            handleSendRegisterEmailCode(req, resp);
+        if ("sendCode".equalsIgnoreCase(op)) {
+            handleSendRegisterCode(req, resp);
             return;
         }
 
@@ -176,19 +180,19 @@ public class AuthServlet extends HttpServlet {
             return;
         }
 
-        // Email & verification code required
+        // 验证邮箱验证码
         if (isEmpty(email)) {
-            req.setAttribute("error", "邮箱不能为空，请先填写邮箱并发送验证码。");
+            req.setAttribute("error", "邮箱不能为空。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
             return;
         }
         if (isEmpty(emailCode)) {
-            req.setAttribute("error", "请输入邮箱验证码。");
+            req.setAttribute("error", "请先点击“发送验证码”，并在下方填写收到的验证码。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
             return;
         }
-        if (!validateRegisterEmailCode(req.getSession(false), email, emailCode)) {
-            req.setAttribute("error", "邮箱验证码错误或已过期，请重新发送验证码。");
+        if (!verifyRegisterEmailOtp(req.getSession(false), email, emailCode)) {
+            req.setAttribute("error", "邮箱验证码无效或已过期，请重新发送验证码后再注册。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
             return;
         }
@@ -214,7 +218,7 @@ public class AuthServlet extends HttpServlet {
             user.setFullName(defaultString(fullName));
             user.setAffiliation(defaultString(affiliation));
             user.setResearchArea(defaultString(researchArea));
-            // 按需求：新注册用户直接激活
+            // 需求变更：注册后直接为 ACTIVE
             user.setStatus("ACTIVE");
 
             if ("REVIEWER".equals(targetRoleCode)) {
@@ -223,16 +227,11 @@ public class AuthServlet extends HttpServlet {
                 userDAO.registerAuthor(user);
             }
 
-            // 清理验证码，避免重复使用
-            HttpSession s = req.getSession(false);
-            if (s != null) {
-                s.removeAttribute(OTP_SESSION_CODE);
-                s.removeAttribute(OTP_SESSION_EMAIL);
-                s.removeAttribute(OTP_SESSION_EXPIRE_AT);
-            }
+            // 清理验证码，避免复用
+            clearRegisterEmailOtp(req.getSession(false));
 
-            // 不自动登录，提示可直接登录
-            req.setAttribute("message", "注册成功，账号已激活，可直接登录。");
+            // 不自动登录（保持原交互），提示可直接登录
+            req.setAttribute("message", "注册成功，您的账户已激活，可直接登录。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
         } catch (SQLException e) {
             throw new ServletException("注册时访问数据库出错", e);
@@ -240,65 +239,67 @@ public class AuthServlet extends HttpServlet {
     }
 
     /**
-     * 发送注册邮箱验证码（6位数字）。
-     * - 用 session 存储验证码与过期时间；
-     * - 支持 AJAX：直接返回 text/plain，不刷新页面。
+     * 发送注册邮箱验证码：生成 6 位数字验证码，保存在 session（5 分钟有效）并尝试发送邮件。
      */
-    private void handleSendRegisterEmailCode(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void handleSendRegisterCode(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String email = trim(req.getParameter("email"));
-        resp.setCharacterEncoding("UTF-8");
-        resp.setContentType("text/plain;charset=UTF-8");
-
         if (isEmpty(email)) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("请先填写邮箱");
+            req.setAttribute("error", "请先填写邮箱后再发送验证码。");
+            req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
             return;
         }
 
-        String code = generate6DigitCode();
-        long expireAt = System.currentTimeMillis() + OTP_TTL_MILLIS;
-        HttpSession session = req.getSession(true);
-        session.setAttribute(OTP_SESSION_CODE, code);
-        session.setAttribute(OTP_SESSION_EMAIL, email);
-        session.setAttribute(OTP_SESSION_EXPIRE_AT, expireAt);
+        String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1000000));
+        long expiresAt = System.currentTimeMillis() + 5L * 60L * 1000L;
 
+        HttpSession session = req.getSession(true);
+        session.setAttribute(SESSION_REG_OTP_EMAIL, email);
+        session.setAttribute(SESSION_REG_OTP_CODE, code);
+        session.setAttribute(SESSION_REG_OTP_EXPIRES_AT, expiresAt);
+
+        // 发送邮件（若未配置 SMTP，将在控制台打印失败信息，但不影响页面流程）
         String subject = "注册验证码";
-        String body = "您的注册验证码为：" + code + "\n\n" +
-                "验证码 5 分钟内有效，请勿泄露给他人。";
+        String body = "您的注册验证码为：" + code + "\n\n有效期 5 分钟。若非本人操作请忽略此邮件。";
         MailService.sendText(email, subject, body);
 
-        resp.getWriter().write("验证码已发送，请查收邮箱（5分钟有效）");
+        // 开发友好：同时将验证码写到控制台，便于本地未配置邮箱时调试
+        System.out.println("[Auth/Register OTP] email=" + email + ", code=" + code + ", expiresAt=" + expiresAt);
+
+        req.setAttribute("message", "验证码已发送，请在 5 分钟内查收邮箱并填写下方验证码。（开发环境可在控制台查看验证码）");
+        req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
     }
 
-    private static boolean validateRegisterEmailCode(HttpSession session, String email, String codeInput) {
+    private boolean verifyRegisterEmailOtp(HttpSession session, String email, String code) {
         if (session == null) return false;
-        Object codeObj = session.getAttribute(OTP_SESSION_CODE);
-        Object emailObj = session.getAttribute(OTP_SESSION_EMAIL);
-        Object expObj = session.getAttribute(OTP_SESSION_EXPIRE_AT);
-        if (!(codeObj instanceof String) || !(emailObj instanceof String) || expObj == null) return false;
-        String code = (String) codeObj;
-        String codeEmail = (String) emailObj;
-        long expireAt;
-        if (expObj instanceof Long) {
-            expireAt = (Long) expObj;
-        } else if (expObj instanceof String) {
-            try {
-                expireAt = Long.parseLong((String) expObj);
-            } catch (Exception e) {
-                return false;
+        Object se = session.getAttribute(SESSION_REG_OTP_EMAIL);
+        Object sc = session.getAttribute(SESSION_REG_OTP_CODE);
+        Object sx = session.getAttribute(SESSION_REG_OTP_EXPIRES_AT);
+
+        if (!(se instanceof String) || !(sc instanceof String) || sx == null) return false;
+        String storedEmail = ((String) se).trim();
+        String storedCode = ((String) sc).trim();
+
+        long expiresAt;
+        try {
+            if (sx instanceof Long) {
+                expiresAt = (Long) sx;
+            } else {
+                expiresAt = Long.parseLong(String.valueOf(sx));
             }
-        } else {
+        } catch (Exception ignore) {
             return false;
         }
 
-        if (expireAt <= System.currentTimeMillis()) return false;
-        if (email == null || !email.equalsIgnoreCase(codeEmail)) return false;
-        return codeInput != null && codeInput.trim().equals(code);
+        if (System.currentTimeMillis() > expiresAt) return false;
+        if (email == null || !storedEmail.equalsIgnoreCase(email.trim())) return false;
+        return storedCode.equals(code == null ? "" : code.trim());
     }
 
-    private static String generate6DigitCode() {
-        int v = OTP_RNG.nextInt(900000) + 100000; // 100000 - 999999
-        return String.valueOf(v);
+    private void clearRegisterEmailOtp(HttpSession session) {
+        if (session == null) return;
+        session.removeAttribute(SESSION_REG_OTP_EMAIL);
+        session.removeAttribute(SESSION_REG_OTP_CODE);
+        session.removeAttribute(SESSION_REG_OTP_EXPIRES_AT);
     }
 
     /**

@@ -7,6 +7,8 @@ import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.mail.MailNotifications; // 添加导入
+import edu.bjfu.onlinesm.util.MenuPermissionGuard;
+import edu.bjfu.onlinesm.util.PermissionCatalog;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
@@ -39,10 +41,6 @@ public class ReviewerServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req,
                          HttpServletResponse resp) throws ServletException, IOException {
 
-        if (!ensureReviewer(req, resp)) {
-            return;
-        }
-
         String path = req.getPathInfo();
         if (path == null || "/".equals(path)) {
             path = "/dashboard";
@@ -50,28 +48,33 @@ public class ReviewerServlet extends HttpServlet {
 
         switch (path) {
             case "/dashboard":
-                // 审稿人工作台首页
+                // 审稿人工作台首页：允许拥有任一审稿人入口权限的账号访问（跨角色授予入口）
+                if (!ensureAnyReviewerEntry(req, resp)) return;
                 req.getRequestDispatcher("/WEB-INF/jsp/reviewer/reviewer_dashboard.jsp")
                         .forward(req, resp);
                 break;
 
             case "/assigned":
                 // 待评审稿件列表
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleAssignedList(req, resp);
                 break;
 
             case "/history":
                 // 历史评审记录
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_HISTORY)) return;
                 handleHistory(req, resp);
                 break;
 
             case "/reviewForm":
                 // 填写某条审稿记录的评审意见
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleReviewForm(req, resp);
                 break;
 
             case "/invitation":
                 // 查看邀请详情（摘要等），再决定是否接受/拒绝
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleInvitationDetail(req, resp);
                 break;
 
@@ -86,10 +89,6 @@ public class ReviewerServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req,
                           HttpServletResponse resp) throws ServletException, IOException {
 
-        if (!ensureReviewer(req, resp)) {
-            return;
-        }
-
         String path = req.getPathInfo();
         if (path == null) {
             path = "/submit";
@@ -98,14 +97,17 @@ public class ReviewerServlet extends HttpServlet {
         switch (path) {
             case "/submit":
                 // 提交评审意见
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleSubmitReview(req, resp);
                 break;
             case "/accept":
                 // 接受审稿邀请
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleAcceptInvitation(req, resp);
                 break;
             case "/decline":
                 // 拒绝审稿邀请
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
                 handleDeclineInvitation(req, resp);
                 break;
             default:
@@ -500,16 +502,30 @@ public class ReviewerServlet extends HttpServlet {
                 ? (User) session.getAttribute("currentUser")
                 : null;
     }
+    private boolean requireMenu(HttpServletRequest req, HttpServletResponse resp, String permKey)
+            throws IOException, ServletException {
+        return MenuPermissionGuard.require(req, resp, permKey);
+    }
 
-    private boolean ensureReviewer(HttpServletRequest req,
-                                   HttpServletResponse resp) throws IOException {
+    /**
+     * 审稿人模块“首页/仪表盘”允许只要拥有任一审稿人入口权限即可访问（跨角色授予入口）。
+     */
+    private boolean ensureAnyReviewerEntry(HttpServletRequest req, HttpServletResponse resp)
+            throws IOException, ServletException {
+
         User u = getCurrentUser(req);
         if (u == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
             return false;
         }
-        if (!"REVIEWER".equals(u.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有审稿人可以访问该模块。");
+
+        boolean ok = MenuPermissionGuard.has(req, PermissionCatalog.MENU_REVIEWER_ASSIGNED)
+                || MenuPermissionGuard.has(req, PermissionCatalog.MENU_REVIEWER_HISTORY);
+
+        if (!ok) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            req.setAttribute("error", "当前账号无权限访问审稿人模块。");
+            req.getRequestDispatcher("/WEB-INF/jsp/error/access_denied.jsp").forward(req, resp);
             return false;
         }
         return true;

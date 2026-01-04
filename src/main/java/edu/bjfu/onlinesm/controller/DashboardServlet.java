@@ -10,10 +10,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * 根据当前登录用户的角色，跳转到不同的工作台 JSP。
+ * 统一工作台：不再按角色分流到各自 dashboard JSP。
  *
- * 角色代码建议与 dbo.Roles.RoleCode 对应：
- *  SUPER_ADMIN / SYSTEM_ADMIN / EDITOR_IN_CHIEF / EDITOR / REVIEWER / AUTHOR
+ * 说明：
+ * - 工作台页面展示“所有入口”，但具体显示/隐藏由 sessionScope.menuPermMap 控制；
+ * - 是否可访问功能页面由 MenuAuthzFilter / MenuPermissionGuard 控制。
  */
 @WebServlet(name = "DashboardServlet", urlPatterns = {"/dashboard"})
 public class DashboardServlet extends HttpServlet {
@@ -29,39 +30,13 @@ public class DashboardServlet extends HttpServlet {
 
         User currentUser = (User) obj;
         String roleCode = currentUser.getRoleCode();
-        if (roleCode == null || roleCode.trim().isEmpty()) {
-            // 没有显式设置角色的话，默认视为作者
-            roleCode = "AUTHOR";
-        }
+        if (roleCode == null || roleCode.trim().isEmpty()) roleCode = "AUTHOR";
 
-        String target;
-        switch (roleCode) {
-            case "SUPER_ADMIN":
-                target = "/WEB-INF/jsp/admin/superadmin_dashboard.jsp";
-                break;
-            case "SYSTEM_ADMIN":
-                target = "/WEB-INF/jsp/admin/admin_dashboard.jsp";
-                break;
-            case "EO_ADMIN":
-                target = "/WEB-INF/jsp/admin/eo_admin_dashboard.jsp";
-                break;
-            case "EDITOR_IN_CHIEF":
-                target = "/WEB-INF/jsp/editor/chief_editor_dashboard.jsp";
-                break;
-            case "EDITOR":
-                target = "/WEB-INF/jsp/editor/editor_dashboard.jsp";
-                break;
-            case "REVIEWER":
-                target = "/WEB-INF/jsp/reviewer/reviewer_dashboard.jsp";
-                break;
-            case "AUTHOR":
-            default:
-                target = "/WEB-INF/jsp/author/author_dashboard.jsp";
-                break;
-        }
+        // 给 header.jsp 使用的页面标题
+        req.setAttribute("pageTitle", "工作台");
 
-        // 给 header.jsp 使用的页面标题，可选
-        req.setAttribute("pageTitle", "工作台 - " + roleCode);
-        req.getRequestDispatcher(target).forward(req, resp);
+        // 统一跳转到公共工作台
+        req.setAttribute("currentRoleCode", roleCode);
+        req.getRequestDispatcher("/WEB-INF/jsp/common/workbench.jsp").forward(req, resp);
     }
 }

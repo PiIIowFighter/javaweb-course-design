@@ -343,7 +343,7 @@ public class JournalAdminServlet extends HttpServlet {
         Issue existing = (issueId != null) ? issueDAO.findById(issueId) : null;
 
         String issueType = req.getParameter("issueType");
-        String title = req.getParameter("title");
+        String title = normalizeIssueTitle(issueType, req.getParameter("title"));
         Integer volume = intParam(req, "volume");
         Integer number = intParam(req, "number");
         Integer year = intParam(req, "year");
@@ -390,6 +390,33 @@ public class JournalAdminServlet extends HttpServlet {
         }
 
         resp.sendRedirect(req.getContextPath() + "/admin/journals/issues/list?journalId=" + journalId);
+    }
+
+    /**
+     * 统一 Issue 标题的存储：
+     * - SPECIAL：允许用户输入 "Special Issue:" / "专刊：" 前缀，但存库时去掉前缀，页面渲染时统一加前缀。
+     * - LATEST：保持用户输入（不做强制改写）。
+     */
+    private static String normalizeIssueTitle(String issueType, String raw) {
+        if (raw == null) return null;
+        String title = raw.trim();
+        if (title.isEmpty()) return title;
+
+        String t = (issueType == null) ? "" : issueType.trim().toUpperCase();
+        if ("SPECIAL".equals(t)) {
+            // 常见前缀：Special Issue: / Special Issue： / 专刊: / 专刊：
+            String lower = title.toLowerCase();
+            if (lower.startsWith("special issue:")) {
+                title = title.substring("special issue:".length()).trim();
+            } else if (lower.startsWith("special issue：")) {
+                title = title.substring("special issue：".length()).trim();
+            } else if (title.startsWith("专刊:")) {
+                title = title.substring("专刊:".length()).trim();
+            } else if (title.startsWith("专刊：")) {
+                title = title.substring("专刊：".length()).trim();
+            }
+        }
+        return title;
     }
 
     private void handleIssuesDelete(HttpServletRequest req, HttpServletResponse resp) throws SQLException, IOException {

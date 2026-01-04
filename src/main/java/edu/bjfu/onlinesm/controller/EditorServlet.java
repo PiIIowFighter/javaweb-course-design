@@ -27,6 +27,8 @@ import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.util.mail.MailService;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 import edu.bjfu.onlinesm.util.UploadPathUtil;
+import edu.bjfu.onlinesm.util.MenuPermissionGuard;
+import edu.bjfu.onlinesm.util.PermissionCatalog;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -88,22 +90,16 @@ public class EditorServlet extends HttpServlet {
             return;
         }
 
-        // 2. 角色校验：主编、编辑、编辑部管理员可以访问
-        String role = current.getRoleCode();
-        if (role == null
-                || (!"EDITOR_IN_CHIEF".equals(role)
-                && !"EDITOR".equals(role)
-                && !"EO_ADMIN".equals(role))) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "只有主编/编辑/编辑部管理员可以访问编辑工作台。");
-            return;
-        }
 
         // 3. 解析子路径
         String path = req.getPathInfo();
         if (path == null || "/".equals(path)) {
             path = "/dashboard";
         }
+
+        // 按“菜单入口权限”校验（允许跨角色访问）。/dashboard 不拦截
+        String requiredPerm = requiredMenuPermission(path);
+        if (requiredPerm != null && !MenuPermissionGuard.require(req, resp, requiredPerm)) return;
 
         try {
             switch (path) {
@@ -236,7 +232,7 @@ public class EditorServlet extends HttpServlet {
     private void handleFormalCheckReviewPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+        if (!MenuPermissionGuard.has(req, PermissionCatalog.MENU_EO_FORMAL_CHECK)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以进入形式审查页面。");
             return;
         }
@@ -277,7 +273,7 @@ public class EditorServlet extends HttpServlet {
     private void handleFormalCheckHistoryPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+        if (!MenuPermissionGuard.has(req, PermissionCatalog.MENU_EO_FORMAL_HISTORY)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以查看审查历史。");
             return;
         }
@@ -307,7 +303,7 @@ public class EditorServlet extends HttpServlet {
     private void handleFormalCheckHistoryDetailPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EO_ADMIN".equals(current.getRoleCode())) {
+        if (!MenuPermissionGuard.has(req, PermissionCatalog.MENU_EO_FORMAL_HISTORY)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑部管理员可以查看审查记录详情。");
             return;
         }
@@ -445,12 +441,6 @@ public class EditorServlet extends HttpServlet {
     private void handleEditorRecommendPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        String role = current.getRoleCode();
-        if (!"EDITOR".equals(role) && !"EDITOR_IN_CHIEF".equals(role)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以访问提出建议页面。");
-            return;
-        }
-
         String manuscriptIdStr = req.getParameter("manuscriptId");
         if (manuscriptIdStr == null || manuscriptIdStr.trim().isEmpty()) {
 
@@ -458,7 +448,7 @@ public class EditorServlet extends HttpServlet {
             List<Manuscript> ready = manuscriptDAO.findByStatuses("EDITOR_RECOMMENDATION");
 
             // 若是责任编辑，只展示分配给自己的稿件
-            if ("EDITOR".equals(role)) {
+            if ("EDITOR".equals(current.getRoleCode())) {
                 List<Manuscript> filtered = new ArrayList<>();
                 for (Manuscript m : ready) {
                     Integer editorId = manuscriptDAO.findCurrentEditorId(m.getManuscriptId());
@@ -489,7 +479,7 @@ public class EditorServlet extends HttpServlet {
         }
 
         // 权限：责任编辑只能看自己的；主编可看全部
-        if ("EDITOR".equals(role)) {
+        if ("EDITOR".equals(current.getRoleCode())) {
             Integer editorId = manuscriptDAO.findCurrentEditorId(manuscriptId);
             if (!java.util.Objects.equals(editorId, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
@@ -552,12 +542,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
     private void handleRecommendManuscriptDetailPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        String role = current.getRoleCode();
-        if (!"EDITOR".equals(role) && !"EDITOR_IN_CHIEF".equals(role)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以访问该页面。");
-            return;
-        }
-
         String midStr = req.getParameter("manuscriptId");
         if (midStr == null || midStr.trim().isEmpty()) {
             midStr = req.getParameter("id");
@@ -582,7 +566,7 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         }
 
         // 责任编辑只能查看分配给自己的稿件
-        if ("EDITOR".equals(role)) {
+        if ("EDITOR".equals(current.getRoleCode())) {
             Integer editorId = manuscriptDAO.findCurrentEditorId(manuscriptId);
             if (!java.util.Objects.equals(editorId, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "您无权查看该稿件的详情。");
@@ -619,11 +603,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
     private void handleReviewerPoolPage (HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以管理审稿人库。");
-            return;
-        }
-
         String reviewerKeyword = req.getParameter("reviewerKeyword");
         if (reviewerKeyword == null) reviewerKeyword = "";
         String kw = reviewerKeyword.trim().toLowerCase();
@@ -657,11 +636,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
     private void handleChiefOverview(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以查看全览列表。");
-            return;
-        }
-
         List<Manuscript> list = manuscriptDAO.findAllForChief();
         req.setAttribute("manuscripts", list);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_overview.jsp")
@@ -673,11 +647,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
      */
     private void handleChiefSpecialPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
-
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以访问特殊权限页面。");
-            return;
-        }
 
         // 只展示与“决策/撤稿”相关的稿件，避免列表过大
         List<Manuscript> list = manuscriptDAO.findByStatuses(
@@ -714,6 +683,10 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
         if (path == null) {
             path = "";
         }
+
+        // 按“菜单入口权限”校验（允许跨角色访问）
+        String requiredPerm = requiredMenuPermission(path);
+        if (requiredPerm != null && !MenuPermissionGuard.require(req, resp, requiredPerm)) return;
 
         try {
             switch (path) {
@@ -801,11 +774,6 @@ private void handleFinalDecisionList(HttpServletRequest req, HttpServletResponse
             throws IOException, SQLException {
 
         // 只有 EDITOR 或 EDITOR_IN_CHIEF 才能邀请审稿人
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以邀请审稿人。");
-            return;
-        }
 
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String[] reviewerIdParams = req.getParameterValues("reviewerIds");
@@ -875,12 +843,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                               HttpServletResponse resp,
                                               User current)
         throws IOException, SQLException {
-
-    if (!"EDITOR".equals(current.getRoleCode())
-            && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-        resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以邀请审稿人。");
-        return;
-    }
 
     String manuscriptIdStr = req.getParameter("manuscriptId");
     String dueDateStr = req.getParameter("dueDate"); // yyyy-MM-dd，可为空
@@ -988,12 +950,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                           User current)
             throws IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以催审。");
-            return;
-        }
-
         String reviewIdStr     = req.getParameter("reviewId");
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String backTo          = req.getParameter("backTo");
@@ -1089,13 +1045,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                             User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑 / 主编 / 编辑部管理员可以访问审稿监控。");
-            return;
-        }
-
         String reviewIdStr = req.getParameter("reviewId");
         if (reviewIdStr == null || reviewIdStr.trim().isEmpty()) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 reviewId 参数。");
@@ -1133,13 +1082,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                               HttpServletResponse resp,
                                               User current)
             throws ServletException, IOException, SQLException {
-
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑/主编/编辑部管理员可以查看审稿意见详情。\n");
-            return;
-        }
 
         String reviewIdStr = req.getParameter("reviewId");
         if (reviewIdStr == null || reviewIdStr.trim().isEmpty()) {
@@ -1191,13 +1133,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                                 User current)
             throws IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑 / 主编 / 编辑部管理员可以催审。");
-            return;
-        }
-
         String reviewIdStr     = req.getParameter("reviewId");
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String back            = req.getParameter("back");
@@ -1240,13 +1175,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                          User current)
             throws IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑 / 主编 / 编辑部管理员可以催审。");
-            return;
-        }
-
         int overdueDays  = parseIntOrDefault(req.getParameter("overdueDays"), 7);
         int cooldownDays = parseIntOrDefault(req.getParameter("cooldownDays"), 3);
         int limit        = parseIntOrDefault(req.getParameter("limit"), 50);
@@ -1285,12 +1213,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
                                            User current)
             throws IOException, SQLException {
 
-        String role = current.getRoleCode();
-        if (!"EDITOR".equals(role) && !"EDITOR_IN_CHIEF".equals(role)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑或主编可以提交编辑建议。");
-            return;
-        }
-
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String suggestionCode  = req.getParameter("suggestion");
         String summary         = req.getParameter("summary");
@@ -1314,7 +1236,7 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
         }
 
         // 责任编辑只能提交自己负责的稿件
-        if ("EDITOR".equals(role)) {
+        if ("EDITOR".equals(current.getRoleCode())) {
             Integer editorId = manuscriptDAO.findCurrentEditorId(manuscriptId);
             if (!java.util.Objects.equals(editorId, current.getUserId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "该稿件不属于当前编辑。");
@@ -1686,11 +1608,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
     private void handleDeskDecisionPost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws SQLException, IOException {
 
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以执行案头初审操作。");
-            return;
-        }
-
         String idStr = req.getParameter("manuscriptId");
         String op = req.getParameter("op");
         if (idStr == null || op == null) {
@@ -1723,11 +1640,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
      */
     private void handleAssignEditorPost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws SQLException, IOException {
-
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以指派编辑。");
-            return;
-        }
 
         String idStr = req.getParameter("manuscriptId");
         String editorIdStr = req.getParameter("editorId");
@@ -1762,11 +1674,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
      */
     private void handleFinalDecisionPost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws SQLException, IOException {
-
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以执行终审操作。");
-            return;
-        }
 
         String idStr = req.getParameter("manuscriptId");
         String op = req.getParameter("op");
@@ -1837,11 +1744,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
      */
     private void handleReviewerPoolPost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws SQLException, IOException {
-
-        if (!"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有主编可以管理审稿人库。");
-            return;
-        }
 
         // 兼容：op=invite/create/approve/disable/enable
         String op = req.getParameter("op");
@@ -1918,13 +1820,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
     private void handleReviewSelectPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑/主编/编辑部管理员可以选择审稿人。");
-            return;
-        }
-
         String manuscriptIdStr = req.getParameter("manuscriptId");
         if (manuscriptIdStr == null || manuscriptIdStr.trim().isEmpty()) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 manuscriptId 参数。");
@@ -1976,13 +1871,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
      */
     private void handleCancelReviewerPost(HttpServletRequest req, HttpServletResponse resp, User current)
         throws IOException, SQLException {
-
-    if (!"EDITOR".equals(current.getRoleCode())
-            && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-            && !"EO_ADMIN".equals(current.getRoleCode())) {
-        resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑/主编/编辑部管理员可以解除审稿人。");
-        return;
-    }
 
     String reviewIdStr = req.getParameter("reviewId");
     String manuscriptIdStr = req.getParameter("manuscriptId");
@@ -2253,13 +2141,6 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
     private void handleSendAuthorMessagePost(HttpServletRequest req, HttpServletResponse resp, User current)
             throws IOException, SQLException {
 
-        if (!"EDITOR".equals(current.getRoleCode())
-                && !"EDITOR_IN_CHIEF".equals(current.getRoleCode())
-                && !"EO_ADMIN".equals(current.getRoleCode())) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有编辑/主编/编辑部管理员可以给作者发消息。");
-            return;
-        }
-
         String manuscriptIdStr = req.getParameter("manuscriptId");
         String title = req.getParameter("title");
         String content = req.getParameter("content");
@@ -2409,5 +2290,49 @@ private void handleInviteExternalReviewerPost(HttpServletRequest req,
         return appendQueryParam(url, key, enc);
     }
 
+
+
+
+    /**
+     * /editor/* 路径与“菜单入口权限”映射（与 MenuAuthzFilter 保持一致）。
+     */
+    private String requiredMenuPermission(String path) {
+        if (path == null) return null;
+
+        // 编辑部管理员：形式审查
+        if (path.startsWith("/formalCheck/history")) return PermissionCatalog.MENU_EO_FORMAL_HISTORY;
+        if (path.startsWith("/formalCheck/autoCheck")) return PermissionCatalog.MENU_EO_FORMAL_CHECK;
+        if (path.startsWith("/formalCheck")) return PermissionCatalog.MENU_EO_FORMAL_CHECK;
+
+        // 主编
+        if (path.startsWith("/overview")) return PermissionCatalog.MENU_EIC_OVERVIEW;
+        if (path.startsWith("/desk")) return PermissionCatalog.MENU_EIC_DESK;
+        if (path.startsWith("/toAssign")) return PermissionCatalog.MENU_EIC_TO_ASSIGN;
+        if (path.startsWith("/reviewers")) return PermissionCatalog.MENU_EIC_REVIEWERS;
+        if (path.startsWith("/finalDecision")) return PermissionCatalog.MENU_EIC_FINAL_DECISION;
+        if (path.startsWith("/special")) return PermissionCatalog.MENU_EIC_SPECIAL;
+
+        // 编辑：列表/推荐
+        if (path.startsWith("/withEditor")) return PermissionCatalog.MENU_EDITOR_TODO;
+        if (path.startsWith("/underReview")) return PermissionCatalog.MENU_EDITOR_UNDER_REVIEW;
+        if (path.startsWith("/recommend")) return PermissionCatalog.MENU_EDITOR_RECOMMEND;
+
+        // 审稿动作：邀请/取消 -> “编辑待办”
+        if (path.startsWith("/review/invite") || path.startsWith("/review/inviteExternal") || path.startsWith("/review/cancel")) {
+            return PermissionCatalog.MENU_EDITOR_TODO;
+        }
+        // 催审/监控 -> “审稿监控”
+        if (path.startsWith("/review/remind") || path.startsWith("/review/remindCustom") || path.startsWith("/review/autoRemindNow")
+                || path.startsWith("/review/monitor")) {
+            return PermissionCatalog.MENU_EDITOR_REVIEW_MONITOR;
+        }
+
+        // 作者沟通（页面 + 发消息动作）
+        if (path.startsWith("/author/message") || path.startsWith("/authorComm")) {
+            return PermissionCatalog.MENU_EDITOR_AUTHOR_COMM;
+        }
+
+        return null;
+    }
 
 }
