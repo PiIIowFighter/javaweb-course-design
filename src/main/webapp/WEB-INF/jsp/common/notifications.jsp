@@ -77,7 +77,16 @@
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
                                         <c:if test="${not empty n.relatedManuscriptId}">
-                                            · <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
+                                            ·
+                                            <c:choose>
+                                                <%-- 作者在通知中心点击“查看稿件”应跳转到作者可访问的稿件详情页，避免 403 --%>
+                                                <c:when test="${sessionScope.currentUser.roleCode eq 'AUTHOR'}">
+                                                    <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </c:if>
                                     </div>
                                 </td>
@@ -141,7 +150,16 @@
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
                                         <c:if test="${not empty n.relatedManuscriptId}">
-                                            · <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
+                                            ·
+                                            <c:choose>
+                                                <%-- 作者在通知中心点击“查看稿件”应跳转到作者可访问的稿件详情页，避免 403 --%>
+                                                <c:when test="${sessionScope.currentUser.roleCode eq 'AUTHOR'}">
+                                                    <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </c:if>
                                     </div>
                                 </td>

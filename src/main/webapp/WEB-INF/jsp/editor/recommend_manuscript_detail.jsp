@@ -16,18 +16,14 @@
         <div class="card-header">
             <div>
                 <h3 class="card-title">稿件详情</h3>
-                <p class="card-subtitle">
-                    ManuscriptId：<strong><c:out value="${manuscript.manuscriptId}"/></strong>
-                    &nbsp;&nbsp;|&nbsp;&nbsp;
-                    当前状态：<strong><c:out value="${manuscript.currentStatus}"/></strong>
+                <p class="card-subtitle">当前状态：<strong><c:out value="${manuscript.currentStatus}"/></strong>
                 </p>
             </div>
         </div>
         <div class="card-body">
             <table border="1" cellpadding="6" cellspacing="0" style="width:100%;">
                 <tr><th style="width:160px;">标题</th><td><c:out value="${manuscript.title}"/></td></tr>
-                <tr><th>研究主题</th><td><c:out value="${manuscript.subjectArea}"/></td></tr>
-                <tr><th>关键词</th><td><c:out value="${manuscript.keywords}"/></td></tr>
+<tr><th>关键词</th><td><c:out value="${manuscript.subjectArea}"/></td></tr>
                 <tr><th>资助信息</th><td><c:out value="${manuscript.fundingInfo}"/></td></tr>
                 <tr><th>投稿时间</th><td><c:out value="${manuscript.submitTime}"/></td></tr>
                 <tr><th>决策</th><td><c:out value="${manuscript.decision}"/></td></tr>

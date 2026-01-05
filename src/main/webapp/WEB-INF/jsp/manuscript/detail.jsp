@@ -42,17 +42,13 @@
             <th>期刊ID</th>
             <td><c:out value="${manuscript.journalId}"/></td>
         </tr>
-        <tr>
-            <th>研究主题</th>
-            <td><c:out value="${manuscript.subjectArea}"/></td>
-        </tr>
-        <tr>
+<tr>
             <th>项目资助情况</th>
             <td><c:out value="${manuscript.fundingInfo}"/></td>
         </tr>
         <tr>
             <th>关键词</th>
-            <td><c:out value="${manuscript.keywords}"/></td>
+            <td><c:out value="${manuscript.subjectArea}"/></td>
         </tr>
         <tr>
             <th>摘要（HTML）</th>
@@ -745,7 +741,7 @@
             </div>
         </div>
         <c:if test="${not empty reviewerSuggestionKeyword}">
-            <div style="margin-top:8px; color:#666; font-size:12px;">提示：系统已根据研究主题/关键词进行智能推荐，可直接查看下方候选审稿人。</div>
+            <div style="margin-top:8px; color:#666; font-size:12px;">提示：系统已根据关键词进行智能推荐，可直接查看下方候选审稿人。</div>
         </c:if>
     </form>
 

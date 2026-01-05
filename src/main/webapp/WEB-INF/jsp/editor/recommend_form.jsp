@@ -51,7 +51,6 @@
                 <th>审稿人</th>
                 <th>推荐</th>
                 <th>评分</th>
-                <th>关键评价</th>
                 <th>给编辑的保密意见</th>
                 <th>提交时间</th>
                 <th>操作</th>
@@ -63,16 +62,6 @@
                     <td><c:out value="${r.reviewerName}"/></td>
                     <td><c:out value="${r.recommendation}"/></td>
                     <td><c:out value="${r.score}"/></td>
-                    <td style="max-width: 340px;">
-                        <c:choose>
-                            <c:when test="${not empty r.keyEvaluation}">
-                                <div class="rich-text" style="max-height: 120px; overflow: auto; line-height: 1.6;">
-                                    <c:out value="${r.keyEvaluation}" escapeXml="false"/>
-                                </div>
-                            </c:when>
-                            <c:otherwise>--</c:otherwise>
-                        </c:choose>
-                    </td>
                     <td style="max-width: 340px;">
                         <c:choose>
                             <c:when test="${not empty r.confidentialToEditor}">

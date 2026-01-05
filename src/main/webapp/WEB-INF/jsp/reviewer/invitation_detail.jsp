@@ -89,13 +89,9 @@ document.getElementById('rejectModal').addEventListener('click', function(e) {
         </tr>
         <tr>
             <th>关键词</th>
-            <td><c:out value="${manuscript.keywords}"/></td>
-        </tr>
-        <tr>
-            <th>研究主题</th>
             <td><c:out value="${manuscript.subjectArea}"/></td>
         </tr>
-        <tr>
+<tr>
             <th>项目资助</th>
             <td><c:out value="${manuscript.fundingInfo}"/></td>
         </tr>

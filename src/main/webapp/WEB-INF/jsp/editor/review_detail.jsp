@@ -119,26 +119,6 @@
             </div>
         </div>
     </div>
-
-    <div class="card" style="max-width: 1100px; margin-top: 14px;">
-        <div class="card-header">
-            <div>
-                <h3 class="card-title">关键评价</h3>
-            </div>
-        </div>
-        <div class="card-body">
-            <c:choose>
-                <c:when test="${not empty review.keyEvaluation}">
-                    <%-- 关键评价来自审稿人输入，可能包含富文本；编辑/主编端按富文本展示 --%>
-                    <div class="rich-text" style="line-height: 1.7;">
-                        <c:out value="${review.keyEvaluation}" escapeXml="false"/>
-                    </div>
-                </c:when>
-                <c:otherwise><p>--</p></c:otherwise>
-            </c:choose>
-        </div>
-    </div>
-
     <div class="card" style="max-width: 1100px; margin-top: 14px;">
         <div class="card-header">
             <div>

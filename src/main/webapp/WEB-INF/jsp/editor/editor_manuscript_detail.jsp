@@ -49,13 +49,9 @@
 
             <table border="1" cellpadding="4" cellspacing="0">
                 <tbody>
-                <tr>
-                    <th style="width:180px;">研究主题</th>
-                    <td><c:out value="${manuscript.subjectArea}"/></td>
-                </tr>
-                <tr>
+<tr>
                     <th>关键词</th>
-                    <td><c:out value="${manuscript.keywords}"/></td>
+                    <td><c:out value="${manuscript.subjectArea}"/></td>
                 </tr>
                 <tr>
                     <th>提交时间</th>

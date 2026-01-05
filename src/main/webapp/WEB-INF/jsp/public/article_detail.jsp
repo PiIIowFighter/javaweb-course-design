@@ -27,11 +27,8 @@
         <c:if test="${not empty article.authorList}">
             <p><span class="badge">作者</span> <c:out value="${article.authorList}"/></p>
         </c:if>
-        <c:if test="${not empty article.keywords}">
-            <p><span class="badge">关键词</span> <c:out value="${article.keywords}"/></p>
-        </c:if>
         <c:if test="${not empty article.subjectArea}">
-            <p><span class="badge">研究主题</span> <c:out value="${article.subjectArea}"/></p>
+            <p><span class="badge">关键词</span> <c:out value="${article.subjectArea}"/></p>
         </c:if>
 
         <p>

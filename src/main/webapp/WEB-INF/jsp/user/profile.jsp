@@ -24,10 +24,10 @@
         <form action="${ctx}/profile" method="post" enctype="multipart/form-data" class="stack">
             <div class="grid grid-2">
                 <div class="form-row">
-                    <label>用户名</label>
+                    <label for="username">用户名</label>
                     <div>
-                        <strong><c:out value="${u.username}"/></strong>
-                        <div class="help">用户名不可修改</div>
+                        <input id="username" type="text" name="username" value="${u.username}" required/>
+                        <div class="help">修改后将使用新用户名登录（需保持唯一）。</div>
                     </div>
                 </div>
 
@@ -83,6 +83,10 @@
                     <i class="bi bi-save" aria-hidden="true"></i>
                     保存修改
                 </button>
+                <a class="btn-secondary" href="${ctx}/profile/changePassword" style="text-decoration:none;">
+                    <i class="bi bi-key" aria-hidden="true"></i>
+                    修改密码
+                </a>
                 <a class="btn-quiet" href="${ctx}/dashboard" style="text-decoration:none;">返回工作台</a>
             </div>
         </form>

@@ -99,30 +99,68 @@ public class ProfileServlet extends HttpServlet {
             return;
         }
 
+        int userId = current.getUserId();
+
+        // 允许在个人中心直接修改用户名（用于后续登录）
+        String username = trim(req.getParameter("username"));
         String email = trim(req.getParameter("email"));
         String fullName = trim(req.getParameter("fullName"));
         String affiliation = trim(req.getParameter("affiliation"));
         String researchArea = trim(req.getParameter("researchArea"));
 
         try {
+            boolean usernameChanged = false;
+
+            // 1) 校验并更新用户名（若有变化）
+            if (username == null || username.trim().isEmpty()) {
+                User fresh = userDAO.findById(userId);
+                req.setAttribute("user", fresh);
+                String[] paths = resolveProfileFiles(req, userId);
+                req.setAttribute("avatarPath", paths[0]);
+                req.setAttribute("resumePath", paths[1]);
+                req.setAttribute("error", "用户名不能为空。");
+                req.getRequestDispatcher("/WEB-INF/jsp/user/profile.jsp").forward(req, resp);
+                return;
+            }
+
+            String normalizedUsername = username.trim();
+            if (current.getUsername() == null || !normalizedUsername.equals(current.getUsername())) {
+                User existed = userDAO.findByUsername(normalizedUsername);
+                if (existed != null && existed.getUserId() != null && existed.getUserId() != userId) {
+                    User fresh = userDAO.findById(userId);
+                    req.setAttribute("user", fresh);
+                    String[] paths = resolveProfileFiles(req, userId);
+                    req.setAttribute("avatarPath", paths[0]);
+                    req.setAttribute("resumePath", paths[1]);
+                    req.setAttribute("error", "修改失败：用户名已存在，请换一个用户名。");
+                    req.getRequestDispatcher("/WEB-INF/jsp/user/profile.jsp").forward(req, resp);
+                    return;
+                }
+                userDAO.updateUsername(userId, normalizedUsername);
+                usernameChanged = true;
+            }
+
+            // 2) 更新其它个人信息（不包含密码）
             User toUpdate = new User();
-            toUpdate.setUserId(current.getUserId());
+            toUpdate.setUserId(userId);
             toUpdate.setEmail(email);
             toUpdate.setFullName(fullName);
             toUpdate.setAffiliation(affiliation);
             toUpdate.setResearchArea(researchArea);
             userDAO.updateProfile(toUpdate);
 
-            saveProfileFiles(req, current.getUserId());
+            // 3) 保存附件（头像 / 简历）
+            saveProfileFiles(req, userId);
 
-            User fresh = userDAO.findById(current.getUserId());
+            // 4) 刷新 session 中的 currentUser
+            User fresh = userDAO.findById(userId);
             req.getSession(true).setAttribute("currentUser", fresh);
 
             req.setAttribute("user", fresh);
-            String[] paths = resolveProfileFiles(req, fresh.getUserId());
+            String[] paths = resolveProfileFiles(req, userId);
             req.setAttribute("avatarPath", paths[0]);
             req.setAttribute("resumePath", paths[1]);
-            req.setAttribute("message", "信息更新成功。");
+            req.setAttribute("message", usernameChanged ? "信息更新成功，用户名已更新。" : "信息更新成功。");
 
             req.getRequestDispatcher("/WEB-INF/jsp/user/profile.jsp").forward(req, resp);
         } catch (SQLException e) {
@@ -130,7 +168,8 @@ public class ProfileServlet extends HttpServlet {
         }
     }
 
-    private User getCurrentUser(HttpServletRequest req) {
+
+private User getCurrentUser(HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         return session != null ? (User) session.getAttribute("currentUser") : null;
     }

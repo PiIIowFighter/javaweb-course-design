@@ -48,13 +48,9 @@
             <th>标题</th>
             <td><c:out value="${manuscript.title}"/></td>
         </tr>
-        <tr>
-            <th>研究主题</th>
-            <td><c:out value="${manuscript.subjectArea}"/></td>
-        </tr>
-        <tr>
+<tr>
             <th>关键词</th>
-            <td><c:out value="${manuscript.keywords}"/></td>
+            <td><c:out value="${manuscript.subjectArea}"/></td>
         </tr>
         <tr>
             <th>当前状态</th>

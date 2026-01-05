@@ -469,22 +469,30 @@ public class ReviewerServlet extends HttpServlet {
         double sum = scoreOriginality + scoreSignificance + scoreMethodology + scorePresentation;
         int cnt = 4;
 
-        // 新增维度（若表单提供，则要求全部填写）
+        // 新增维度（表单已提供 5 项：实验/文献/结论/诚信/实用性）。
+        // 以前版本只用于计算总体分，但没有落库，导致编辑端/主编端查看详情时分项分值与审稿人填写不一致。
+        // 这里同时用于计算总体分，并在 submit 时一并写入 dbo.Reviews。
         String pExp = req.getParameter("scoreExperimentation");
         String pLit = req.getParameter("scoreLiteratureReview");
         String pCon = req.getParameter("scoreConclusions");
         String pInt = req.getParameter("scoreAcademicIntegrity");
         String pPra = req.getParameter("scorePracticality");
 
+        Double scoreExperimentation = null;
+        Double scoreLiteratureReview = null;
+        Double scoreConclusions = null;
+        Double scoreAcademicIntegrity = null;
+        Double scorePracticality = null;
+
         boolean hasAnyNew =
                 !isBlank(pExp) || !isBlank(pLit) || !isBlank(pCon) || !isBlank(pInt) || !isBlank(pPra);
 
         if (hasAnyNew) {
-            Double scoreExperimentation = parseScoreInt(pExp, "实验/数据分析");
-            Double scoreLiteratureReview = parseScoreInt(pLit, "文献综述");
-            Double scoreConclusions = parseScoreInt(pCon, "结论与讨论");
-            Double scoreAcademicIntegrity = parseScoreInt(pInt, "学术规范性");
-            Double scorePracticality = parseScoreInt(pPra, "实用性");
+            scoreExperimentation = parseScoreInt(pExp, "实验/数据分析");
+            scoreLiteratureReview = parseScoreInt(pLit, "文献综述");
+            scoreConclusions = parseScoreInt(pCon, "结论与讨论");
+            scoreAcademicIntegrity = parseScoreInt(pInt, "学术规范性");
+            scorePracticality = parseScoreInt(pPra, "实用性");
 
             sum += scoreExperimentation + scoreLiteratureReview + scoreConclusions + scoreAcademicIntegrity + scorePracticality;
             cnt += 5;
@@ -495,7 +503,8 @@ public class ReviewerServlet extends HttpServlet {
         checkScoreRange(scoreOverall);
 
         // === 提交评审 ===
-        reviewDAO.submitReviewV2(
+        // 新版：同时写入 9 个分项维度，避免编辑端查看“审稿意见详情”时分项分值错误/缺失
+        reviewDAO.submitReviewV3(
                 reviewId,
                 current.getUserId(),
                 commentsToAuthor == null ? "" : commentsToAuthor.trim(),          // 给作者的意见
@@ -506,6 +515,11 @@ public class ReviewerServlet extends HttpServlet {
                 scoreSignificance,                // 重要性评分
                 scoreMethodology,                 // 方法学评分
                 scorePresentation,                // 呈现质量评分
+                scoreExperimentation,             // 实验/数据分析
+                scoreLiteratureReview,            // 文献综述
+                scoreConclusions,                 // 结论与讨论
+                scoreAcademicIntegrity,           // 学术规范性
+                scorePracticality,                // 实用性
                 recommendation.trim());           // 推荐结论
 
         req.getSession().setAttribute("successMsg", "评审意见已成功提交！");

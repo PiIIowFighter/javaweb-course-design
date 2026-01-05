@@ -23,7 +23,7 @@
                 <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
                 <p><strong>期刊ID：</strong><c:out value="${manuscript.journalId}"/></p>                <p><strong>当前状态：</strong><c:out value="${manuscript.currentStatus}"/></p>
                 <p><strong>提交时间：</strong><c:out value="${manuscript.submitTime}"/></p>
-                <p><strong>关键词：</strong><c:out value="${manuscript.keywords}"/></p>
+                <p><strong>关键词：</strong><c:out value="${manuscript.subjectArea}"/></p>
             </div>
 
             <!-- 摘要 -->

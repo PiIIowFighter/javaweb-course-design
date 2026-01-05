@@ -597,6 +597,118 @@ public class ReviewDAO {
         promoteManuscriptToEditorRecommendationIfReadyByReviewId(reviewId);
     }
 
+    /**
+     * v3 提交评审：写入 9 个分项维度。
+     *
+     * 说明：review_form.jsp 已包含 9 个评分维度并用于计算总体分。
+     * 旧版后端只落库 4 个维度，导致编辑端/主编端查看“审稿意见详情”时分项分值与审稿人填写不一致。
+     *
+     * 兼容策略：
+     *  - 优先尝试写入 9 个维度；
+     *  - 若数据库缺失新列（ScoreExperimentation 等），降级为 submitReviewV2(11 参数)；
+     *  - 若连 v2 列也缺失，则继续降级为 submitReview（只写作者意见+总体分+推荐结论）。
+     */
+    public void submitReviewV3(int reviewId,
+                              Integer reviewerId,
+                              String commentsToAuthor,
+                              String confidentialToEditor,
+                              String keyEvaluation,
+                              Double scoreOverall,
+                              Double scoreOriginality,
+                              Double scoreSignificance,
+                              Double scoreMethodology,
+                              Double scorePresentation,
+                              Double scoreExperimentation,
+                              Double scoreLiteratureReview,
+                              Double scoreConclusions,
+                              Double scoreAcademicIntegrity,
+                              Double scorePracticality,
+                              String recommendation) throws SQLException {
+
+        Integer so = roundToInt(scoreOriginality);
+        Integer ss = roundToInt(scoreSignificance);
+        Integer sm = roundToInt(scoreMethodology);
+        Integer sp = roundToInt(scorePresentation);
+        Integer se = roundToInt(scoreExperimentation);
+        Integer sl = roundToInt(scoreLiteratureReview);
+        Integer sc = roundToInt(scoreConclusions);
+        Integer sai = roundToInt(scoreAcademicIntegrity);
+        Integer spr = roundToInt(scorePracticality);
+
+        // 如果总体分没传，默认取所有存在项均值
+        Double overall = scoreOverall;
+        if (overall == null) {
+            double sum = 0;
+            int cnt = 0;
+            Integer[] vals = new Integer[]{so, ss, sm, sp, se, sl, sc, sai, spr};
+            for (Integer v : vals) {
+                if (v != null) {
+                    sum += v;
+                    cnt++;
+                }
+            }
+            if (cnt > 0) overall = sum / cnt;
+        }
+
+        String sqlV3 = "UPDATE dbo.Reviews SET " +
+                "ConfidentialToEditor = ?, " +
+                "KeyEvaluation = ?, " +
+                "ScoreOriginality = ?, " +
+                "ScoreSignificance = ?, " +
+                "ScoreMethodology = ?, " +
+                "ScorePresentation = ?, " +
+                "ScoreExperimentation = ?, " +
+                "ScoreLiteratureReview = ?, " +
+                "ScoreConclusions = ?, " +
+                "ScoreAcademicIntegrity = ?, " +
+                "ScorePracticality = ?, " +
+                "Content = ?, " +
+                "Score = ?, " +
+                "Recommendation = ?, " +
+                "Status = 'SUBMITTED', " +
+                "SubmittedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
+                "WHERE ReviewId = ? AND ReviewerId = ?";
+
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlV3)) {
+            ps.setString(1, confidentialToEditor);
+            ps.setString(2, keyEvaluation);
+            if (so != null) ps.setInt(3, clampScore(so)); else ps.setNull(3, Types.INTEGER);
+            if (ss != null) ps.setInt(4, clampScore(ss)); else ps.setNull(4, Types.INTEGER);
+            if (sm != null) ps.setInt(5, clampScore(sm)); else ps.setNull(5, Types.INTEGER);
+            if (sp != null) ps.setInt(6, clampScore(sp)); else ps.setNull(6, Types.INTEGER);
+            if (se != null) ps.setInt(7, clampScore(se)); else ps.setNull(7, Types.INTEGER);
+            if (sl != null) ps.setInt(8, clampScore(sl)); else ps.setNull(8, Types.INTEGER);
+            if (sc != null) ps.setInt(9, clampScore(sc)); else ps.setNull(9, Types.INTEGER);
+            if (sai != null) ps.setInt(10, clampScore(sai)); else ps.setNull(10, Types.INTEGER);
+            if (spr != null) ps.setInt(11, clampScore(spr)); else ps.setNull(11, Types.INTEGER);
+            ps.setString(12, commentsToAuthor);
+            if (overall != null) ps.setDouble(13, overall); else ps.setNull(13, Types.DECIMAL);
+            ps.setString(14, recommendation);
+            ps.setInt(15, reviewId);
+            if (reviewerId != null) ps.setInt(16, reviewerId); else ps.setNull(16, Types.INTEGER);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            String msg = ex.getMessage();
+            // 若缺失新增列，则降级为 v2（4 维），再不行降级为基础提交
+            if (msg != null && (
+                    msg.contains("ScoreExperimentation") || msg.contains("ScoreLiteratureReview") ||
+                    msg.contains("ScoreConclusions") || msg.contains("ScoreAcademicIntegrity") ||
+                    msg.contains("ScorePracticality") || msg.contains("ConfidentialToEditor") ||
+                    msg.contains("KeyEvaluation") || msg.contains("ScoreOriginality")
+            )) {
+                // 降级：只写前 4 个维度
+                submitReviewV2(reviewId, reviewerId, commentsToAuthor, confidentialToEditor, keyEvaluation,
+                        overall, scoreOriginality, scoreSignificance, scoreMethodology, scorePresentation, recommendation);
+                return;
+            }
+            throw ex;
+        }
+
+        // 提交后尝试推进稿件状态
+        promoteManuscriptToEditorRecommendationIfReadyByReviewId(reviewId);
+    }
+
     /** 催审：RemindCount + 1, LastRemindedAt 更新为当前时间。 */
     public void remind(int reviewId) throws SQLException {
         String sql = "UPDATE dbo.Reviews SET RemindCount = ISNULL(RemindCount,0) + 1, LastRemindedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ReviewId = ?";

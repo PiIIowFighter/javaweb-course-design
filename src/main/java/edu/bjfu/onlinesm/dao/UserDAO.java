@@ -368,7 +368,38 @@ public class UserDAO {
         }
     }
 
-    // === 内部工具方法 ===
+    
+
+    /**
+     * 用户在个人中心修改用户名（要求唯一）。
+     */
+    public void updateUsername(int userId, String newUsername) throws SQLException {
+        String sql = "UPDATE dbo.Users SET Username = ? WHERE UserId = ?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newUsername);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * 用户修改密码：只有当旧密码匹配时才会更新。
+     *
+     * @return 更新的行数（1=成功，0=旧密码不正确或用户不存在）
+     */
+    public int updatePasswordIfMatch(int userId, String oldPassword, String newPassword) throws SQLException {
+        String sql = "UPDATE dbo.Users SET PasswordHash = ? WHERE UserId = ? AND PasswordHash = ?";
+        try (Connection conn = DbUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newPassword);
+            ps.setInt(2, userId);
+            ps.setString(3, oldPassword);
+            return ps.executeUpdate();
+        }
+    }
+
+// === 内部工具方法 ===
 
     private int getRoleIdByCode(String roleCode) throws SQLException {
         String sql = "SELECT RoleId FROM dbo.Roles WHERE RoleCode = ?";

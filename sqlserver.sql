@@ -89,7 +89,7 @@ BEGIN
         Affiliation    NVARCHAR(200) NULL,
         ResearchArea   NVARCHAR(200) NULL,
         RoleId         INT NOT NULL,
-        RegisterTime   DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        RegisterTime   DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         Status         NVARCHAR(20)  NOT NULL DEFAULT N'ACTIVE',  -- ACTIVE / DISABLED / LOCKED / PENDING
         CONSTRAINT FK_Users_Roles FOREIGN KEY(RoleId) REFERENCES dbo.Roles(RoleId),
         CONSTRAINT CK_Users_Status CHECK (Status IN (N'ACTIVE', N'DISABLED', N'LOCKED', N'PENDING'))
@@ -219,7 +219,7 @@ BEGIN
         ImpactFactor  DECIMAL(6,3) NULL,
         Timeline      NVARCHAR(200) NULL,
         ISSN          NVARCHAR(30)  NULL,
-        CreatedAt     DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CreatedAt     DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CreatedBy     INT NULL,
         CONSTRAINT FK_Journals_CreatedBy FOREIGN KEY(CreatedBy) REFERENCES dbo.Users(UserId)
     );
@@ -253,7 +253,7 @@ BEGIN
         Decision           NVARCHAR(30)   NULL,          -- ACCEPT / REJECT / REVISION
         CurrentRound       INT NOT NULL DEFAULT 1,
         SubmitTime         DATETIME2(0) NULL,
-        LastStatusTime     DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        LastStatusTime     DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         FinalDecisionTime  DATETIME2(0) NULL,
         IsArchived         BIT NOT NULL DEFAULT 0,
         IsWithdrawn        BIT NOT NULL DEFAULT 0,
@@ -297,7 +297,7 @@ BEGIN
         CoverLetterPath     NVARCHAR(260) NULL,
         CoverLetterHtml     NVARCHAR(MAX) NULL,
         ResponseLetterPath  NVARCHAR(260) NULL,
-        CreatedAt           DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CreatedAt           DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CreatedBy           INT NOT NULL,
         Remark              NVARCHAR(200) NULL,
 
@@ -327,7 +327,7 @@ BEGIN
         AssignedByChiefId  INT NOT NULL,                   -- 指派的主编
         ChiefComment       NVARCHAR(1000) NULL,            -- 主编给编辑的文字建议
         AssignedTime       DATETIME2(0) NOT NULL 
-                          DEFAULT SYSUTCDATETIME(),        -- 指派时间（UTC）
+                          DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),        -- 指派时间（北京时间）
 
         CONSTRAINT FK_MA_Manuscript 
             FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),
@@ -396,8 +396,10 @@ BEGIN
         Score          DECIMAL(4,2) NULL,
         Recommendation NVARCHAR(50) NULL,
         Status         NVARCHAR(30) NOT NULL DEFAULT N'INVITED', -- INVITED/ACCEPTED/DECLINED/SUBMITTED/EXPIRED
-        InvitedAt      DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        InvitedAt      DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         AcceptedAt     DATETIME2(0) NULL,
+        DeclinedAt     DATETIME2(0) NULL,
+        RejectionReason NVARCHAR(500) NULL,
         SubmittedAt    DATETIME2(0) NULL,
         DueAt          DATETIME2(0) NULL,
         RemindCount    INT NOT NULL DEFAULT 0,
@@ -418,6 +420,19 @@ GO
    ============================================================ */
 IF OBJECT_ID(N'dbo.Reviews', N'U') IS NOT NULL
 BEGIN
+    /* 保证拒绝邀请状态可用（DECLINED）以及拒绝原因字段存在 */
+    IF COL_LENGTH('dbo.Reviews','DeclinedAt') IS NULL
+        ALTER TABLE dbo.Reviews ADD DeclinedAt DATETIME2(0) NULL;
+
+    IF COL_LENGTH('dbo.Reviews','RejectionReason') IS NULL
+        ALTER TABLE dbo.Reviews ADD RejectionReason NVARCHAR(500) NULL;
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Reviews_Status' AND parent_object_id = OBJECT_ID(N'dbo.Reviews'))
+        ALTER TABLE dbo.Reviews DROP CONSTRAINT CK_Reviews_Status;
+    ALTER TABLE dbo.Reviews
+        ADD CONSTRAINT CK_Reviews_Status
+        CHECK (Status IN (N'INVITED', N'ACCEPTED', N'DECLINED', N'SUBMITTED', N'EXPIRED'));
+
     IF COL_LENGTH('dbo.Reviews','ConfidentialToEditor') IS NULL
         ALTER TABLE dbo.Reviews ADD ConfidentialToEditor NVARCHAR(MAX) NULL;
 
@@ -465,7 +480,7 @@ BEGIN
         NewsId      INT IDENTITY(1,1) PRIMARY KEY,
         Title       NVARCHAR(200) NOT NULL,
         Content     NVARCHAR(MAX) NOT NULL,
-        PublishedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        PublishedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         AuthorId    INT NOT NULL,
         IsPublished BIT NOT NULL DEFAULT 1,
         CONSTRAINT FK_News_Author FOREIGN KEY(AuthorId) REFERENCES dbo.Users(UserId)
@@ -488,7 +503,7 @@ BEGIN
         Action        NVARCHAR(200) NOT NULL,
         Detail        NVARCHAR(MAX) NULL,
         Ip            NVARCHAR(64)  NULL,
-        CreatedAt     DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME()
+        CreatedAt     DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME())
     );
 
     -- 可选索引：提升日志列表查询性能
@@ -509,7 +524,7 @@ BEGIN
         FilePath     NVARCHAR(260) NOT NULL,
         FileType     NVARCHAR(50)  NULL,
         FileSize     BIGINT        NULL,
-        UploadTime   DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UploadTime   DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         UploaderId   INT NOT NULL,
         ManuscriptId INT NULL,
         VersionId    INT NULL,
@@ -530,7 +545,7 @@ BEGIN
         ToStatus     NVARCHAR(30)  NOT NULL,
         Event        NVARCHAR(50)  NOT NULL,
         ChangedBy    INT NOT NULL,
-        ChangeTime   DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        ChangeTime   DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         Remark       NVARCHAR(500) NULL,
 
         CONSTRAINT FK_MSH_Manuscript FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),
@@ -622,7 +637,7 @@ BEGIN
         PageKey    NVARCHAR(50) NOT NULL,
         Title      NVARCHAR(200) NOT NULL,
         Content    NVARCHAR(MAX) NOT NULL,
-        UpdatedAt  DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt  DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CONSTRAINT FK_JournalPages_Journal FOREIGN KEY(JournalId) REFERENCES dbo.Journals(JournalId)
     );
     CREATE UNIQUE INDEX UX_JournalPages_Journal_PageKey
@@ -663,7 +678,7 @@ DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId
   <li><b>退稿（Rejected）</b>：不再进入后续评审流程，系统保留记录以便追溯。</li>
 </ul>
 <p class="muted">提示：系统中可在“我的稿件 / 审稿进度”查看每个阶段的状态与历史记录。</p>
-', "''") + N'''),
+', N'''', N'''''' ) + N'''),
 
         (N''guide'',    N''用户指南（Guide for Authors）'', N''' + REPLACE(N'
 <p>本指南汇总投稿准备、写作结构、格式要求与提交清单，帮助作者高效完成投稿。</p>
@@ -679,7 +694,7 @@ DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId
   <li>图表清晰，图题与注释完整；参考文献格式统一。</li>
 </ul>
 <p class="muted">提示：后台“期刊管理 → 关于期刊页面”可配置本页内容。</p>
-', "''") + N'''),
+', N'''', N'''''' ) + N'''),
 
         (N''aims'',     N''论文主旨与投稿范围（Aims and Scope）'', N''' + REPLACE(N'
 <p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
@@ -690,7 +705,7 @@ DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId
   <li>数据挖掘与知识图谱</li>
   <li>系统与工程实践（部署/评测/MLOps）</li>
 </ul>
-', "''") + N'''),
+', N'''', N'''''' ) + N'''),
 
         (N''policies'', N''政策与指南（Policies and Guidelines）'', N''' + REPLACE(N'
 <p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。</p>
@@ -700,7 +715,7 @@ DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId
   <li>查重与相似性检测：编辑部可进行相似性检测，异常可要求解释或退稿。</li>
   <li>数据与代码：鼓励公开数据/代码以提升可复现性。</li>
 </ul>
-', "''") + N''')
+', N'''', N'''''' ) + N''')
     ) AS V(PageKey, Title, Content)
 )
 MERGE dbo.JournalPages AS T
@@ -710,7 +725,7 @@ WHEN MATCHED THEN
     UPDATE SET
         T.Title = S.Title,
         T.Content = S.Content,
-        T.UpdatedAt = SYSUTCDATETIME()
+        T.UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME())
 WHEN NOT MATCHED THEN
     INSERT (JournalId, PageKey, Title, Content' + CASE WHEN 1=1 THEN N'' ELSE N'' END + N')
     VALUES (S.JournalId, S.PageKey, S.Title, S.Content' + CASE WHEN 1=1 THEN N'' ELSE N'' END + N');
@@ -774,13 +789,13 @@ BEGIN
             VALUES
               (N'期刊系统上线公告',
                N'本期刊在线投稿与审稿系统已上线，欢迎作者注册并提交稿件。',
-               SYSUTCDATETIME(), @authorId, 1),
+               DATEADD(HOUR, 8, SYSUTCDATETIME()), @authorId, 1),
               (N'征稿通知：AI 与可复现研究专题',
                N'本期刊开设专题：AI 与可复现研究（Special Issue），欢迎相关工作投稿。',
-               DATEADD(DAY, -3, SYSUTCDATETIME()), @authorId, 1),
+               DATEADD(DAY, -3, DATEADD(HOUR, 8, SYSUTCDATETIME())), @authorId, 1),
               (N'审稿人招募',
                N'期刊长期招募审稿人，欢迎具有相关研究背景的学者加入审稿人库。',
-               DATEADD(DAY, -10, SYSUTCDATETIME()), @authorId, 1);
+               DATEADD(DAY, -10, DATEADD(HOUR, 8, SYSUTCDATETIME())), @authorId, 1);
         END
     END
 END
@@ -833,7 +848,7 @@ BEGIN
         Description  NVARCHAR(MAX)  NULL,
         IsPublished  BIT            NOT NULL CONSTRAINT DF_Issues_IsPublished DEFAULT(0),
         PublishDate  DATE           NULL,
-        CreatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_Issues_CreatedAt DEFAULT SYSUTCDATETIME(),
+        CreatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_Issues_CreatedAt DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CONSTRAINT FK_Issues_Journals FOREIGN KEY (JournalId) REFERENCES dbo.Journals(JournalId),
         CONSTRAINT CK_Issues_IssueType CHECK (IssueType IN (N'LATEST', N'SPECIAL'))
     );
@@ -869,7 +884,7 @@ BEGIN
         Deadline    DATE          NULL,
         EndDate     DATE          NULL,
         IsPublished BIT           NOT NULL CONSTRAINT DF_CallForPapers_IsPublished DEFAULT(1),
-        CreatedAt   DATETIME2(0)  NOT NULL CONSTRAINT DF_CallForPapers_CreatedAt DEFAULT SYSUTCDATETIME(),
+        CreatedAt   DATETIME2(0)  NOT NULL CONSTRAINT DF_CallForPapers_CreatedAt DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CONSTRAINT FK_CallForPapers_Journals FOREIGN KEY (JournalId) REFERENCES dbo.Journals(JournalId)
     );
 
@@ -1043,7 +1058,7 @@ BEGIN
         RelatedManuscriptId INT NULL,
         IsRead BIT NOT NULL DEFAULT 0,
         ReadAt DATETIME2(0) NULL,
-        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)
     );
 
@@ -1118,8 +1133,8 @@ BEGIN
         EditorId INT NOT NULL,
         Suggestion NVARCHAR(50) NOT NULL,
         Summary NVARCHAR(MAX) NULL,
-        SubmittedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-        UpdatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        SubmittedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
+        UpdatedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
 
         CONSTRAINT FK_EditorSuggestions_Manuscript FOREIGN KEY(ManuscriptId)
             REFERENCES dbo.Manuscripts(ManuscriptId),
@@ -1156,7 +1171,7 @@ BEGIN
         DownloadCount    INT NOT NULL DEFAULT 0,
         CitationCount    INT NOT NULL DEFAULT 0,
         PopularityScore  FLOAT NOT NULL DEFAULT 0,
-        UpdatedAt        DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt        DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
 
         CONSTRAINT FK_ArticleMetrics_Manuscripts
             FOREIGN KEY (ManuscriptId)
@@ -1182,7 +1197,7 @@ BEGIN
     IF COL_LENGTH('dbo.Manuscripts', 'LastStatusTime') IS NULL
     BEGIN
         ALTER TABLE dbo.Manuscripts
-            ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME();
+            ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME());
 
         PRINT 'Added LastStatusTime to dbo.Manuscripts';
     END
@@ -1195,7 +1210,7 @@ BEGIN
         CheckResultId           INT IDENTITY(1,1) PRIMARY KEY,
         ManuscriptId            INT NOT NULL,
         ReviewerId              INT NOT NULL,
-        CheckTime               DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CheckTime               DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CheckResult             NVARCHAR(10) NULL,
         AuthorInfoValid         BIT NULL,
         AbstractWordCountValid  BIT NULL,
@@ -1257,7 +1272,7 @@ GO
 PRINT '检查 Manuscripts 表的 LastStatusTime 字段...';
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.Manuscripts') AND name = 'LastStatusTime')
 BEGIN
-    ALTER TABLE dbo.Manuscripts ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME();
+    ALTER TABLE dbo.Manuscripts ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME());
     PRINT '✅ 已添加字段 LastStatusTime 到 Manuscripts 表';
 END
 ELSE
@@ -1276,7 +1291,7 @@ BEGIN
         CheckResultId           INT IDENTITY(1,1) PRIMARY KEY,
         ManuscriptId            INT NOT NULL,
         ReviewerId              INT NOT NULL,
-        CheckTime               DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CheckTime               DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         CheckResult             NVARCHAR(10) NULL,
         AuthorInfoValid         BIT NULL,
         AbstractWordCountValid  BIT NULL,
@@ -1389,7 +1404,7 @@ DECLARE @updateCount INT;
 
 UPDATE dbo.Manuscripts
 SET Status = 'RETURNED',
-    LastStatusTime = SYSUTCDATETIME()
+    LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME())
 WHERE Status = 'Incomplete Submission';
 
 SET @updateCount = @@ROWCOUNT;
@@ -1553,6 +1568,7 @@ BEGIN
 END
 GO
 
+DECLARE @Role_REVIEWER INT = (SELECT TOP 1 RoleId FROM dbo.Roles WHERE RoleCode=N'REVIEWER');
 IF @Role_REVIEWER IS NOT NULL
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'reviewer2')
@@ -1626,25 +1642,25 @@ BEGIN
             INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
             VALUES (N'投稿指南更新：新增模板与格式检查要点',
                     N'为提升审稿效率与排版一致性，我们更新了作者指南：新增 Word/LaTeX 模板、参考文献格式示例与常见格式问题清单。建议投稿前先完成自检。',
-                    DATEADD(DAY, -2, SYSUTCDATETIME()), @newsAuthor, 1);
+                    DATEADD(DAY, -2, DATEADD(HOUR, 8, SYSUTCDATETIME())), @newsAuthor, 1);
 
         IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'出版伦理声明：利益冲突与数据可用性')
             INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
             VALUES (N'出版伦理声明：利益冲突与数据可用性',
                     N'请作者在稿件中明确声明利益冲突，并在可行情况下提供数据与代码可用性说明（Data & Code Availability）。本刊对学术不端采取零容忍政策。',
-                    DATEADD(DAY, -7, SYSUTCDATETIME()), @newsAuthor, 1);
+                    DATEADD(DAY, -7, DATEADD(HOUR, 8, SYSUTCDATETIME())), @newsAuthor, 1);
 
         IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'审稿人培训：如何给出高质量审稿意见')
             INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
             VALUES (N'审稿人培训：如何给出高质量审稿意见',
                     N'我们发布了审稿建议清单，涵盖创新性、方法严谨性、实验可复现性与写作表达等维度，帮助审稿人提供可操作的改进建议。',
-                    DATEADD(DAY, -14, SYSUTCDATETIME()), @newsAuthor, 1);
+                    DATEADD(DAY, -14, DATEADD(HOUR, 8, SYSUTCDATETIME())), @newsAuthor, 1);
 
         IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'系统功能升级：新增通知中心与消息提醒')
             INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
             VALUES (N'系统功能升级：新增通知中心与消息提醒',
                     N'系统新增站内通知中心：稿件退修、审稿邀请、终审结果等关键节点会以站内信形式推送，帮助作者与审稿人及时跟进。',
-                    DATEADD(DAY, -20, SYSUTCDATETIME()), @newsAuthor, 1);
+                    DATEADD(DAY, -20, DATEADD(HOUR, 8, SYSUTCDATETIME())), @newsAuthor, 1);
     END
 END
 GO
@@ -1779,24 +1795,32 @@ BEGIN
 
         DECLARE @new TABLE(ManuscriptId INT NOT NULL, SeedKey NVARCHAR(50) NOT NULL);
 
-        INSERT INTO dbo.Manuscripts(
-            JournalId, SubmitterId, CurrentEditorId,
-            Title, Abstract, Keywords, SubjectArea, AuthorList,
-            Status, Decision, CurrentRound,
-            SubmitTime, LastStatusTime, FinalDecisionTime,
-            IsArchived, IsWithdrawn
-        )
-        OUTPUT inserted.ManuscriptId, s.SeedKey INTO @new(ManuscriptId, SeedKey)
-        SELECT
-            @jidM, @authorId, @editorId,
-            s.Title, s.Abstract, s.Keywords, s.SubjectArea, s.AuthorList,
-            N'ACCEPTED', N'ACCEPT', 1,
-            DATEADD(DAY, -s.DaysAgo, SYSUTCDATETIME()),
-            DATEADD(DAY, -s.DaysAgo, SYSUTCDATETIME()),
-            DATEADD(DAY, -s.DaysAgo + 3, SYSUTCDATETIME()),
-            0, 0
-        FROM @seed s
-        WHERE NOT EXISTS (SELECT 1 FROM dbo.Manuscripts m WHERE m.Title = s.Title);
+        MERGE dbo.Manuscripts AS t
+        USING (
+            SELECT
+                s.SeedKey, s.Title, s.Abstract, s.Keywords, s.SubjectArea, s.AuthorList,
+                s.DaysAgo
+            FROM @seed s
+        ) AS s
+        ON t.Title = s.Title
+        WHEN NOT MATCHED THEN
+            INSERT (
+                JournalId, SubmitterId, CurrentEditorId,
+                Title, Abstract, Keywords, SubjectArea, AuthorList,
+                Status, Decision, CurrentRound,
+                SubmitTime, LastStatusTime, FinalDecisionTime,
+                IsArchived, IsWithdrawn
+            )
+            VALUES (
+                @jidM, @authorId, @editorId,
+                s.Title, s.Abstract, s.Keywords, s.SubjectArea, s.AuthorList,
+                N'ACCEPTED', N'ACCEPT', 1,
+                DATEADD(DAY, -s.DaysAgo, DATEADD(HOUR, 8, SYSUTCDATETIME())),
+                DATEADD(DAY, -s.DaysAgo, DATEADD(HOUR, 8, SYSUTCDATETIME())),
+                DATEADD(DAY, -s.DaysAgo + 3, DATEADD(HOUR, 8, SYSUTCDATETIME())),
+                0, 0
+            )
+        OUTPUT inserted.ManuscriptId, s.SeedKey INTO @new(ManuscriptId, SeedKey);
 
         /* Ensure each seeded manuscript has a current Version row (file paths left NULL for demo) */
         IF OBJECT_ID(N'dbo.ManuscriptVersions', N'U') IS NOT NULL
