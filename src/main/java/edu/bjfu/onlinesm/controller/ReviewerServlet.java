@@ -78,6 +78,12 @@ public class ReviewerServlet extends HttpServlet {
                 handleInvitationDetail(req, resp);
                 break;
 
+            case "/manuscript":
+                // 查看稿件详情（审稿人匿名视图，仅 ACCEPTED/SUBMITTED）
+                if (!requireMenu(req, resp, PermissionCatalog.MENU_REVIEWER_ASSIGNED)) return;
+                handleManuscriptDetail(req, resp);
+                break;
+
             default:
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -244,6 +250,56 @@ public class ReviewerServlet extends HttpServlet {
         }
     }
 
+    /**
+     * 查看稿件详情（匿名视图）：
+     *  - 仅允许当前审稿人查看自己 ACCEPTED/SUBMITTED 的审稿记录；
+     *  - 不展示作者信息；
+     *  - 文件下载仅指向脱密稿（由 /files/preview 在服务端强制执行）。
+     */
+    private void handleManuscriptDetail(HttpServletRequest req,
+                                        HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String reviewIdStr = req.getParameter("id");
+        if (reviewIdStr == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少审稿记录 ID。");
+            return;
+        }
+
+        User current = getCurrentUser(req);
+        try {
+            int reviewId = Integer.parseInt(reviewIdStr);
+            Review review = reviewDAO.findById(reviewId);
+            if (review == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到审稿记录。");
+                return;
+            }
+            if (review.getReviewerId() != current.getUserId()) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看该稿件详情。");
+                return;
+            }
+
+            if (!("ACCEPTED".equals(review.getStatus()) || "SUBMITTED".equals(review.getStatus()))) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "该审稿记录当前状态不支持查看稿件详情。");
+                return;
+            }
+
+            Manuscript m = manuscriptDAO.findById(review.getManuscriptId());
+            if (m == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到对应稿件。");
+                return;
+            }
+
+            req.setAttribute("review", review);
+            req.setAttribute("manuscript", m);
+            req.getRequestDispatcher("/WEB-INF/jsp/reviewer/manuscript_detail.jsp")
+                    .forward(req, resp);
+        } catch (NumberFormatException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
+        } catch (SQLException e) {
+            throw new ServletException("加载稿件详情时数据库出错", e);
+        }
+    }
 
     private void handleAssignedList(HttpServletRequest req,
                                     HttpServletResponse resp)

@@ -5,7 +5,7 @@
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
 <h2>新闻 / 公告管理</h2>
-<p>展示 dbo.News 表中的公告列表，并支持新增、编辑和删除操作。</p>
+<p>展示站点公告列表，并支持新增、编辑和删除操作。</p>
 
 
 <form method="get" action="${pageContext.request.contextPath}/admin/news/list" style="margin: 12px 0;">

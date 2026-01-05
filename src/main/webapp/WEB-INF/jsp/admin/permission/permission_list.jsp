@@ -79,7 +79,7 @@
                     <h3 style="margin: 0 0 var(--space-2);">系统管理（管理员）</h3>
                     <div class="grid grid-2" style="align-items:start;">
                         <c:forEach var="p" items="${permissions}">
-                            <c:if test="${fn:startsWith(p.key, 'ADMIN_')}">
+                            <c:if test="${fn:startsWith(p.key, 'ADMIN_') and p.key != 'ADMIN_JOURNALS' and p.key != 'ADMIN_NEWS'}">
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
@@ -184,7 +184,7 @@
                     <h3 style="margin: 0 0 var(--space-2);">编辑部管理员</h3>
                     <div class="grid grid-2" style="align-items:start;">
                         <c:forEach var="p" items="${permissions}">
-                            <c:if test="${fn:startsWith(p.key, 'MENU_EO_')}">
+                            <c:if test="${(fn:startsWith(p.key, 'MENU_EO_') or p.key == 'ADMIN_JOURNALS' or p.key == 'ADMIN_NEWS')}">
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>

@@ -32,8 +32,7 @@
     <section class="content">
         <c:choose>
 
-            <%-- Aims and scope（数据库驱动：dbo.JournalPages） --%>
-            <c:when test="${activeAboutTab == 'aims'}">
+                        <c:when test="${activeAboutTab == 'aims'}">
                 <div class="card">
                     <div class="card-header">
                         <div>
@@ -130,8 +129,7 @@
                 </div>
             </c:when>
 
-            <%-- Journal insights --%>
-            <c:when test="${activeAboutTab == 'insights'}">
+                        <c:when test="${activeAboutTab == 'insights'}">
                 <div class="card">
                     <div class="card-header">
                         <div>
@@ -141,7 +139,7 @@
                     </div>
 
                     <c:if test="${empty journal}">
-                        <p>未读取到期刊信息（请检查 dbo.Journals 是否已初始化）。</p>
+                        <p>未读取到期刊信息。</p>
                     </c:if>
                     <c:if test="${not empty journal}">
                         <table class="table">
@@ -177,8 +175,7 @@
                 </div>
             </c:when>
 
-            <%-- News --%>
-            <c:when test="${activeAboutTab == 'news'}">
+                        <c:when test="${activeAboutTab == 'news'}">
                 <div class="card">
                     <div class="card-header">
                         <div>
@@ -219,8 +216,7 @@
                 </div>
             </c:when>
 
-            <%-- Policies and Guidelines（数据库驱动：dbo.JournalPages） --%>
-            <c:when test="${activeAboutTab == 'policies'}">
+                        <c:when test="${activeAboutTab == 'policies'}">
                 <div class="card">
                     <div class="card-header">
                         <div>

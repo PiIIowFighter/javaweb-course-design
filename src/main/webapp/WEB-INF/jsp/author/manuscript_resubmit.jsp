@@ -16,8 +16,14 @@
         <div class="alert alert-danger"><c:out value="${error}"/></div>
     </c:if>
 
+    <c:if test="${not empty param.msg}">
+        <div class="alert alert-success"><c:out value="${param.msg}"/></div>
+    </c:if>
+
     <form id="resubmitEditForm" method="post" action="${ctx}/manuscripts/resubmit" enctype="multipart/form-data" class="stack-lg">
         <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
+        <!-- mode = submit | draft（用于"存为草稿"） -->
+        <input type="hidden" id="resubmitMode" name="mode" value="submit"/>
 
         <!-- ========== 1) 元数据 ========== -->
         <fieldset>
@@ -33,19 +39,6 @@
                 </div>
             </div>
 
-            <div class="form-row">
-                <label for="issueId">选择专刊（可选）</label>
-                <select id="issueId" name="issueId">
-                    <option value="">（不选择 / 默认）</option>
-                    <c:forEach var="iss" items="${specialIssues}">
-                        <option value="${iss.issueId}"
-                                <c:if test="${not empty manuscript && manuscript.issueId == iss.issueId}">selected</c:if>>
-                            <c:out value="${iss.title}"/>
-                        </option>
-                    </c:forEach>
-                </select>
-                <div class="help">未选择则系统默认关联第一个已发布专刊（SPECIAL 优先）。</div>
-            </div>
 
             <div class="form-row">
                 <label for="title">标题</label>
@@ -276,7 +269,12 @@
 
         <!-- ========== 5) 操作按钮 ========== -->
         <div class="actions">
-            <button class="btn-primary" type="submit" onclick="return confirm('确认重新提交（Resubmit）？提交后将进入后续处理流程。');">
+            <button type="submit" class="btn-quiet" onclick="document.getElementById('resubmitMode').value='draft'; return confirm('保存为草稿？\n\n说明：\n- 不会推进流程状态（仍保持待修改）；\n- 可多次保存，稍后再重新提交。');">
+                <i class="bi bi-save" aria-hidden="true"></i>
+                存为草稿
+            </button>
+
+            <button class="btn-primary" type="submit" onclick="document.getElementById('resubmitMode').value='submit'; return confirm('确认重新提交（Resubmit）？提交后将进入后续处理流程。');">
                 <i class="bi bi-send" aria-hidden="true"></i>
                 重新提交（Resubmit）
             </button>

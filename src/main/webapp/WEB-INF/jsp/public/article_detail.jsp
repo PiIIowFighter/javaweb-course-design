@@ -54,11 +54,7 @@
             </c:otherwise>
         </c:choose>
 
-        <div class="alert">
-            说明：本前台“论文库”功能当前基于 <span class="badge">dbo.Manuscripts</span> 的 <span class="badge">ACCEPTED</span> 状态展示。
-            “全文 PDF/附件下载”当前只在登录后通过 <span class="badge">/files/preview</span> 提供（并带权限校验）。
-            若需要对游客公开全文，请后续调整权限策略或新增公开发布文件表。
-        </div>
+        <div class="alert">本文页面展示公开信息。若需查看全文与附件，请登录后在稿件详情页中访问。</div>
 
         <div class="actions">
             <a class="btn-primary" style="text-decoration:none;" href="${ctx}/auth/login">

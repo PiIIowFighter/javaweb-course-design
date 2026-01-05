@@ -25,16 +25,14 @@
 
     <p>
         <label>页面 Key：
-            <select name="pageKey" style="width: 220px;">
-                <option value="aims" <c:if test="${page.pageKey=='aims'}">selected</c:if>>aims（办刊宗旨）</option>
-                <option value="policies" <c:if test="${page.pageKey=='policies'}">selected</c:if>>policies（政策与流程）</option>
-                <option value="about" <c:if test="${page.pageKey=='about'}">selected</c:if>>about（关于）</option>
-                <option value="contact" <c:if test="${page.pageKey=='contact'}">selected</c:if>>contact（联系方式）</option>
-                <option value="faq" <c:if test="${page.pageKey=='faq'}">selected</c:if>>faq</option>
-                <option value="other" <c:if test="${page.pageKey=='other'}">selected</c:if>>other</option>
+            <select name="pageKey" style="width: 260px;">
+                <option value="publish" <c:if test="${page.pageKey=='publish'}">selected</c:if>>publish（/publish：投稿与出版）</option>
+                <option value="guide" <c:if test="${page.pageKey=='guide'}">selected</c:if>>guide（/guide：投稿指南）</option>
+                <option value="aims" <c:if test="${page.pageKey=='aims'}">selected</c:if>>aims（/about/aims：办刊宗旨）</option>
+                <option value="policies" <c:if test="${page.pageKey=='policies'}">selected</c:if>>policies（/about/policies：政策与流程）</option>
             </select>
         </label>
-        <span style="color:#666; font-size:0.9em;">（前台目前主要使用 aims / policies）</span>
+        <span style="color:#666; font-size:0.9em;">（本项目仅维护以上 4 个页面）</span>
     </p>
 
     <p>

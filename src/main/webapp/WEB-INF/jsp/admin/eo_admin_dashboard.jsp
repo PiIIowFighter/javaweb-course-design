@@ -4,6 +4,8 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+
 <div class="card">
     <div class="card-header">
         <div>
@@ -15,50 +17,59 @@
     </div>
 
     <div class="grid grid-3">
+
         <!-- 形式审查 / 格式检查 -->
-        <a class="card" style="text-decoration:none;"
-           href="${pageContext.request.contextPath}/editor/formalCheck">
-            <h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> 形式审查 / 格式检查</h3>
-            <p>
-                处理 SUBMITTED / FORMAL_CHECK：检查稿件版式、篇幅、要素是否符合投稿须知，
-                决定是否送主编案头审查或退回作者修改。
-            </p>
-            <small>
-                <i class="bi bi-arrow-right" aria-hidden="true"></i> 进入形式审查工作台
-            </small>
-        </a>
+        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
+            <a class="card" style="text-decoration:none;" href="${ctx}/editor/formalCheck">
+                <h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> 形式审查 / 格式检查</h3>
+                <p>
+                    处理 SUBMITTED / FORMAL_CHECK：检查稿件版式、篇幅、要素是否符合投稿须知，
+                    决定是否送主编案头审查或退回作者修改。
+                </p>
+                <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 进入形式审查工作台</small>
+            </a>
+        </c:if>
 
         <!-- 审查历史 -->
-        <a class="card" style="text-decoration:none;"
-           href="${pageContext.request.contextPath}/editor/formalCheck/history">
-            <h3><i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史</h3>
-            <p>
-                查看编辑部管理员历史提交的形式审查记录（通过 / 退回）、反馈意见与查重信息，
-                便于追溯审查过程与统计审查质量。
-            </p>
-            <small>
-                <i class="bi bi-arrow-right" aria-hidden="true"></i> 打开审查历史
-            </small>
-        </a>
+        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
+            <a class="card" style="text-decoration:none;" href="${ctx}/editor/formalCheck/history">
+                <h3><i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史</h3>
+                <p>
+                    查看历史提交的形式审查记录（通过 / 退回）、反馈意见与查重信息，
+                    便于追溯审查过程与统计审查质量。
+                </p>
+                <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开审查历史</small>
+            </a>
+        </c:if>
 
-        <!-- 新闻 / 公告管理 -->
-        <a class="card" style="text-decoration:none;"
-           href="${pageContext.request.contextPath}/admin/news/list">
-            <h3><i class="bi bi-megaphone" aria-hidden="true"></i> 新闻 / 公告管理</h3>
-            <p>
-                维护期刊网站首页的新闻与公告，例如征稿启事、重要通知等，
-                保证作者和审稿人及时获知最新信息。
-            </p>
-            <small>
-                <i class="bi bi-arrow-right" aria-hidden="true"></i> 打开新闻 / 公告管理
-            </small>
-        </a>
+        <!-- 公告 / 新闻管理 -->
+        <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
+            <a class="card" style="text-decoration:none;" href="${ctx}/admin/news/list">
+                <h3><i class="bi bi-megaphone" aria-hidden="true"></i> 公告 / 新闻管理</h3>
+                <p>
+                    维护期刊网站首页的新闻与公告，例如征稿启事、重要通知等，
+                    保证作者和审稿人及时获知最新信息。
+                </p>
+                <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开公告 / 新闻管理</small>
+            </a>
+        </c:if>
+
+        <!-- 期刊管理 -->
+        <c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
+            <a class="card" style="text-decoration:none;" href="${ctx}/admin/journals/list">
+                <h3><i class="bi bi-journals" aria-hidden="true"></i> 期刊管理</h3>
+                <p>
+                    维护期刊基本信息、专刊（Issue）与征稿页面，支持编辑部日常运营与内容更新。
+                </p>
+                <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开期刊管理</small>
+            </a>
+        </c:if>
+
     </div>
 
     <div class="stack" style="margin-top: var(--space-6);">
         <small>
-            后续如需扩展，可在此工作台增加“退修管理”“统计报表”等卡片入口，
-            统一从编辑部管理员视角管理日常运营工作。
+            可在此工作台扩展更多运营入口，如“退修管理”“统计报表”等。
         </small>
     </div>
 </div>

@@ -18,7 +18,7 @@
             <p><c:out value="${journal.description}"/></p>
         </c:when>
         <c:otherwise>
-            <p>欢迎访问本期刊网站。当前期刊简介尚未在数据库中完善（dbo.Journals.Description）。</p>
+            <p>欢迎访问本刊官方网站。</p>
         </c:otherwise>
     </c:choose>
 
@@ -39,9 +39,6 @@
         </a>
     </div>
 </div>
-
-<!-- 首页中间的“结构导航说明”模块按需求删除（避免占位文案影响观感） -->
-
 <div class="grid grid-2" style="margin-top: var(--space-6);">
 
     <!-- 期刊编委会介绍：编委照片/简介 -->
@@ -49,7 +46,7 @@
         <div class="card-header">
             <div>
                 <h2 class="card-title">期刊编委会</h2>
-                <p class="card-subtitle">编委照片（占位）与简介来自 dbo.EditorialBoard + dbo.Users</p>
+                <p class="card-subtitle">了解本刊编委会成员与研究方向。</p>
             </div>
             <a href="${ctx}/editorial-board" style="white-space:nowrap; text-decoration:none;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
@@ -57,7 +54,7 @@
         </div>
 
         <c:if test="${empty boardMembers}">
-            <p>暂无编委会成员数据（dbo.EditorialBoard 为空），可以后续补充数据后再展示。</p>
+            <p>编委会信息将陆续更新，敬请关注。</p>
         </c:if>
         <c:if test="${not empty boardMembers}">
             <ul class="list">
@@ -144,20 +141,17 @@
                     </li>
                 </c:forEach>
             </ul>
-            <small>提示：全文附件下载/引用/下载/热度统计需要新增字段或新表支持，当前仅提供论文基本信息链接。</small>
         </c:if>
     </div>
 
 </div>
 
 <div class="grid grid-2" style="margin-top: var(--space-6);">
-
-    <!-- 新闻列表 -->
     <div class="card stack">
         <div class="card-header">
             <div>
                 <h2 class="card-title">新闻列表</h2>
-                <p class="card-subtitle">来自 dbo.News（仅展示 IsPublished=1）</p>
+                <p class="card-subtitle">最新公告与动态。</p>
             </div>
             <a href="${ctx}/news" style="white-space:nowrap; text-decoration:none;">
                 查看更多 <i class="bi bi-arrow-right" aria-hidden="true"></i>
@@ -189,13 +183,11 @@
             </ul>
         </c:if>
     </div>
-
-    <!-- 征稿通知 Call for papers -->
     <div class="card stack">
         <div class="card-header">
             <div>
                 <h2 class="card-title">征稿通知</h2>
-                <p class="card-subtitle">Call for papers（来自 dbo.CallForPapers 已发布数据）</p>
+                <p class="card-subtitle">Call for papers</p>
             </div>
             <a href="${ctx}/calls" style="white-space:nowrap; text-decoration:none;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
@@ -203,7 +195,7 @@
         </div>
 
         <c:if test="${empty callForPapers}">
-            <p>暂无已发布征稿通知。你可以在【超级管理员 → 期刊管理 → 征稿通知】里新增并勾选发布。</p>
+            <p>暂无征稿通知。</p>
         </c:if>
 
         <c:if test="${not empty callForPapers}">

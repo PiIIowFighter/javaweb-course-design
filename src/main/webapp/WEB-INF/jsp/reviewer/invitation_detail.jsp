@@ -81,7 +81,7 @@
                 下载与审阅：
                 <a href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript" target="_blank">下载匿名稿</a>
                 <span style="margin:0 6px;">|</span>
-                <a href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=original" target="_blank">下载原稿</a>
+                <a href="${ctx}/reviewer/manuscript?id=${review.reviewId}">查看稿件详情</a>
             </p>
             <p>
                 <a href="${ctx}/reviewer/reviewForm?id=${review.reviewId}">提交评审意见</a>

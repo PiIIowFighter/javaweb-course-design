@@ -46,24 +46,6 @@
             <td><c:out value="${manuscript.journalId}"/></td>
         </tr>
         <tr>
-            <th>所属专刊</th>
-            <td>
-                <c:choose>
-                    <c:when test="${not empty linkedIssue}">
-                        <a href="${pageContext.request.contextPath}/issues?view=detail&id=${linkedIssue.issueId}">
-                            <c:out value="${linkedIssue.title}"/>
-                        </a>
-                    </c:when>
-                    <c:when test="${not empty manuscript.issueTitle}">
-                        <c:out value="${manuscript.issueTitle}"/>
-                    </c:when>
-                    <c:otherwise>
-                        （默认 / 未关联）
-                    </c:otherwise>
-                </c:choose>
-            </td>
-        </tr>
-        <tr>
             <th>研究主题</th>
             <td><c:out value="${manuscript.subjectArea}"/></td>
         </tr>
@@ -176,6 +158,9 @@
                                 <option value="true">符合标准</option>
                                 <option value="false">不符合标准</option>
                             </select>
+                            <div style="margin-top:4px; color:#666;">
+                                当前字数：<b><span id="abstractCountText">${empty abstractCount ? 0 : abstractCount}</span></b>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -187,6 +172,9 @@
                                 <option value="true">符合标准</option>
                                 <option value="false">不符合标准</option>
                             </select>
+                            <div style="margin-top:4px; color:#666;">
+                                当前字数：<b><span id="bodyCountText">${empty bodyCount ? 0 : bodyCount}</span></b>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -282,6 +270,15 @@
                                 document.querySelector('select[name="abstractWordCountValid"]').value = response.abstractWordCountValid;
                                 document.querySelector('select[name="bodyWordCountValid"]').value = response.bodyWordCountValid;
                                 document.querySelector('select[name="keywordsValid"]').value = response.keywordsValid;
+                                // 同步更新右侧“当前字数”
+                                var ac = document.getElementById('abstractCountText');
+                                if (ac && response.abstractCount !== undefined && response.abstractCount !== null) {
+                                    ac.textContent = response.abstractCount;
+                                }
+                                var bc = document.getElementById('bodyCountText');
+                                if (bc && response.bodyCount !== undefined && response.bodyCount !== null) {
+                                    bc.textContent = response.bodyCount;
+                                }
                                 alert('自动检查完成！');
                             } else {
                                 alert('自动检查失败：' + response.message);

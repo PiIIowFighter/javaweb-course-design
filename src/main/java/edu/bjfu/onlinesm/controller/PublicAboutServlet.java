@@ -54,7 +54,7 @@ public class PublicAboutServlet extends HttpServlet {
 
         Integer journalId = (journal == null) ? null : journal.getJournalId();
 
-        // aims / policies：从数据库读取页面内容（不再使用占位）
+        // aims / policies：读取页面内容
         if ("aims".equals(tab) || "policies".equals(tab)) {
             try {
                 JournalPage page;
@@ -71,8 +71,8 @@ public class PublicAboutServlet extends HttpServlet {
                 }
 
                 if (page == null) {
-                    req.setAttribute("pageLoadError", "未找到页面配置数据（JournalPages 中没有对应记录）。请先执行提供的 about_journal_seed.sql 初始化数据。");
-                }
+                    req.setAttribute("pageLoadError", "暂无内容。");
+}
             } catch (SQLException e) {
                 req.setAttribute("pageLoadError", e.getMessage());
             }

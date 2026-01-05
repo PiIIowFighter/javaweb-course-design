@@ -72,20 +72,14 @@ public class ManuscriptDAO {
      */
     public Manuscript insertWithStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
         String sql = "INSERT INTO dbo.Manuscripts " +
-                "(JournalId, IssueId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
-                "VALUES (?,?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "SYSUTCDATETIME()" : "NULL") + ")";
+                "(JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
+                "VALUES (?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "SYSUTCDATETIME()" : "NULL") + ")";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             int idx = 1;
             if (m.getJournalId() != null) {
                 ps.setInt(idx++, m.getJournalId());
-            } else {
-                ps.setNull(idx++, Types.INTEGER);
-            }
-
-            if (m.getIssueId() != null) {
-                ps.setInt(idx++, m.getIssueId());
             } else {
                 ps.setNull(idx++, Types.INTEGER);
             }
@@ -136,7 +130,7 @@ public class ManuscriptDAO {
         }
         
         String sql = "UPDATE dbo.Manuscripts SET " +
-                "JournalId = ?, IssueId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
+                "JournalId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
                 "Status = ?, " +
                 (setSubmitTime ? "SubmitTime = ISNULL(SubmitTime, SYSUTCDATETIME()), " : "") +
                 "LastStatusTime = SYSUTCDATETIME() " +
@@ -149,12 +143,6 @@ public class ManuscriptDAO {
             } else {
                 ps.setNull(idx++, Types.INTEGER);
             }
-            if (m.getIssueId() != null) {
-                ps.setInt(idx++, m.getIssueId());
-            } else {
-                ps.setNull(idx++, Types.INTEGER);
-            }
-
             ps.setString(idx++, m.getTitle());
             ps.setString(idx++, m.getAbstractText());
             ps.setString(idx++, m.getKeywords());
@@ -189,11 +177,10 @@ public class ManuscriptDAO {
      * 查询指定作者的所有稿件。
      */
     public List<Manuscript> findBySubmitter(int submitterId) throws SQLException {
-        String sql = "SELECT m.ManuscriptId, m.JournalId, m.IssueId, i.Title AS IssueTitle, " +
+        String sql = "SELECT m.ManuscriptId, m.JournalId, " +
                      "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
                      "m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
                      "FROM dbo.Manuscripts m " +
-                     "LEFT JOIN dbo.Issues i ON i.IssueId = m.IssueId " +
                      "WHERE m.SubmitterId = ? ORDER BY m.ManuscriptId DESC";
 
         List<Manuscript> list = new ArrayList<>();
@@ -213,11 +200,10 @@ public class ManuscriptDAO {
      * 按主键查询单个稿件，供详情页使用。
      */
     public Manuscript findById(int manuscriptId) throws SQLException {
-        String sql = "SELECT m.ManuscriptId, m.JournalId, m.IssueId, i.Title AS IssueTitle, " +
+        String sql = "SELECT m.ManuscriptId, m.JournalId, " +
                      "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
                      "m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
                      "FROM dbo.Manuscripts m " +
-                     "LEFT JOIN dbo.Issues i ON i.IssueId = m.IssueId " +
                      "WHERE m.ManuscriptId = ?";
 
         try (Connection conn = DbUtil.getConnection();
@@ -432,7 +418,6 @@ public class ManuscriptDAO {
             return filtered;
         }
     }
-
 
     /**
      * 主编“全览权限”使用：查询系统内全部稿件（包含已归档/已撤稿/草稿等）。
@@ -736,15 +721,6 @@ public class ManuscriptDAO {
         }
     }
 
-    private boolean isPublished(Connection conn, int manuscriptId) throws SQLException {
-        String sql = "SELECT TOP 1 1 FROM dbo.IssueManuscripts im JOIN dbo.Issues i ON i.IssueId = im.IssueId WHERE im.ManuscriptId = ? AND i.IsPublished = 1";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, manuscriptId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        }
-    }
 
     private void insertStatusHistory(Connection conn, int manuscriptId, String fromStatus, String toStatus, String event, int changedBy, String remark) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptStatusHistory (ManuscriptId, FromStatus, ToStatus, Event, ChangedBy, Remark) VALUES (?,?,?,?,?,?)";
@@ -1051,6 +1027,40 @@ public class ManuscriptDAO {
         stageTimestampsDAO.ensureAndUpdateStage(conn, m.getManuscriptId(), fromStatus);
     }
 
+/**
+ * 作者在 RETURNED / REVISION 状态下点击“保存草稿”时更新稿件元数据：
+ * <ul>
+ *     <li>不改变 Status（仍保持 RETURNED / REVISION）</li>
+ *     <li>不推进轮次、不清空决定</li>
+ *     <li>仅更新元数据并写入 LastStatusTime（用于追踪最近编辑时间）</li>
+ * </ul>
+ */
+public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLException {
+    String sql = "UPDATE dbo.Manuscripts SET " +
+            "Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, JournalId = ?, " +
+            "LastStatusTime = SYSUTCDATETIME() " +
+            "WHERE ManuscriptId = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        int idx = 1;
+        ps.setString(idx++, m.getTitle());
+        ps.setString(idx++, m.getAbstractText());
+        ps.setString(idx++, m.getKeywords());
+        ps.setString(idx++, m.getSubjectArea());
+        ps.setString(idx++, m.getFundingInfo());
+        ps.setString(idx++, m.getAuthorList());
+
+        if (m.getJournalId() != null) {
+            ps.setInt(idx++, m.getJournalId());
+        } else {
+            ps.setNull(idx++, Types.INTEGER);
+        }
+
+        ps.setInt(idx, m.getManuscriptId());
+        ps.executeUpdate();
+    }
+}
+
     /**
      * 兼容旧调用：内部自建连接执行 Resubmit 更新。
      */
@@ -1070,19 +1080,6 @@ public class ManuscriptDAO {
         int journalId = rs.getInt("JournalId");
         if (!rs.wasNull()) {
             m.setJournalId(journalId);
-        }
-
-        // 专刊（可选列/别名）：IssueId / IssueTitle
-        try {
-            if (hasColumn(rs, "IssueId")) {
-                Object v = rs.getObject("IssueId");
-                if (v != null) m.setIssueId(((Number) v).intValue());
-            }
-            if (hasColumn(rs, "IssueTitle")) {
-                m.setIssueTitle(rs.getString("IssueTitle"));
-            }
-        } catch (SQLException ignored) {
-            // ignore
         }
         m.setSubmitterId(rs.getInt("SubmitterId"));
         m.setTitle(rs.getString("Title"));

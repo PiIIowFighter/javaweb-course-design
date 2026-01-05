@@ -36,38 +36,6 @@
                 </div>
             </div>
 
-            <div class="form-row">
-                <label for="issueId">选择专刊（可选）</label>
-                <select id="issueId" name="issueId">
-                    <option value="">（不选择 / 默认）</option>
-                    <c:forEach var="iss" items="${specialIssues}">
-                        <option value="${iss.issueId}"
-                                <c:if test="${not empty manuscript && manuscript.issueId == iss.issueId}">selected</c:if>>
-                            <c:set var="_rawTitle" value="${iss.title}"/>
-                            <c:set var="_lowerTitle" value="${fn:toLowerCase(_rawTitle)}"/>
-                            <c:choose>
-                                <c:when test="${fn:startsWith(_lowerTitle, 'special issue:') || fn:startsWith(_lowerTitle, 'special issue：')}">
-                                    <c:out value="${_rawTitle}"/>
-                                </c:when>
-                                <c:otherwise>
-                                    Special Issue: <c:out value="${_rawTitle}"/>
-                                </c:otherwise>
-                            </c:choose>
-
-                            <c:if test="${iss.year != null || iss.volume != null || iss.number != null}">
-                                （
-                                <c:if test="${iss.year != null}">Year <c:out value="${iss.year}"/></c:if>
-                                <c:if test="${iss.volume != null}"><c:if test="${iss.year != null}"> · </c:if>Vol <c:out value="${iss.volume}"/></c:if>
-                                <c:if test="${iss.number != null}">
-                                    <c:if test="${iss.year != null || iss.volume != null}"> · </c:if>No <c:out value="${iss.number}"/>
-                                </c:if>
-                                ）
-                            </c:if>
-                        </option>
-                    </c:forEach>
-                </select>
-                <div class="help">提示：未选择则系统默认关联第一个已发布专刊（SPECIAL 优先）。</div>
-            </div>
 
             <div class="form-row">
                 <label for="title">标题</label>

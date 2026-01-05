@@ -5,7 +5,7 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <h2>编辑委员会管理</h2>
-<p>维护期刊的主编、副主编、编委等成员信息（dbo.EditorialBoard）。</p>
+<p>维护期刊的主编、副主编、编委等成员信息。</p>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 

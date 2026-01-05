@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * URL 约定（见 web.xml 中的 /auth/* 映射）：
  *  GET  /auth/login      显示登录页
  *  GET  /auth/register   显示注册页
- *  GET  /auth/reset      显示重置密码页（占位）
+ *  GET  /auth/reset      显示重置密码页
  *  GET  /auth/logout     注销并返回首页
  *
  *  POST /auth/login      执行登录
@@ -257,15 +257,12 @@ public class AuthServlet extends HttpServlet {
         session.setAttribute(SESSION_REG_OTP_CODE, code);
         session.setAttribute(SESSION_REG_OTP_EXPIRES_AT, expiresAt);
 
-        // 发送邮件（若未配置 SMTP，将在控制台打印失败信息，但不影响页面流程）
+        // 发送邮件（若未配置 SMTP，发送可能失败；页面将提示已发送，建议在生产环境正确配置邮箱服务）
         String subject = "注册验证码";
         String body = "您的注册验证码为：" + code + "\n\n有效期 5 分钟。若非本人操作请忽略此邮件。";
         MailService.sendText(email, subject, body);
 
-        // 开发友好：同时将验证码写到控制台，便于本地未配置邮箱时调试
-        System.out.println("[Auth/Register OTP] email=" + email + ", code=" + code + ", expiresAt=" + expiresAt);
-
-        req.setAttribute("message", "验证码已发送，请在 5 分钟内查收邮箱并填写下方验证码。（开发环境可在控制台查看验证码）");
+        req.setAttribute("message", "验证码已发送，请在 5 分钟内查收邮箱并填写下方验证码。");
         req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
     }
 
@@ -302,15 +299,180 @@ public class AuthServlet extends HttpServlet {
         session.removeAttribute(SESSION_REG_OTP_EXPIRES_AT);
     }
 
+    
     /**
-     * 密码重置占位实现：当前仅给出提示信息，不做真实重置。
+     * 密码重置：通过邮箱验证码校验身份后，允许设置新密码。
+     *
+     * 流程：
+     *  1) GET  /auth/reset                     -> 打开重置页面
+     *  2) POST /auth/reset?op=sendResetCode    -> 发送验证码到用户绑定邮箱
+     *  3) POST /auth/reset?op=verifyResetCode  -> 校验验证码，进入设置新密码页面
+     *  4) POST /auth/reset?op=doResetPassword  -> 提交新密码并更新
      */
     private void handleReset(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        req.setAttribute("message", "密码重置功能暂未实现，请联系管理员或稍后自行补充实现。");
+        String op = trim(req.getParameter("op"));
+        HttpSession session = req.getSession(true);
+
+        final String SESSION_RESET_USERNAME = "RESET_OTP_USERNAME";
+        final String SESSION_RESET_EMAIL = "RESET_OTP_EMAIL";
+        final String SESSION_RESET_CODE = "RESET_OTP_CODE";
+        final String SESSION_RESET_EXPIRES_AT = "RESET_OTP_EXPIRES_AT";
+        final String SESSION_RESET_VERIFIED = "RESET_VERIFIED_USERNAME";
+
+        if ("sendResetCode".equalsIgnoreCase(op)) {
+            String username = trim(req.getParameter("username"));
+            if (isEmpty(username)) {
+                req.setAttribute("error", "请先填写用户名。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                return;
+            }
+
+            try {
+                User user = userDAO.findByUsername(username);
+                if (user == null || isEmpty(user.getEmail())) {
+                    req.setAttribute("error", "未找到该用户或该用户未绑定邮箱。");
+                    req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                    return;
+                }
+
+                String email = user.getEmail().trim();
+                String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1000000));
+                long expiresAt = System.currentTimeMillis() + 5L * 60L * 1000L;
+
+                session.setAttribute(SESSION_RESET_USERNAME, username);
+                session.setAttribute(SESSION_RESET_EMAIL, email);
+                session.setAttribute(SESSION_RESET_CODE, code);
+                session.setAttribute(SESSION_RESET_EXPIRES_AT, expiresAt);
+                session.removeAttribute(SESSION_RESET_VERIFIED);
+
+                String subject = "密码重置验证码";
+                String body = "您好，您正在进行密码重置操作。\n\n"
+                        + "验证码：" + code + "\n"
+                        + "有效期 5 分钟。\n\n"
+                        + "若非本人操作，请忽略此邮件。";
+
+                MailService.sendText(email, subject, body);
+
+                req.setAttribute("message", "验证码已发送，请在 5 分钟内查收邮箱并填写验证码。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                return;
+
+            } catch (SQLException e) {
+                throw new ServletException(e);
+            }
+        }
+
+        if ("verifyResetCode".equalsIgnoreCase(op)) {
+            String username = trim(req.getParameter("username"));
+            String code = trim(req.getParameter("code"));
+            if (isEmpty(username) || isEmpty(code)) {
+                req.setAttribute("error", "请填写用户名与验证码。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                return;
+            }
+
+            if (!verifyResetOtp(session, username, code, SESSION_RESET_USERNAME, SESSION_RESET_CODE, SESSION_RESET_EXPIRES_AT)) {
+                req.setAttribute("error", "验证码错误或已过期，请重新获取验证码。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                return;
+            }
+
+            session.setAttribute(SESSION_RESET_VERIFIED, username);
+            req.setAttribute("username", username);
+            req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password_form.jsp").forward(req, resp);
+            return;
+        }
+
+        if ("doResetPassword".equalsIgnoreCase(op)) {
+            String username = (String) session.getAttribute(SESSION_RESET_VERIFIED);
+            if (isEmpty(username)) {
+                req.setAttribute("error", "请先完成验证码校验。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                return;
+            }
+
+            String password = trim(req.getParameter("password"));
+            String confirm = trim(req.getParameter("confirmPassword"));
+            if (isEmpty(password) || isEmpty(confirm)) {
+                req.setAttribute("error", "请填写新密码并确认。");
+                req.setAttribute("username", username);
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password_form.jsp").forward(req, resp);
+                return;
+            }
+            if (!password.equals(confirm)) {
+                req.setAttribute("error", "两次输入的密码不一致。");
+                req.setAttribute("username", username);
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password_form.jsp").forward(req, resp);
+                return;
+            }
+            if (password.length() < 6) {
+                req.setAttribute("error", "密码长度至少 6 位。");
+                req.setAttribute("username", username);
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password_form.jsp").forward(req, resp);
+                return;
+            }
+
+            try {
+                User user = userDAO.findByUsername(username);
+                if (user == null) {
+                    req.setAttribute("error", "用户不存在。");
+                    req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
+                    return;
+                }
+                userDAO.resetPassword(user.getUserId(), password);
+
+                // 清理会话痕迹
+                session.removeAttribute(SESSION_RESET_VERIFIED);
+                session.removeAttribute(SESSION_RESET_USERNAME);
+                session.removeAttribute(SESSION_RESET_EMAIL);
+                session.removeAttribute(SESSION_RESET_CODE);
+                session.removeAttribute(SESSION_RESET_EXPIRES_AT);
+
+                req.setAttribute("message", "密码已更新，请使用新密码登录。");
+                req.getRequestDispatcher("/WEB-INF/jsp/auth/login.jsp").forward(req, resp);
+                return;
+
+            } catch (SQLException e) {
+                throw new ServletException(e);
+            }
+        }
+
+        // 默认：打开页面
         req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
     }
 
-    // === 工具方法 ===
+    private boolean verifyResetOtp(HttpSession session,
+                                   String username,
+                                   String code,
+                                   String sessionUsernameKey,
+                                   String sessionCodeKey,
+                                   String sessionExpiresKey) {
+        if (session == null) return false;
+        Object su = session.getAttribute(sessionUsernameKey);
+        Object sc = session.getAttribute(sessionCodeKey);
+        Object sx = session.getAttribute(sessionExpiresKey);
+
+        if (!(su instanceof String) || !(sc instanceof String) || sx == null) return false;
+        String storedUsername = ((String) su).trim();
+        String storedCode = ((String) sc).trim();
+
+        long expiresAt;
+        try {
+            if (sx instanceof Long) {
+                expiresAt = (Long) sx;
+            } else {
+                expiresAt = Long.parseLong(String.valueOf(sx));
+            }
+        } catch (Exception ignore) {
+            return false;
+        }
+
+        if (System.currentTimeMillis() > expiresAt) return false;
+        if (username == null || !storedUsername.equalsIgnoreCase(username.trim())) return false;
+        return storedCode.equals(code == null ? "" : code.trim());
+    }
+
+// === 工具方法 ===
 
     private static String trim(String s) {
         return s == null ? null : s.trim();

@@ -3,71 +3,83 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">期刊管理（超级管理员）</h2>
-            <p class="card-subtitle">按“板块”分别维护：期刊基本信息 / 关于期刊页面 / 卷期与专刊 / 征稿通知。</p>
-        </div>
-        <div class="admin-actions">
-            <a href="${pageContext.request.contextPath}/admin/journals/basic/edit">➕ 新增期刊</a>
+            <h2 class="card-title">期刊管理</h2>
+            <p class="card-subtitle">本项目仅维护一个期刊：在本页直接编辑“基本信息”，并通过下方入口维护“关于期刊页面 / 卷期与专刊 / 征稿通知”。</p>
         </div>
     </div>
 
-<c:if test="${empty journals}">
-    <p>当前数据库没有期刊记录。你可以先点击“新增期刊”。</p>
-</c:if>
+    <c:if test="${empty journal || journal.journalId == null}">
+        <p class="card-subtitle">未找到期刊记录，请先创建期刊。</p>
+    </c:if>
 
-<c:if test="${not empty journals}">
-    <div class="table-wrap">
-    <table class="table-fixed" border="1" cellpadding="6" cellspacing="0" style="min-width: 1240px;">
-        <thead>
-        <tr>
-            <th style="width:70px;">ID</th>
-            <th>期刊名称</th>
-            <th style="width:150px;">ISSN</th>
-            <th style="width:110px;">ImpactFactor</th>
-            <th style="width:360px;">板块入口</th>
-            <th style="width:200px;">操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <c:forEach var="j" items="${journals}">
-            <tr>
-                <td>${j.journalId}</td>
-                <td><div class="cell-wrap"><c:out value="${j.name}"/></div></td>
-                <td><div class="cell-wrap"><c:out value="${j.issn}"/></div></td>
-                <td>
-                    <c:choose>
-                        <c:when test="${j.impactFactor != null}">${j.impactFactor}</c:when>
-                        <c:otherwise>-</c:otherwise>
-                    </c:choose>
-                </td>
-                <td>
-                    <div class="link-pills">
-                        <a href="${pageContext.request.contextPath}/admin/journals/basic/edit?journalId=${j.journalId}">基本信息</a>
-                        <a href="${pageContext.request.contextPath}/admin/journals/pages/list?journalId=${j.journalId}">关于期刊页面</a>
-                        <a href="${pageContext.request.contextPath}/admin/journals/issues/list?journalId=${j.journalId}">卷期 / 专刊</a>
-                        <a href="${pageContext.request.contextPath}/admin/journals/calls/list?journalId=${j.journalId}">征稿通知</a>
-                    </div>
-                </td>
-                <td>
-                    <div class="admin-actions">
-                        <a class="btn-primary" href="${pageContext.request.contextPath}/admin/journals/basic/edit?journalId=${j.journalId}">编辑</a>
-                        <form method="post" action="${pageContext.request.contextPath}/admin/journals/basic/delete"
-                              onsubmit="return confirm('确定删除该期刊？删除后相关页面/期次/征稿可能因外键约束失败。');"
-                              style="display:inline;">
-                            <input type="hidden" name="journalId" value="${j.journalId}"/>
-                            <button type="submit">删除</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-        </c:forEach>
-        </tbody>
-    </table>
-    </div>
-</c:if>
+    <c:if test="${not empty journal && journal.journalId != null}">
+
+        <h3 style="margin-top: 6px;">基本信息</h3>
+
+        <form method="post" action="${ctx}/admin/journals/basic/save" style="max-width: 980px;">
+            <input type="hidden" name="journalId" value="${journal.journalId}"/>
+
+            <p>
+                <label>期刊名称：
+                    <input type="text" name="name" value="<c:out value='${journal.name}'/>" style="width: 520px;" required/>
+                </label>
+            </p>
+
+            <p>
+                <label>ISSN：
+                    <input type="text" name="issn" value="<c:out value='${journal.issn}'/>" style="width: 220px;"/>
+                </label>
+                &nbsp;&nbsp;
+                <label>影响因子：
+                    <input type="text" name="impactFactor" value="<c:out value='${journal.impactFactor}'/>" style="width: 140px;"/>
+                </label>
+            </p>
+
+            <p>
+                <label>时间线 / 发展历程（可选）：
+                    <input type="text" name="timeline" value="<c:out value='${journal.timeline}'/>" style="width: 620px;"/>
+                </label>
+            </p>
+
+            <p>简介（支持普通文本或 HTML；如需更完整内容请到“关于期刊页面”板块维护）：</p>
+            <p>
+                <textarea name="description" rows="6" style="width: 100%; max-width: 980px;"><c:out value="${journal.description}"/></textarea>
+            </p>
+
+            <div class="actions" style="margin: 10px 0 6px;">
+                <button class="btn-primary" type="submit" style="text-decoration:none;">
+                    <i class="bi bi-save" aria-hidden="true"></i>
+                    保存基本信息
+                </button>
+            </div>
+        </form>
+
+        <hr style="margin: 18px 0;"/>
+
+        <h3>板块入口</h3>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <a class="card" style="text-decoration:none;" href="${ctx}/admin/journals/pages/list?journalId=${journal.journalId}">
+                <h3 style="margin:0;"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> 关于期刊页面</h3>
+                <p class="card-subtitle" style="margin:8px 0 0;">维护 Publish / Guide / Aims / Policies 四个页面的内容。</p>
+            </a>
+
+            <a class="card" style="text-decoration:none;" href="${ctx}/admin/journals/issues/list?journalId=${journal.journalId}">
+                <h3 style="margin:0;"><i class="bi bi-collection" aria-hidden="true"></i> 卷期 / 专刊</h3>
+                <p class="card-subtitle" style="margin:8px 0 0;">维护 Latest Issues / Special Issues 等卷期信息。</p>
+            </a>
+
+            <a class="card" style="text-decoration:none;" href="${ctx}/admin/journals/calls/list?journalId=${journal.journalId}">
+                <h3 style="margin:0;"><i class="bi bi-megaphone" aria-hidden="true"></i> 征稿通知</h3>
+                <p class="card-subtitle" style="margin:8px 0 0;">维护征稿通知列表与详情内容。</p>
+            </a>
+        </div>
+    </c:if>
 
 </div>
 

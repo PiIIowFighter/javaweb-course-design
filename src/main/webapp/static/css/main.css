@@ -943,13 +943,86 @@ tbody tr:hover td {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.65);
+    max-width: 100%;
 }
 .ql-snow.richtext-view .ql-editor {
     padding: 12px;
     font-family: inherit;
     line-height: 1.7;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .ql-snow.richtext-view .ql-editor p { margin: 0 0 0.75em; }
 .ql-snow.richtext-view .ql-editor p:last-child { margin-bottom: 0; }
 .ql-snow.richtext-view .ql-editor img { max-width: 100%; height: auto; }
-.ql-snow.richtext-view .ql-editor pre { white-space: pre-wrap; }
+.ql-snow.richtext-view .ql-editor pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+/* 富文本内部元素：避免内容横向撑破屏幕 */
+.ql-snow.richtext-view .ql-editor table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+.ql-snow.richtext-view .ql-editor iframe,
+.ql-snow.richtext-view .ql-editor video {
+    max-width: 100%;
+}
+
+
+/* =========================
+   Quill 富文本编辑器：限制高度，防止超出屏幕
+   ========================= */
+
+/* 编辑器容器（snow theme）：限制尺寸并强制换行，防止溢出屏幕 */
+.ql-toolbar.ql-snow {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.ql-container.ql-snow {
+    width: 100%;
+    max-width: 100%;
+    /* 既限制最大高度，也兼顾不同屏幕（不超过视口高度的一部分） */
+    max-height: min(520px, 55vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.ql-editor {
+    min-height: 180px;
+    max-height: min(520px, 55vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.ql-editor img,
+.ql-editor video,
+.ql-editor iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.ql-editor pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.ql-editor table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}

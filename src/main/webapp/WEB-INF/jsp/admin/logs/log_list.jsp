@@ -8,7 +8,7 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">系统日志查询</h2>
-            <p class="card-subtitle">展示系统的操作日志（dbo.OperationLogs），支持按时间范围、用户、模块等条件检索，便于进行日志审计与故障排查。</p>
+            <p class="card-subtitle">展示系统的操作日志，支持按时间范围、用户、模块等条件检索。</p>
         </div>
     </div>
 

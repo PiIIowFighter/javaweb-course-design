@@ -38,7 +38,7 @@
 
     <c:if test="${empty issues}">
         <p>暂无已发布 Issue。</p>
-        <small class="muted">提示：请先在数据库 <span class="badge">dbo.Issues</span> 中插入 <span class="badge">IsPublished=1</span> 的记录。</small>
+        <small class="muted">暂无内容，敬请关注后续更新。</small>
     </c:if>
 
     <c:if test="${not empty issues}">

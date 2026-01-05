@@ -10,7 +10,7 @@
 <div class="hero stack">
     <h1>期刊编委会</h1>
     <c:if test="${journal != null}">
-        <p><c:out value="${journal.name}"/> · 编委成员信息来自 dbo.EditorialBoard + dbo.Users</p>
+        <p><c:out value="${journal.name}"/> · 编委会成员信息</p>
     </c:if>
 </div>
 
@@ -26,7 +26,7 @@
     </div>
 
     <c:if test="${empty boardMembers}">
-        <p>暂无编委会成员数据（dbo.EditorialBoard 为空）。</p>
+        <p>编委会信息将陆续更新，敬请关注。</p>
     </c:if>
 
     <c:if test="${not empty boardMembers}">

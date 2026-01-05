@@ -10,7 +10,7 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">Writing（写作指南）</h2>
-            <p class="card-subtitle">占位页：后续你可以接入数据库或文件下载实现更完整的“作者写作指南”。</p>
+            <p class="card-subtitle">提供写作结构、学术表达与可复现性建议，帮助作者提升稿件质量。</p>
         </div>
         <a href="${ctx}/guide" style="white-space:nowrap; text-decoration:none;">
             返回用户指南 <i class="bi bi-arrow-right" aria-hidden="true"></i>

@@ -82,13 +82,18 @@ document.getElementById('rejectModal').addEventListener('click', function(e) {
             <td><c:out value="${r.invitedAt}"/></td>
             <td><c:out value="${r.dueAt}"/></td>
             <td>
-                <a href="${ctx}/reviewer/invitation?id=${r.reviewId}">查看稿件摘要</a>
+                <c:choose>
+                    <c:when test="${r.status == 'INVITED'}">
+                        <a href="${ctx}/reviewer/invitation?id=${r.reviewId}">查看稿件摘要</a>
+                    </c:when>
+                    <c:otherwise>
+                        <a href="${ctx}/reviewer/manuscript?id=${r.reviewId}">查看稿件详情</a>
+                    </c:otherwise>
+                </c:choose>
                 <br/>
                 <c:if test="${r.status == 'ACCEPTED' || r.status == 'SUBMITTED'}">
                     下载与审阅：
                     <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=manuscript" target="_blank">匿名稿</a>
-                    <span style="margin:0 6px;">|</span>
-                    <a href="${ctx}/files/preview?manuscriptId=${r.manuscriptId}&type=original" target="_blank">原稿</a>
                     <br/>
                 </c:if>
                 <c:choose>

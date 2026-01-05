@@ -89,6 +89,11 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看 Response Letter。");
                     return;
                 }
+                // 需求：审稿过程中仅允许查看脱密稿，不允许下载原稿
+                if ("original".equalsIgnoreCase(type)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人仅允许查看脱密稿（匿名稿）。");
+                    return;
+                }
             }
 
             ManuscriptVersion v = versionDAO.findCurrentByManuscriptId(manuscriptId);
@@ -99,18 +104,19 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
             String filePath = null;
             if ("manuscript".equalsIgnoreCase(type)) {
-                // 审稿人优先看匿名稿（若没有匿名稿，就退化为原稿）
+                // 审稿人：只能看匿名稿（不允许回退到原稿）
                 if ("REVIEWER".equals(role)) {
                     filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
                             ? v.getFileAnonymousPath()
-                            : v.getFileOriginalPath();
+                            : null;
                 } else {
                     filePath = v.getFileOriginalPath();
                 }
             } else if ("anonymous".equalsIgnoreCase(type)) {
+                // anonymous：若不存在匿名稿则返回缺失（避免审稿人误看原稿）
                 filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
                         ? v.getFileAnonymousPath()
-                        : v.getFileOriginalPath();
+                        : null;
             } else if ("original".equalsIgnoreCase(type)) {
                 // 明确下载原稿（审稿人也可下载，但仍需满足 reviewerHasAccess 的状态校验）
                 filePath = v.getFileOriginalPath();

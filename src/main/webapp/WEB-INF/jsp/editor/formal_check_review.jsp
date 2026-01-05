@@ -80,7 +80,11 @@
                         <option value="false" ${formalCheckResult.abstractWordCountValid == false ? 'selected' : ''}>不通过</option>
                     </select>
                 </td>
-                <td class="muted">摘要是否在投稿须知要求范围内</td>
+	                <td class="muted">
+	                    摘要字数：
+	                    <b><span id="abstractCountText">${empty abstractCount ? 0 : abstractCount}</span></b>
+	                    <span class="muted">（要求 100 - 300）</span>
+	                </td>
             </tr>
             <tr>
                 <td>正文字数是否符合（自动）</td>
@@ -91,7 +95,11 @@
                         <option value="false" ${formalCheckResult.bodyWordCountValid == false ? 'selected' : ''}>不通过</option>
                     </select>
                 </td>
-                <td class="muted">正文字数检查通常需结合附件人工确认</td>
+                <td class="muted">
+                    正文字数（从作者上传 PDF 中提取）：
+                    <b><span id="bodyCountText">${empty bodyCount ? 0 : bodyCount}</span></b>
+                    <span class="muted">（要求 3000 - 8000）</span>
+                </td>
             </tr>
             <tr>
                 <td>关键词是否规范（自动）</td>
@@ -214,6 +222,14 @@
             setSelect('abstractWordCountValid', json.abstractWordCountValid);
             setSelect('bodyWordCountValid', json.bodyWordCountValid);
             setSelect('keywordsValid', json.keywordsValid);
+            const bcEl = document.getElementById('bodyCountText');
+            if (bcEl && json.bodyCount !== undefined && json.bodyCount !== null) {
+                bcEl.textContent = String(json.bodyCount);
+            }
+	            const acEl = document.getElementById('abstractCountText');
+	            if (acEl && json.abstractCount !== undefined && json.abstractCount !== null) {
+	                acEl.textContent = String(json.abstractCount);
+	            }
             showMsg(json.message || '自动检查完成。', true);
         }else{
             showMsg(json.message || '自动检查失败。', false);

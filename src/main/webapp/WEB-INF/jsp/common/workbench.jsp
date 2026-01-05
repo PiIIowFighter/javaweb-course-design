@@ -110,25 +110,32 @@
   </c:if>
 
   <!-- 编辑部管理员 -->
-  <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
-    <div class="card">
-      <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-clipboard-check" aria-hidden="true"></i> 编辑部管理</div>
-      <div class="muted" style="margin-bottom:10px;">形式审查相关入口</div>
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
-          <a class="btn" href="${ctx}/editor/formalCheck">形式审查</a>
-        </c:if>
-        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
-          <a class="btn" href="${ctx}/editor/formalCheck/history">审查历史</a>
-        </c:if>
-      </div>
+<c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY'] or sessionScope.menuPermMap['ADMIN_JOURNALS'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
+  <div class="card">
+    <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-clipboard-check" aria-hidden="true"></i> 编辑部管理</div>
+    <div class="muted" style="margin-bottom:10px;">编辑部管理相关入口</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
+        <a class="btn" href="${ctx}/editor/formalCheck">形式审查</a>
+      </c:if>
+      <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
+        <a class="btn" href="${ctx}/editor/formalCheck/history">审查历史</a>
+      </c:if>
+      <c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
+        <a class="btn" href="${ctx}/admin/journals/list">期刊管理</a>
+      </c:if>
+      <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
+        <a class="btn" href="${ctx}/admin/news/list">公告 / 新闻</a>
+      </c:if>
     </div>
-  </c:if>
+  </div>
+</c:if>
 
-  <!-- 后台管理 -->
+<!-- 后台管理 -->
+
   <c:if test="${sessionScope.menuPermMap['ADMIN_USERS'] or sessionScope.menuPermMap['ADMIN_PERMISSIONS'] or sessionScope.menuPermMap['ADMIN_LOGS']
-      or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE'] or sessionScope.menuPermMap['ADMIN_JOURNALS']
-      or sessionScope.menuPermMap['ADMIN_EDITORIAL'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
+      or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE']
+      or sessionScope.menuPermMap['ADMIN_EDITORIAL']}">
     <div class="card">
       <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-gear" aria-hidden="true"></i> 后台管理</div>
       <div class="muted" style="margin-bottom:10px;">系统配置与维护入口</div>
@@ -148,14 +155,8 @@
         <c:if test="${sessionScope.menuPermMap['ADMIN_LOGS']}">
           <a class="btn" href="${ctx}/admin/logs/list">系统日志</a>
         </c:if>
-        <c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
-          <a class="btn" href="${ctx}/admin/journals/list">期刊管理</a>
-        </c:if>
         <c:if test="${sessionScope.menuPermMap['ADMIN_EDITORIAL']}">
           <a class="btn" href="${ctx}/admin/editorial/list">编委管理</a>
-        </c:if>
-        <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
-          <a class="btn" href="${ctx}/admin/news/list">公告 / 新闻</a>
         </c:if>
       </div>
     </div>

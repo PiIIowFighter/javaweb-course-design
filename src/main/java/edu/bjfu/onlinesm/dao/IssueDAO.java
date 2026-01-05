@@ -41,7 +41,23 @@ public class IssueDAO {
             return runList(conn, sql, f, journalId);
         }
     }
+
     /**
+     * 列出所有期刊下已发布的专刊（IssueType='SPECIAL' 且 IsPublished=1）。
+     * 用于作者投稿时的“选择专刊”下拉框，确保所有已发布专刊都可见。
+     */
+    public List<Issue> listSpecialPublishedAll(int limit) throws SQLException {
+        try (Connection conn = DbUtil.getConnection()) {
+            ColFlags f = detectColumns(conn);
+            String base = selectColumns(f);
+            if (limit > 0) base = base.replaceFirst("SELECT", "SELECT TOP " + limit);
+            String sql = base +
+                    "WHERE IssueType=N'SPECIAL' AND IsPublished=1 " +
+                    "ORDER BY COALESCE(PublishDate, CAST('1900-01-01' AS DATE)) DESC, IssueId DESC";
+            return runList(conn, sql, f);
+        }
+    }
+/**
      * 前台统一入口：根据 type 返回已发布的 issues 列表。
      * type 支持：latest / special / all（默认 all）。
      */
@@ -102,6 +118,9 @@ public class IssueDAO {
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            if (!tableExists(conn, "IssueManuscripts")) {
+                return list;
+            }
             ps.setInt(1, issueId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -131,7 +150,6 @@ public class IssueDAO {
         }
         return list;
     }
-
 
 // -------------------- 后台维护（admin） --------------------
 
@@ -250,6 +268,17 @@ public class IssueDAO {
                 + " FROM dbo.Issues ";
     }
 
+    private List<Issue> runList(Connection conn, String sql, ColFlags f) throws SQLException {
+        List<Issue> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(map(rs, f));
+            }
+        }
+        return list;
+    }
+
     private List<Issue> runList(Connection conn, String sql, ColFlags f, int param) throws SQLException {
         List<Issue> list = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -315,6 +344,9 @@ public class IssueDAO {
                 "ORDER BY im.OrderNo ASC, im.AddedAt DESC, i.IssueId ASC";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (!tableExists(conn, "IssueManuscripts")) {
+                return null;
+            }
             ps.setInt(1, manuscriptId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -351,4 +383,15 @@ public class IssueDAO {
         return null;
     }
 
+
+
+    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+        String sql = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME=?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
 }

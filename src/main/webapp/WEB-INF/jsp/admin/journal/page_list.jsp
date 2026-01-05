@@ -3,64 +3,129 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>关于期刊页面管理</h2>
+<c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<p>
-    期刊：<b><c:out value="${journal.name}"/></b>
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="${pageContext.request.contextPath}/admin/journals/list">返回期刊列表</a>
-</p>
+<div class="card stack-lg">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">关于期刊页面</h2>
+            <p class="card-subtitle">维护前台四个页面的内容：Publish / Guide / Aims / Policies。</p>
+        </div>
+    </div>
 
-<p style="margin: 12px 0;">
-    <a href="${pageContext.request.contextPath}/admin/journals/pages/edit?journalId=${journal.journalId}">➕ 新增页面</a>
-</p>
+    <p>
+        期刊：<b><c:out value="${journal.name}"/></b>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <a href="${ctx}/admin/journals/list">返回期刊管理</a>
+    </p>
 
-<c:if test="${empty pages}">
-    <p>该期刊暂未配置页面内容。你可以点击“新增页面”。</p>
-</c:if>
-
-<c:if test="${not empty pages}">
-    <table border="1" cellpadding="6" cellspacing="0" style="background:#fff; width:100%; max-width: 1100px;">
-        <thead>
-        <tr>
-            <th style="width:80px;">PageId</th>
-            <th style="width:160px;">Key</th>
-            <th>标题</th>
-            <th style="width:160px;">更新时间</th>
-            <th style="width:160px;">资源</th>
-            <th style="width:200px;">操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <c:forEach var="p" items="${pages}">
+    <div class="table-wrap">
+        <table class="table-fixed" border="1" cellpadding="6" cellspacing="0" style="background:#fff; width:100%; max-width: 1100px;">
+            <thead>
             <tr>
-                <td>${p.pageId}</td>
-                <td><c:out value="${p.pageKey}"/></td>
-                <td><c:out value="${p.title}"/></td>
-                <td><c:out value="${p.updatedAt}"/></td>
+                <th style="width:180px;">页面</th>
+                <th style="width:170px;">对应 URL</th>
+                <th>标题</th>
+                <th style="width:200px;">更新时间</th>
+                <th style="width:120px;">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><b>Publish</b>（论文发表 / 投稿与出版）</td>
+                <td><a href="${ctx}/publish" target="_blank">${ctx}/publish</a></td>
                 <td>
-                    <c:if test="${not empty p.coverImagePath}">
-                        <a href="${pageContext.request.contextPath}/journal/asset?type=page_cover&id=${p.pageId}" target="_blank">封面</a>
-                    </c:if>
-                    <c:if test="${not empty p.attachmentPath}">
-                        <c:if test="${not empty p.coverImagePath}">&nbsp;|&nbsp;</c:if>
-                        <a href="${pageContext.request.contextPath}/journal/asset?type=page_attachment&id=${p.pageId}" target="_blank">附件</a>
-                    </c:if>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['publish']}">
+                            <c:out value="${pageMap['publish'].title}"/>
+                        </c:when>
+                        <c:otherwise><span style="color:#999;">未配置</span></c:otherwise>
+                    </c:choose>
                 </td>
                 <td>
-                    <a href="${pageContext.request.contextPath}/admin/journals/pages/edit?journalId=${journal.journalId}&id=${p.pageId}">编辑</a>
-                    &nbsp;|&nbsp;
-                    <form method="post" action="${pageContext.request.contextPath}/admin/journals/pages/delete"
-                          onsubmit="return confirm('确定删除该页面？');" style="display:inline;">
-                        <input type="hidden" name="journalId" value="${journal.journalId}"/>
-                        <input type="hidden" name="id" value="${p.pageId}"/>
-                        <button type="submit">删除</button>
-                    </form>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['publish']}"><c:out value="${pageMap['publish'].updatedAt}"/></c:when>
+                        <c:otherwise>-</c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <a href="${ctx}/admin/journals/pages/edit?journalId=${journal.journalId}&pageKey=publish">编辑</a>
                 </td>
             </tr>
-        </c:forEach>
-        </tbody>
-    </table>
-</c:if>
+
+            <tr>
+                <td><b>Guide</b>（用户指南 / 投稿指南）</td>
+                <td><a href="${ctx}/guide" target="_blank">${ctx}/guide</a></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['guide']}">
+                            <c:out value="${pageMap['guide'].title}"/>
+                        </c:when>
+                        <c:otherwise><span style="color:#999;">未配置</span></c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['guide']}"><c:out value="${pageMap['guide'].updatedAt}"/></c:when>
+                        <c:otherwise>-</c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <a href="${ctx}/admin/journals/pages/edit?journalId=${journal.journalId}&pageKey=guide">编辑</a>
+                </td>
+            </tr>
+
+            <tr>
+                <td><b>Aims</b>（办刊宗旨 / Aims &amp; Scope）</td>
+                <td><a href="${ctx}/about/aims" target="_blank">${ctx}/about/aims</a></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['aims']}">
+                            <c:out value="${pageMap['aims'].title}"/>
+                        </c:when>
+                        <c:otherwise><span style="color:#999;">未配置</span></c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['aims']}"><c:out value="${pageMap['aims'].updatedAt}"/></c:when>
+                        <c:otherwise>-</c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <a href="${ctx}/admin/journals/pages/edit?journalId=${journal.journalId}&pageKey=aims">编辑</a>
+                </td>
+            </tr>
+
+            <tr>
+                <td><b>Policies</b>（政策与流程 / Ethics &amp; Policies）</td>
+                <td><a href="${ctx}/about/policies" target="_blank">${ctx}/about/policies</a></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['policies']}">
+                            <c:out value="${pageMap['policies'].title}"/>
+                        </c:when>
+                        <c:otherwise><span style="color:#999;">未配置</span></c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <c:choose>
+                        <c:when test="${not empty pageMap['policies']}"><c:out value="${pageMap['policies'].updatedAt}"/></c:when>
+                        <c:otherwise>-</c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <a href="${ctx}/admin/journals/pages/edit?journalId=${journal.journalId}&pageKey=policies">编辑</a>
+                </td>
+            </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <p class="card-subtitle" style="margin-top: 10px;">
+        提示：保存后，前台对应页面将展示最新内容。
+    </p>
+</div>
 
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

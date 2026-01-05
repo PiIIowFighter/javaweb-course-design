@@ -2,9 +2,12 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.*;
 import edu.bjfu.onlinesm.model.*;
+import edu.bjfu.onlinesm.service.FormalCheckService;
 import edu.bjfu.onlinesm.util.DbUtil;
 import edu.bjfu.onlinesm.util.UploadPathUtil;
 import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
+import edu.bjfu.onlinesm.util.PdfTextUtil;
+import edu.bjfu.onlinesm.util.FileTextUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -49,12 +52,10 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
+    private final FormalCheckService formalCheckService = new FormalCheckService();
     // 与 ProfileServlet 保持一致的上传根目录
     private final ManuscriptStatusHistoryDAO statusHistoryDAO = new ManuscriptStatusHistoryDAO();
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
-    // 文章与专刊（Issue）关联
-    private final IssueDAO issueDAO = new IssueDAO();
-    private final IssueManuscriptDAO issueManuscriptDAO = new IssueManuscriptDAO();
     // 与 ProfileServlet 保持一致的上传根目录
     private static final String UPLOAD_BASE_DIR = UploadPathUtil.getBaseDirPath();
     private static final String UPLOAD_MANUSCRIPT_DIR = UPLOAD_BASE_DIR + File.separator + "manuscripts";
@@ -154,12 +155,6 @@ public class ManuscriptServlet extends HttpServlet {
         } else if (journals != null && !journals.isEmpty() && journals.get(0) != null) {
             journalId = journals.get(0).getJournalId();			// 默认数据库中记录的第一个期刊
         }
-        // 根据期刊加载专刊
-        if (journalId != null) {
-            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(journalId, 0));	//寻找数据库中对应期刊的所有专刊
-        } else {
-            req.setAttribute("specialIssues", java.util.Collections.emptyList());
-        }
 
         // 编辑草稿模式特有信息
         if (draft != null) {
@@ -169,19 +164,10 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(draft.getManuscriptId()));
             // 当前版本
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(draft.getManuscriptId()));
-
-            // 已关联的 Issue
-            Issue linked = issueDAO.findLinkedIssueByManuscriptId(draft.getManuscriptId());
-            if (linked != null) {
-                draft.setIssueId(linked.getIssueId());
-                draft.setIssueTitle(linked.getTitle());
-                req.setAttribute("linkedIssue", linked);
-            }
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
     }
-
 
     /*
      * 稿件被退回或需要修改时，进入修改页面
@@ -224,17 +210,7 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("journals", journals);
         if (m.getJournalId() != null) {
             req.setAttribute("journal", journalDAO.findById(m.getJournalId()));
-            req.setAttribute("specialIssues", issueDAO.listSpecialPublished(m.getJournalId(), 0));
         } else {
-            req.setAttribute("specialIssues", java.util.Collections.emptyList());
-        }
-
-        // 已关联的 Issue
-        Issue linked = issueDAO.findLinkedIssueByManuscriptId(manuscriptId);
-        if (linked != null) {
-            m.setIssueId(linked.getIssueId());
-            m.setIssueTitle(linked.getTitle());
-            req.setAttribute("linkedIssue", linked);
         }
 
         // 其他稿件信息
@@ -245,7 +221,6 @@ public class ManuscriptServlet extends HttpServlet {
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
     }
-
 
     /*
      * 投稿表单回显（用于表单验证失败时保持现有数据）
@@ -268,7 +243,6 @@ public class ManuscriptServlet extends HttpServlet {
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
     }
-
 
     /*
      * 重新提交投稿表单回显（用于表单验证失败时保持现有数据）
@@ -410,6 +384,48 @@ public class ManuscriptServlet extends HttpServlet {
         FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
         req.setAttribute("formalCheckResult", formalCheckResult);
 
+        // ===== 形式审查页右侧“当前字数”展示 =====
+        // 需求：优先用 Cover Letter 统计正文字数；若 Cover Letter 字数为 0，则回退到 Manuscript 预览/下载对应的 PDF。
+        int bodyCount = 0;
+        int abstractCount = 0;
+        try {
+            ManuscriptVersion currentVer = versionDAO.findCurrentByManuscriptId(manuscriptId);
+
+            String bodyText = "";
+
+            // 1) Cover Letter
+            if (currentVer != null) {
+                String coverPath = currentVer.getCoverLetterPath();
+                if (coverPath != null && !coverPath.trim().isEmpty()) {
+                    bodyText = FileTextUtil.extractText(new File(coverPath));
+                }
+            }
+            bodyCount = formalCheckService.computeBodyCount(bodyText);
+
+            // 2) Fallback: manuscript PDF
+            if (bodyCount == 0 && currentVer != null) {
+                String pdfPath = null;
+                if (currentVer.getFileOriginalPath() != null && !currentVer.getFileOriginalPath().trim().isEmpty()) {
+                    pdfPath = currentVer.getFileOriginalPath();
+                } else if (currentVer.getFileAnonymousPath() != null && !currentVer.getFileAnonymousPath().trim().isEmpty()) {
+                    pdfPath = currentVer.getFileAnonymousPath();
+                }
+                if (pdfPath != null) {
+                    bodyText = FileTextUtil.extractText(new File(pdfPath));
+                    bodyCount = formalCheckService.computeBodyCount(bodyText);
+                }
+            }
+        } catch (Exception ignore) {
+            bodyCount = 0;
+        }
+        try {
+            abstractCount = formalCheckService.computeAbstractCount(m.getAbstractText());
+        } catch (Exception ignore) {
+            abstractCount = 0;
+        }
+        req.setAttribute("bodyCount", bodyCount);
+        req.setAttribute("abstractCount", abstractCount);
+
         // 1）加载审稿记录，供“当前审稿记录”表格使用
         List<Review> reviewList = reviewDAO.findByManuscript(manuscriptId);
         req.setAttribute("reviews", reviewList);
@@ -487,8 +503,6 @@ public class ManuscriptServlet extends HttpServlet {
                     assignmentDAO.findLatestByManuscriptAndEditor(manuscriptId, current.getUserId());
             req.setAttribute("chiefAssignment", chiefAssignment);
         }
-
-
 
         // 4）与作者沟通历史（时间线）：复用 Notifications 表
         NotificationDAO notificationDAO = new NotificationDAO();
@@ -797,13 +811,6 @@ public class ManuscriptServlet extends HttpServlet {
                     manuscriptDAO.updateMetadataAndStatus(conn, m, isFinalSubmit ? "SUBMITTED" : "DRAFT", isFinalSubmit);
                 }
 
-                // 保存专刊关联（IssueManuscripts）：未选择则默认关联该期刊的“第一个已发布专刊（SPECIAL 优先）”
-                Integer issueId = m.getIssueId();
-                if (issueId == null && m.getJournalId() != null) {
-                    issueId = issueDAO.findDefaultPublishedIssueId(conn, m.getJournalId());
-                }
-                issueManuscriptDAO.setIssueForManuscript(conn, manuscriptId, issueId);
-
                 // 作者 / 推荐审稿人：每次以“全量覆盖”方式保存
                 authorDAO.deleteByManuscriptId(conn, manuscriptId);
                 authorDAO.insertBatch(conn, manuscriptId, authors);
@@ -842,7 +849,6 @@ public class ManuscriptServlet extends HttpServlet {
                 if (anonymousFile != null && anonymousFile.getSize() > 0) {
                     fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
                 }
-
 
                 // CoverLetter：富文本转 PDF
                 String coverPath = null;
@@ -925,6 +931,12 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+        // mode: submit | draft（草稿保存不推进流程）
+        String mode = trim(req.getParameter("mode"));
+        if (mode == null || mode.isEmpty()) {
+            mode = "submit";
+        }
+
         try {
             Manuscript existing = manuscriptDAO.findById(manuscriptId);
             if (existing == null) {
@@ -951,12 +963,14 @@ public class ManuscriptServlet extends HttpServlet {
             List<ManuscriptRecommendedReviewer> recs = buildRecommendedReviewersFromRequest(req);
             toUpdate.setAuthorList(joinAuthorNames(authors));
 
-            // Resubmit 也是“提交”性质操作：若填写了推荐审稿人，则必须姓名+邮箱齐全。
-            String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
-            if (recRowError != null) {
-                req.setAttribute("error", recRowError);
-                forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
-                return;
+            // submit 模式：若填写了推荐审稿人，则必须姓名+邮箱齐全（草稿模式下允许先不完整地填写）
+            if ("submit".equalsIgnoreCase(mode)) {
+                String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
+                if (recRowError != null) {
+                    req.setAttribute("error", recRowError);
+                    forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
+                    return;
+                }
             }
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
@@ -978,14 +992,12 @@ public class ManuscriptServlet extends HttpServlet {
             try (Connection conn = DbUtil.getConnection()) {
                 conn.setAutoCommit(false);
 
-                manuscriptDAO.updateAndResubmit(conn, toUpdate, fromStatus);
-
-                // 更新专刊关联（IssueManuscripts）
-                Integer issueId = toUpdate.getIssueId();
-                if (issueId == null && toUpdate.getJournalId() != null) {
-                    issueId = issueDAO.findDefaultPublishedIssueId(conn, toUpdate.getJournalId());
+                if ("draft".equalsIgnoreCase(mode)) {
+                    // 不改变状态，仅保存元数据
+                    manuscriptDAO.updateResubmitDraft(conn, toUpdate);
+                } else {
+                    manuscriptDAO.updateAndResubmit(conn, toUpdate, fromStatus);
                 }
-                issueManuscriptDAO.setIssueForManuscript(conn, manuscriptId, issueId);
 
                 authorDAO.deleteByManuscriptId(conn, manuscriptId);
                 authorDAO.insertBatch(conn, manuscriptId, authors);
@@ -1068,8 +1080,13 @@ public class ManuscriptServlet extends HttpServlet {
                 conn.commit();
             }
 
-            String msg = "已重新提交（Resubmit），稿件 ID：" + genManuscriptCode(manuscriptId);
-            resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, "UTF-8"));
+            if ("draft".equalsIgnoreCase(mode)) {
+                String msg = "已保存修改稿草稿，稿件 ID：" + genManuscriptCode(manuscriptId);
+                resp.sendRedirect(req.getContextPath() + "/manuscripts/resubmitEdit?id=" + manuscriptId + "&msg=" + URLEncoder.encode(msg, "UTF-8"));
+            } else {
+                String msg = "已重新提交（Resubmit），稿件 ID：" + genManuscriptCode(manuscriptId);
+                resp.sendRedirect(req.getContextPath() + "/manuscripts/list?group=processing&msg=" + URLEncoder.encode(msg, "UTF-8"));
+            }
         } catch (Exception e) {
             throw new ServletException("执行 Resubmit 失败", e);
         }

@@ -16,7 +16,7 @@
 
     <h3>期刊介绍</h3>
     <c:if test="${journal == null}">
-        <p>未在数据库中找到期刊信息（dbo.Journals）。请先在 dbo.Journals 插入至少一条记录。</p>
+        <p>未找到期刊信息。</p>
     </c:if>
     <c:if test="${journal != null}">
         <p><strong><c:out value="${journal.name}"/></strong></p>
@@ -25,7 +25,7 @@
                 <p><c:out value="${journal.description}"/></p>
             </c:when>
             <c:otherwise>
-                <p>期刊简介尚未完善（dbo.Journals.Description）。</p>
+                <p>期刊简介尚未完善。</p>
             </c:otherwise>
         </c:choose>
 
@@ -45,7 +45,7 @@
 	<h3 style="margin-top: var(--space-6);">期刊编委会介绍</h3>
 
     <c:if test="${empty boardMembers}">
-        <p>暂无编委会成员数据（dbo.EditorialBoard 为空）。</p>
+        <p>编委会信息将陆续更新，敬请关注。</p>
     </c:if>
     <c:if test="${not empty boardMembers}">
         <div class="grid grid-2">

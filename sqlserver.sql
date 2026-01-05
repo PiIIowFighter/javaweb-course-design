@@ -51,7 +51,6 @@ BEGIN
 END
 GO
 
-
 /* ============================================================
    1. 角色表 Roles（7 种角色）
    ============================================================ */
@@ -74,7 +73,6 @@ BEGIN
     (N'EO_ADMIN',         N'编辑部管理员',     N'形式审查、格式检查、公告/新闻管理');
 END;
 GO
-
 
 /* ============================================================
    2. 用户表 Users
@@ -136,7 +134,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    3. 权限映射表 RolePermissions（给后台模块做 URL 级授权）
    - 代码读取：dbo.RolePermissions(RoleCode, PermissionKey)
@@ -168,8 +165,6 @@ BEGIN
     (N'EO_ADMIN', N'ADMIN_NEWS');
 END
 GO
-
-
 
 /* ============================================================
    Patch: 为新稿件流程相关角色追加默认权限（保持原有数据不变，只在缺失时补齐）
@@ -238,7 +233,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    5. 稿件表 Manuscripts（含状态机字段）
    ============================================================ */
@@ -288,7 +282,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    6. 稿件版本表 ManuscriptVersions
    ============================================================ */
@@ -314,7 +307,6 @@ BEGIN
     );
 END;
 GO
-
 
 /* -- Patch: add CoverLetterHtml column for ManuscriptVersions (if missing) -- */
 IF COL_LENGTH(N'dbo.ManuscriptVersions', N'CoverLetterHtml') IS NULL
@@ -347,7 +339,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    7. 稿件作者表 ManuscriptAuthors
    ============================================================ */
@@ -369,7 +360,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    8. 推荐审稿人表 ManuscriptRecommendedReviewers
    ============================================================ */
@@ -385,7 +375,6 @@ BEGIN
     );
 END;
 GO
-
 
 /* ============================================================
    9. 审稿表 Reviews
@@ -422,7 +411,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    ★ 升级补丁：审稿人评审结构图字段（V2）
    - 解决 reviewer 提交评审时报错：列名 'ConfidentialToEditor' 无效
@@ -450,7 +438,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    10. 编委会表 EditorialBoard
    ============================================================ */
@@ -469,7 +456,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    11. 新闻公告表 News
    ============================================================ */
@@ -486,7 +472,6 @@ BEGIN
     );
 END;
 GO
-
 
 /* ============================================================
    12. 操作日志表 OperationLogs（★与代码一致）
@@ -512,7 +497,6 @@ BEGIN
 END;
 GO
 
-
 /* ============================================================
    13. 其他可选表：若你还在沿用旧脚本的 Files / 状态历史表，可继续保留
    - 当前 src.zip 代码未强依赖 dbo.Files / dbo.ManuscriptStatusHistory
@@ -537,7 +521,6 @@ BEGIN
 END;
 GO
 
-
 IF OBJECT_ID(N'dbo.ManuscriptStatusHistory', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptStatusHistory (
@@ -557,7 +540,6 @@ BEGIN
     CREATE INDEX IX_MSH_ManuscriptId ON dbo.ManuscriptStatusHistory(ManuscriptId, ChangeTime DESC);
 END;
 GO
-
 
 /* ============================================================
    14. 常用索引（提升列表查询）
@@ -588,153 +570,191 @@ GO
 USE [Online_SMSystem4SP];
 GO
 
-/* 99.1 表：dbo.JournalPages */
+
+/* ======== MERGED: JournalPages seed from journalpages_seed_currentdb.sql (2026-01-05) ======== */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+-- 开启常见 SQL Server 行为开关（兼容索引/计算列/过滤索引等）
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+GO
+
+/* ============================================================
+   JournalPages Seed (Current DB)
+   解决：/guide /publish /about/aims /about/policies 提示
+         “JournalPages 中没有对应记录”
+   特点：
+   - 不硬编码 USE 数据库：对【当前连接的数据库】生效
+   - 自动识别 JournalPages 是否含 CoverImagePath / AttachmentPath 列
+   - 记录存在则更新，不存在则插入（MERGE），可重复执行
+   ============================================================ */
+
+PRINT N'当前数据库：' + DB_NAME();
+GO
+
+IF OBJECT_ID(N'dbo.Journals', N'U') IS NULL
+BEGIN
+    RAISERROR(N'未找到 dbo.Journals 表，请先初始化期刊基础表。', 16, 1);
+    RETURN;
+END
+GO
+
+DECLARE @jid INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId ASC);
+
+IF @jid IS NULL
+BEGIN
+    RAISERROR(N'dbo.Journals 中没有任何期刊记录，请先插入至少 1 条期刊（建议 JournalId=1）。', 16, 1);
+    RETURN;
+END
+
 IF OBJECT_ID(N'dbo.JournalPages', N'U') IS NULL
 BEGIN
+    -- 如果你的项目里 JournalPages 早已存在，这段不会执行
     CREATE TABLE dbo.JournalPages (
         PageId     INT IDENTITY(1,1) PRIMARY KEY,
         JournalId  INT NOT NULL,
-        PageKey    NVARCHAR(50) NOT NULL,     -- aims / policies
+        PageKey    NVARCHAR(50) NOT NULL,
         Title      NVARCHAR(200) NOT NULL,
-        Content    NVARCHAR(MAX) NOT NULL,    -- 存 HTML（<p><ul> 等）
+        Content    NVARCHAR(MAX) NOT NULL,
         UpdatedAt  DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
         CONSTRAINT FK_JournalPages_Journal FOREIGN KEY(JournalId) REFERENCES dbo.Journals(JournalId)
     );
-
     CREATE UNIQUE INDEX UX_JournalPages_Journal_PageKey
         ON dbo.JournalPages(JournalId, PageKey);
 END
 GO
 
-/* 99.2 初始化 Aims / Policies（若已存在则更新） */
-DECLARE @jid INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId ASC);
+DECLARE @hasCover BIT = CASE WHEN COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NOT NULL THEN 1 ELSE 0 END;
+DECLARE @hasAttach BIT = CASE WHEN COL_LENGTH('dbo.JournalPages', 'AttachmentPath') IS NOT NULL THEN 1 ELSE 0 END;
 
-IF @jid IS NOT NULL
-BEGIN
-    /* Aims and scope */
-    MERGE dbo.JournalPages AS T
-    USING (SELECT @jid AS JournalId, N'aims' AS PageKey) AS S
-    ON (T.JournalId = S.JournalId AND T.PageKey = S.PageKey)
-    WHEN MATCHED THEN
-        UPDATE SET
-            Title = N'论文主旨与投稿范围（Aims and scope）',
-            Content = N'
-<p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
-<h3>主要研究方向</h3>
-<ul>
-  <li>机器学习 / 深度学习（监督、无监督、强化学习）</li>
-  <li>计算机视觉与模式识别（检测、分割、生成模型）</li>
-  <li>自然语言处理与大模型（检索增强、对齐、推理）</li>
-  <li>数据挖掘与知识图谱（图学习、信息抽取）</li>
-  <li>智能系统与工程应用（部署、评测、系统优化）</li>
-</ul>
-<h3>稿件类型</h3>
-<ul>
-  <li>研究论文（Research Article）</li>
-  <li>综述论文（Review）</li>
-  <li>简报/短文（Short Communication）</li>
-</ul>
-<p><b>投稿要求：</b>稿件需包含清晰的问题定义、方法描述、实验设置与结论分析；鼓励提供数据/代码链接以提升可复现性。</p>
-',
-            UpdatedAt = SYSUTCDATETIME()
-    WHEN NOT MATCHED THEN
-        INSERT (JournalId, PageKey, Title, Content)
-        VALUES (@jid, N'aims', N'论文主旨与投稿范围（Aims and scope）',
-N'
-<p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
-<h3>主要研究方向</h3>
-<ul>
-  <li>机器学习 / 深度学习（监督、无监督、强化学习）</li>
-  <li>计算机视觉与模式识别（检测、分割、生成模型）</li>
-  <li>自然语言处理与大模型（检索增强、对齐、推理）</li>
-  <li>数据挖掘与知识图谱（图学习、信息抽取）</li>
-  <li>智能系统与工程应用（部署、评测、系统优化）</li>
-</ul>
-<h3>稿件类型</h3>
-<ul>
-  <li>研究论文（Research Article）</li>
-  <li>综述论文（Review）</li>
-  <li>简报/短文（Short Communication）</li>
-</ul>
-<p><b>投稿要求：</b>稿件需包含清晰的问题定义、方法描述、实验设置与结论分析；鼓励提供数据/代码链接以提升可复现性。</p>
-');
-    ;
-
-    /* Policies and Guidelines */
-    MERGE dbo.JournalPages AS T
-    USING (SELECT @jid AS JournalId, N'policies' AS PageKey) AS S
-    ON (T.JournalId = S.JournalId AND T.PageKey = S.PageKey)
-    WHEN MATCHED THEN
-        UPDATE SET
-            Title = N'政策与指南（Policies and Guidelines）',
-            Content = N'
-<p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。若与系统功能存在差异，以系统实际流程为准。</p>
-
-<h3>1. 投稿与格式要求</h3>
-<ul>
-  <li>稿件需包含：标题、摘要、关键词、正文、参考文献（按期刊格式）。</li>
-  <li>图表需提供清晰标题与编号；引用数据需注明来源。</li>
-</ul>
-
-<h3>2. 同行评审政策</h3>
-<ul>
-  <li>采用同行评审流程（系统中对应：初审 → 指派编辑 → 外审 → 终审）。</li>
-  <li>审稿意见与修回记录将被系统保存以便追踪。</li>
-</ul>
-
-<h3>3. 出版伦理与学术规范</h3>
-<ul>
-  <li>严禁一稿多投、抄袭、伪造数据等学术不端行为。</li>
-  <li>作者署名与贡献需真实有效；如存在利益冲突需在稿件中声明。</li>
-</ul>
-
-<h3>4. 版权与许可</h3>
-<ul>
-  <li>录用后作者需确认版权/许可协议（可在后续版本中扩展为在线协议确认）。</li>
-</ul>
-
-<h3>5. 数据与代码可复现</h3>
-<ul>
-  <li>鼓励提供数据与代码的公开链接或附加材料，提升研究可复现性。</li>
-</ul>
-',
-            UpdatedAt = SYSUTCDATETIME()
-    WHEN NOT MATCHED THEN
-        INSERT (JournalId, PageKey, Title, Content)
-        VALUES (@jid, N'policies', N'政策与指南（Policies and Guidelines）',
-N'
-<p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。若与系统功能存在差异，以系统实际流程为准。</p>
-
-<h3>1. 投稿与格式要求</h3>
-<ul>
-  <li>稿件需包含：标题、摘要、关键词、正文、参考文献（按期刊格式）。</li>
-  <li>图表需提供清晰标题与编号；引用数据需注明来源。</li>
-</ul>
-
-<h3>2. 同行评审政策</h3>
-<ul>
-  <li>采用同行评审流程（系统中对应：初审 → 指派编辑 → 外审 → 终审）。</li>
-  <li>审稿意见与修回记录将被系统保存以便追踪。</li>
-</ul>
-
-<h3>3. 出版伦理与学术规范</h3>
-<ul>
-  <li>严禁一稿多投、抄袭、伪造数据等学术不端行为。</li>
-  <li>作者署名与贡献需真实有效；如存在利益冲突需在稿件中声明。</li>
-</ul>
-
-<h3>4. 版权与许可</h3>
-<ul>
-  <li>录用后作者需确认版权/许可协议（可在后续版本中扩展为在线协议确认）。</li>
-</ul>
-
-<h3>5. 数据与代码可复现</h3>
-<ul>
-  <li>鼓励提供数据与代码的公开链接或附加材料，提升研究可复现性。</li>
-</ul>
-');
-END
+PRINT N'JournalPages 扩展列：CoverImagePath=' + CAST(@hasCover AS NVARCHAR(10)) + N', AttachmentPath=' + CAST(@hasAttach AS NVARCHAR(10));
 GO
+
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+-- 为了兼容有/无 CoverImagePath、AttachmentPath 的两种表结构，这里用动态 SQL 拼接 MERGE
+SET @sql = N'
+DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId ASC);
+
+;WITH Seed AS (
+    SELECT * FROM (VALUES
+        (N''publish'',  N''论文发表（Publish）'', N''' + REPLACE(N'
+<p>本页介绍稿件从投稿到发表的全流程，帮助作者了解各环节的时间节点、需要提交的材料以及可能的处理结果。</p>
+<h3>流程概览</h3>
+<ol>
+  <li><b>在线投稿</b>：作者提交稿件、作者信息、关键词、附件（正文/图表/补充材料）。</li>
+  <li><b>形式审查</b>：编辑部核对格式、完整性与合规性（可进行查重/相似性检测）。</li>
+  <li><b>编辑分配</b>：主编/编辑指派责任编辑，确定外审策略与审稿人名单。</li>
+  <li><b>同行评审</b>：外审专家提交意见；作者根据意见修回，必要时多轮评审。</li>
+  <li><b>终审决策</b>：主编根据评审意见与稿件质量作出最终决定。</li>
+  <li><b>出版准备</b>：版面编辑、校对、版权/许可确认、最终稿归档。</li>
+  <li><b>上线发布</b>：文章进入已发表列表，生成可引用信息（卷期/页码/DOI 可在后续版本扩展）。</li>
+</ol>
+<h3>处理结果与常见状态</h3>
+<ul>
+  <li><b>需修改（Minor/Major Revision）</b>：作者需在截止日期前提交修回稿与回复信。</li>
+  <li><b>录用（Accepted）</b>：进入出版流程，等待排期与发布。</li>
+  <li><b>退稿（Rejected）</b>：不再进入后续评审流程，系统保留记录以便追溯。</li>
+</ul>
+<p class="muted">提示：系统中可在“我的稿件 / 审稿进度”查看每个阶段的状态与历史记录。</p>
+', "''") + N'''),
+
+        (N''guide'',    N''用户指南（Guide for Authors）'', N''' + REPLACE(N'
+<p>本指南汇总投稿准备、写作结构、格式要求与提交清单，帮助作者高效完成投稿。</p>
+<h3>投稿准备</h3>
+<ul>
+  <li>确认研究主题符合期刊范围（Aims &amp; Scope）。</li>
+  <li>准备作者信息、单位、基金与通讯作者邮箱。</li>
+  <li>整理正文、图表、补充材料与数据/代码链接（如有）。</li>
+</ul>
+<h3>写作与格式</h3>
+<ul>
+  <li>摘要包含背景/方法/结果/结论四要素；关键词 3–6 个。</li>
+  <li>图表清晰，图题与注释完整；参考文献格式统一。</li>
+</ul>
+<p class="muted">提示：后台“期刊管理 → 关于期刊页面”可配置本页内容。</p>
+', "''") + N'''),
+
+        (N''aims'',     N''论文主旨与投稿范围（Aims and Scope）'', N''' + REPLACE(N'
+<p>本期刊聚焦人工智能与数据科学领域的理论创新与工程应用，欢迎具有明确贡献与可复现性的研究工作投稿。</p>
+<ul>
+  <li>机器学习 / 深度学习</li>
+  <li>自然语言处理与大模型</li>
+  <li>计算机视觉与多媒体</li>
+  <li>数据挖掘与知识图谱</li>
+  <li>系统与工程实践（部署/评测/MLOps）</li>
+</ul>
+', "''") + N'''),
+
+        (N''policies'', N''政策与指南（Policies and Guidelines）'', N''' + REPLACE(N'
+<p>以下政策与指南适用于本期刊的投稿、审稿与出版流程。</p>
+<ul>
+  <li>同行评审：形式审查 → 编辑处理 → 外审 → 终审。</li>
+  <li>出版伦理：严禁一稿多投、抄袭、数据伪造/篡改等学术不端。</li>
+  <li>查重与相似性检测：编辑部可进行相似性检测，异常可要求解释或退稿。</li>
+  <li>数据与代码：鼓励公开数据/代码以提升可复现性。</li>
+</ul>
+', "''") + N''')
+    ) AS V(PageKey, Title, Content)
+)
+MERGE dbo.JournalPages AS T
+USING (SELECT @jid2 AS JournalId, PageKey, Title, Content FROM Seed) AS S
+ON (T.JournalId = S.JournalId AND T.PageKey = S.PageKey)
+WHEN MATCHED THEN
+    UPDATE SET
+        T.Title = S.Title,
+        T.Content = S.Content,
+        T.UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN
+    INSERT (JournalId, PageKey, Title, Content' + CASE WHEN 1=1 THEN N'' ELSE N'' END + N')
+    VALUES (S.JournalId, S.PageKey, S.Title, S.Content' + CASE WHEN 1=1 THEN N'' ELSE N'' END + N');
+';
+
+-- 如果表里有 CoverImagePath/AttachmentPath，并且它们是 NOT NULL 且无默认值，
+-- 上面的 INSERT 可能失败；因此这里在拼接时，把这两列也塞进去（赋 NULL），最大化兼容。
+IF COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NOT NULL
+BEGIN
+    SET @sql = REPLACE(@sql,
+        N'INSERT (JournalId, PageKey, Title, Content)',
+        N'INSERT (JournalId, PageKey, Title, Content, CoverImagePath)');
+    SET @sql = REPLACE(@sql,
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content)',
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL)');
+END
+
+IF COL_LENGTH('dbo.JournalPages', 'AttachmentPath') IS NOT NULL
+BEGIN
+    SET @sql = REPLACE(@sql,
+        N'INSERT (JournalId, PageKey, Title, Content, CoverImagePath)',
+        N'INSERT (JournalId, PageKey, Title, Content, CoverImagePath, AttachmentPath)');
+    SET @sql = REPLACE(@sql,
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL)',
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL, NULL)');
+
+    -- 如果没有 CoverImagePath，只有 AttachmentPath
+    SET @sql = REPLACE(@sql,
+        N'INSERT (JournalId, PageKey, Title, Content)',
+        N'INSERT (JournalId, PageKey, Title, Content, AttachmentPath)');
+    SET @sql = REPLACE(@sql,
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content)',
+        N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL)');
+END
+
+EXEC sp_executesql @sql;
+GO
+
+PRINT N'✅ 已写入/更新 JournalPages：publish / guide / aims / policies';
+PRINT N'   你可以用下面语句验证：';
+PRINT N'   SELECT JournalId, PageKey, Title, UpdatedAt FROM dbo.JournalPages ORDER BY UpdatedAt DESC;';
+GO
+
+/* ======== END MERGED JournalPages seed ======== */
 
 /* 99.3 初始化 News（若 News 表为空） */
 IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
@@ -774,7 +794,7 @@ GO
    This section is appended to your original sqlserver.sql.
    It does NOT modify or delete your original data.
    It only:
-     - Creates dbo.Issues, dbo.IssueManuscripts, dbo.CallForPapers if missing
+     - Creates dbo.Issues, dbo.CallForPapers if missing
      - Inserts sample rows only if missing
      - Inserts aims/policies pages ONLY IF they don't exist (no overwrite)
    ============================================================ */
@@ -820,29 +840,6 @@ BEGIN
 
     CREATE INDEX IX_Issues_Journal_Type_Published
         ON dbo.Issues(JournalId, IssueType, IsPublished, PublishDate);
-END
-GO
-
-IF OBJECT_ID(N'dbo.IssueManuscripts', N'U') IS NULL
-BEGIN
-    PRINT N'Creating dbo.IssueManuscripts...';
-
-    IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NULL
-    BEGIN
-        THROW 50001, 'Missing dbo.Manuscripts table (required for IssueManuscripts FK).', 1;
-    END
-
-    CREATE TABLE dbo.IssueManuscripts (
-        IssueId      INT NOT NULL,
-        ManuscriptId INT NOT NULL,
-        OrderNo      INT NOT NULL CONSTRAINT DF_IssueManuscripts_OrderNo DEFAULT(0),
-        AddedAt      DATETIME2(0) NOT NULL CONSTRAINT DF_IssueManuscripts_AddedAt DEFAULT SYSUTCDATETIME(),
-        CONSTRAINT PK_IssueManuscripts PRIMARY KEY (IssueId, ManuscriptId),
-        CONSTRAINT FK_IssueManuscripts_Issues FOREIGN KEY (IssueId) REFERENCES dbo.Issues(IssueId),
-        CONSTRAINT FK_IssueManuscripts_Manuscripts FOREIGN KEY (ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId)
-    );
-
-    CREATE INDEX IX_IssueManuscripts_IssueId ON dbo.IssueManuscripts(IssueId);
 END
 GO
 
@@ -1077,7 +1074,6 @@ ELSE
 PRINT '== Patch end: unique email constraint on dbo.Users.Email ==';
 GO
 
-
 /* ============================================================
    稿件阶段时间戳表 ManuscriptStageTimestamps
    用于记录每份稿件在各审稿阶段的完成时间
@@ -1142,7 +1138,6 @@ ELSE
 PRINT '== Patch end: EditorSuggestions ==';
 GO
 
-
 /* ============================================================
    Patch: ArticleMetrics + FormalCheckResults（补齐缺失表）
    Created: 2026-01-02
@@ -1178,7 +1173,6 @@ ELSE
 
 PRINT '== Patch end: ArticleMetrics ==';
 GO
-
 
 PRINT '== Patch begin: FormalCheckResults ==';
 
@@ -1485,70 +1479,6 @@ PRINT '============================================================';
 GO
 
 /* =========================================================
-   [PATCH] 专刊关联（投稿时选择专刊）
-   - 为 dbo.Manuscripts 增加 IssueId（FK -> dbo.Issues.IssueId）
-   - 对历史/已有稿件：若 IssueId 为空，默认赋值为“同一期刊下第一个专刊（IssueType='SPECIAL'）”，
-     若不存在 SPECIAL，则赋值为同一期刊下第一个 Issue。
-   ========================================================= */
-
--- 1) 增加列（兼容：多次执行不报错）
-IF COL_LENGTH('dbo.Manuscripts','IssueId') IS NULL
-BEGIN
-    ALTER TABLE dbo.Manuscripts ADD IssueId INT NULL;
-END
-GO
-
--- 2) 历史数据兜底：把 IssueId 为空的稿件补齐（优先 SPECIAL）
-;WITH FirstIssuePerJournal AS (
-    SELECT
-        JournalId,
-        MIN(CASE WHEN IssueType = 'SPECIAL' THEN IssueId END) AS FirstSpecialIssueId,
-        MIN(IssueId) AS FirstIssueId
-    FROM dbo.Issues
-    GROUP BY JournalId
-)
-UPDATE m
-SET m.IssueId = COALESCE(f.FirstSpecialIssueId, f.FirstIssueId)
-FROM dbo.Manuscripts m
-LEFT JOIN FirstIssuePerJournal f ON f.JournalId = m.JournalId
-WHERE m.IssueId IS NULL;
-GO
-
--- 如果仍为空（例如 JournalId 为空或无对应 Issues），则兜底为全局第一个 Issue（仍优先 SPECIAL）
-DECLARE @GlobalFirstIssueId INT =
-(
-    SELECT TOP 1 IssueId
-    FROM dbo.Issues
-    ORDER BY CASE WHEN IssueType = 'SPECIAL' THEN 0 ELSE 1 END, IssueId
-);
-IF @GlobalFirstIssueId IS NOT NULL
-BEGIN
-    UPDATE dbo.Manuscripts
-    SET IssueId = @GlobalFirstIssueId
-    WHERE IssueId IS NULL;
-END
-GO
-
--- 3) 外键与索引（兼容：多次执行不报错）
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Manuscripts_Issues_IssueId')
-BEGIN
-    ALTER TABLE dbo.Manuscripts WITH CHECK
-    ADD CONSTRAINT FK_Manuscripts_Issues_IssueId FOREIGN KEY (IssueId)
-    REFERENCES dbo.Issues (IssueId);
-END
-GO
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = 'IX_Manuscripts_IssueId' AND object_id = OBJECT_ID('dbo.Manuscripts')
-)
-BEGIN
-    CREATE INDEX IX_Manuscripts_IssueId ON dbo.Manuscripts(IssueId);
-END
-GO
-
-/* =========================================================
    用户菜单入口权限表（可选增强）
    兼容旧库：如果表已存在但缺少 Granted 列，则补齐。
    ========================================================= */
@@ -1567,6 +1497,328 @@ BEGIN
     BEGIN
         ALTER TABLE dbo.UserMenuPermissions
         ADD Granted BIT NOT NULL CONSTRAINT DF_UserMenuPermissions_Granted DEFAULT(1);
+    END
+END
+GO
+
+
+/* ============================================================
+   DEMO CONTENT ENHANCEMENT (Homepage + TopNav)
+   Purpose:
+     - Make homepage content non-empty (Journal / Editorial board / News / Calls / Issues / Articles)
+     - Provide more "mature" demo dataset for project showcasing
+   Safe to run multiple times:
+     - Uses NOT EXISTS checks
+     - Updates journal description only when it looks like a placeholder
+   ============================================================ */
+GO
+USE [Online_SMSystem4SP];
+GO
+
+/* 1) Enrich Journal basic info (only if current looks like placeholder) */
+DECLARE @DemoJournalId INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+IF @DemoJournalId IS NOT NULL
+BEGIN
+    UPDATE dbo.Journals
+       SET Name = CASE WHEN Name IS NULL OR LTRIM(RTRIM(Name)) = N'' THEN N'International Artificial Intelligence Research' ELSE Name END,
+           Timeline = CASE WHEN Timeline IS NULL OR LTRIM(RTRIM(Timeline)) = N'' THEN N'First decision: ~4 weeks · Accept to online: ~2 weeks · Review model: single-blind / double-blind optional' ELSE Timeline END,
+           ISSN = CASE WHEN ISSN IS NULL OR LTRIM(RTRIM(ISSN)) = N'' THEN N'1234-5678' ELSE ISSN END,
+           ImpactFactor = COALESCE(ImpactFactor, 5.123),
+           Description = CASE
+                            WHEN Description IS NULL
+                              OR Description LIKE N'%课程设计示例期刊%'
+                              OR LEN(LTRIM(RTRIM(Description))) < 60
+                            THEN
+N'International Artificial Intelligence Research（IAIR）聚焦人工智能与数据科学领域的原创研究与工程实践，覆盖机器学习、自然语言处理、计算机视觉、知识图谱、可解释与可信 AI、数据治理与可复现研究等方向。
+本刊倡导严格同行评审与研究透明性，鼓励作者提供数据与代码以提升可复现性。我们为作者提供清晰的投稿指南、出版伦理与利益冲突声明规范，并支持在线投稿、审稿、修回与终审流程的全链路管理。'
+                            ELSE Description
+                         END
+     WHERE JournalId = @DemoJournalId;
+END
+GO
+
+/* 2) Add extra demo users (editorial board candidates) */
+DECLARE @Role_EDITOR INT = (SELECT TOP 1 RoleId FROM dbo.Roles WHERE RoleCode=N'EDITOR');
+DECLARE @Role_REVIEWER INT = (SELECT TOP 1 RoleId FROM dbo.Roles WHERE RoleCode=N'REVIEWER');
+
+IF @Role_EDITOR IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'editor2')
+        INSERT dbo.Users(Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
+        VALUES (N'editor2', N'password123', N'editor2@example.com', N'编辑2', N'清华大学 · 自动化系', N'自然语言处理', @Role_EDITOR, N'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'editor3')
+        INSERT dbo.Users(Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
+        VALUES (N'editor3', N'password123', N'editor3@example.com', N'编辑3', N'北京大学 · 计算机学院', N'计算机视觉', @Role_EDITOR, N'ACTIVE');
+END
+GO
+
+IF @Role_REVIEWER IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'reviewer2')
+        INSERT dbo.Users(Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
+        VALUES (N'reviewer2', N'password123', N'reviewer2@example.com', N'审稿人2', N'香港科技大学', N'可解释 AI', @Role_REVIEWER, N'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'reviewer3')
+        INSERT dbo.Users(Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
+        VALUES (N'reviewer3', N'password123', N'reviewer3@example.com', N'审稿人3', N'上海交通大学', N'知识图谱', @Role_REVIEWER, N'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username=N'reviewer4')
+        INSERT dbo.Users(Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
+        VALUES (N'reviewer4', N'password123', N'reviewer4@example.com', N'审稿人4', N'浙江大学', N'数据治理与隐私计算', @Role_REVIEWER, N'ACTIVE');
+END
+GO
+
+/* 3) Seed EditorialBoard (only insert missing rows) */
+IF OBJECT_ID(N'dbo.EditorialBoard', N'U') IS NOT NULL
+BEGIN
+    DECLARE @jidEB INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+
+    DECLARE @u_eic INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'eic');
+    DECLARE @u_eoadmin INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'eoadmin');
+    DECLARE @u_editor1 INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'editor1');
+    DECLARE @u_editor2 INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'editor2');
+    DECLARE @u_editor3 INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'editor3');
+
+    IF @jidEB IS NOT NULL
+    BEGIN
+        IF @u_eic IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EditorialBoard WHERE JournalId=@jidEB AND UserId=@u_eic)
+            INSERT dbo.EditorialBoard(UserId, JournalId, Position, Section, Bio)
+            VALUES (@u_eic, @jidEB, N'Editor-in-Chief', N'Overall',
+                    N'研究方向：可信 AI、机器学习系统与学术出版。曾任多项国际会议程序委员会成员，关注审稿质量与研究透明性。');
+
+        IF @u_eoadmin IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EditorialBoard WHERE JournalId=@jidEB AND UserId=@u_eoadmin)
+            INSERT dbo.EditorialBoard(UserId, JournalId, Position, Section, Bio)
+            VALUES (@u_eoadmin, @jidEB, N'Managing Editor', N'Editorial Office',
+                    N'负责稿件形式审查、出版流程与作者沟通。熟悉出版伦理、版权与开放科学实践。');
+
+        IF @u_editor1 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EditorialBoard WHERE JournalId=@jidEB AND UserId=@u_editor1)
+            INSERT dbo.EditorialBoard(UserId, JournalId, Position, Section, Bio)
+            VALUES (@u_editor1, @jidEB, N'Associate Editor', N'Machine Learning',
+                    N'研究方向：表示学习与模型评测。关注可复现性与严谨实验设计。');
+
+        IF @u_editor2 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EditorialBoard WHERE JournalId=@jidEB AND UserId=@u_editor2)
+            INSERT dbo.EditorialBoard(UserId, JournalId, Position, Section, Bio)
+            VALUES (@u_editor2, @jidEB, N'Section Editor', N'Natural Language Processing',
+                    N'研究方向：大模型、检索增强生成（RAG）与对齐技术。长期担任审稿人并参与专题策划。');
+
+        IF @u_editor3 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EditorialBoard WHERE JournalId=@jidEB AND UserId=@u_editor3)
+            INSERT dbo.EditorialBoard(UserId, JournalId, Position, Section, Bio)
+            VALUES (@u_editor3, @jidEB, N'Section Editor', N'Computer Vision',
+                    N'研究方向：视觉识别、医学影像与可信评测。关注数据治理与公平性。');
+    END
+END
+GO
+
+/* 4) Seed richer News (avoid duplicates by Title) */
+IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
+BEGIN
+    DECLARE @newsAuthor INT =
+        COALESCE(
+            (SELECT TOP 1 UserId FROM dbo.Users WHERE Username = N'eoadmin'),
+            (SELECT TOP 1 UserId FROM dbo.Users WHERE Username = N'admin'),
+            (SELECT TOP 1 UserId FROM dbo.Users ORDER BY UserId ASC)
+        );
+
+    IF @newsAuthor IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'投稿指南更新：新增模板与格式检查要点')
+            INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
+            VALUES (N'投稿指南更新：新增模板与格式检查要点',
+                    N'为提升审稿效率与排版一致性，我们更新了作者指南：新增 Word/LaTeX 模板、参考文献格式示例与常见格式问题清单。建议投稿前先完成自检。',
+                    DATEADD(DAY, -2, SYSUTCDATETIME()), @newsAuthor, 1);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'出版伦理声明：利益冲突与数据可用性')
+            INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
+            VALUES (N'出版伦理声明：利益冲突与数据可用性',
+                    N'请作者在稿件中明确声明利益冲突，并在可行情况下提供数据与代码可用性说明（Data & Code Availability）。本刊对学术不端采取零容忍政策。',
+                    DATEADD(DAY, -7, SYSUTCDATETIME()), @newsAuthor, 1);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'审稿人培训：如何给出高质量审稿意见')
+            INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
+            VALUES (N'审稿人培训：如何给出高质量审稿意见',
+                    N'我们发布了审稿建议清单，涵盖创新性、方法严谨性、实验可复现性与写作表达等维度，帮助审稿人提供可操作的改进建议。',
+                    DATEADD(DAY, -14, SYSUTCDATETIME()), @newsAuthor, 1);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.News WHERE Title=N'系统功能升级：新增通知中心与消息提醒')
+            INSERT dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished)
+            VALUES (N'系统功能升级：新增通知中心与消息提醒',
+                    N'系统新增站内通知中心：稿件退修、审稿邀请、终审结果等关键节点会以站内信形式推送，帮助作者与审稿人及时跟进。',
+                    DATEADD(DAY, -20, SYSUTCDATETIME()), @newsAuthor, 1);
+    END
+END
+GO
+
+/* 5) Seed more Issues (Latest & Special) */
+IF OBJECT_ID(N'dbo.Issues', N'U') IS NOT NULL
+BEGIN
+    DECLARE @jidIssue INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+
+    IF @jidIssue IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId=@jidIssue AND Title=N'Latest Issues - Vol.1 No.2')
+            INSERT dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate, GuestEditors)
+            VALUES (@jidIssue, N'LATEST', N'Latest Issues - Vol.1 No.2', 1, 2, YEAR(GETDATE()),
+                    N'最新一期：覆盖大模型评测、RAG、隐私计算与可复现研究的代表性工作。', 1,
+                    CONVERT(date, DATEADD(day,-7,GETDATE())), NULL);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId=@jidIssue AND Title=N'Latest Issues - Vol.2 No.1')
+            INSERT dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate, GuestEditors)
+            VALUES (@jidIssue, N'LATEST', N'Latest Issues - Vol.2 No.1', 2, 1, YEAR(GETDATE()),
+                    N'新卷首期：强调开放科学实践与可复现性，鼓励提交数据与代码。', 1,
+                    CONVERT(date, DATEADD(day,-60,GETDATE())), NULL);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId=@jidIssue AND Title=N'Special Issue: Trustworthy AI & Safety')
+            INSERT dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate, GuestEditors)
+            VALUES (@jidIssue, N'SPECIAL', N'Trustworthy AI & Safety', NULL, NULL, YEAR(GETDATE()),
+                    N'专题聚焦可信与安全 AI：对齐、幻觉、评测基准、风险治理与工具链。', 1,
+                    CONVERT(date, DATEADD(day,-90,GETDATE())),
+                    N'Guest Editors: Prof. Zhang (PKU); Dr. Chen (HKUST)');
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId=@jidIssue AND Title=N'Special Issue: Reproducibility in ML')
+            INSERT dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate, GuestEditors)
+            VALUES (@jidIssue, N'SPECIAL', N'Reproducibility in ML', NULL, NULL, YEAR(GETDATE()),
+                    N'专题聚焦机器学习可复现：数据集版本、实验报告、复现实验与开源基准。', 1,
+                    CONVERT(date, DATEADD(day,-120,GETDATE())),
+                    N'Guest Editors: Dr. Li (SJTU); Dr. Wang (ZJU)');
+    END
+END
+GO
+
+/* 6) Seed more Call for Papers (published) */
+IF OBJECT_ID(N'dbo.CallForPapers', N'U') IS NOT NULL
+BEGIN
+    DECLARE @jidCall INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+
+    IF @jidCall IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM dbo.CallForPapers WHERE JournalId=@jidCall AND Title=N'Call for Papers: Trustworthy AI & Safety')
+            INSERT dbo.CallForPapers(JournalId, Title, Content, StartDate, Deadline, EndDate, IsPublished)
+            VALUES (@jidCall,
+                    N'Call for Papers: Trustworthy AI & Safety',
+                    N'<p>我们邀请投稿可信与安全 AI 相关研究，包括对齐、幻觉缓解、鲁棒性、公平性、风险评估与治理等方向。</p><ul><li>截稿日期：见下方 Deadline</li><li>建议提供代码与数据链接</li><li>支持匿名审稿</li></ul>',
+                    CONVERT(date, DATEADD(day,-15,GETDATE())),
+                    CONVERT(date, DATEADD(day, 45,GETDATE())),
+                    CONVERT(date, DATEADD(day, 60,GETDATE())),
+                    1);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.CallForPapers WHERE JournalId=@jidCall AND Title=N'Call for Papers: Reproducible AI Systems')
+            INSERT dbo.CallForPapers(JournalId, Title, Content, StartDate, Deadline, EndDate, IsPublished)
+            VALUES (@jidCall,
+                    N'Call for Papers: Reproducible AI Systems',
+                    N'<p>专题欢迎投稿可复现 AI 系统与工具链：实验追踪、数据版本管理、评测基准、可解释与审计。</p><p>鼓励提交补充材料（Appendix）与可复现说明。</p>',
+                    CONVERT(date, DATEADD(day,-40,GETDATE())),
+                    CONVERT(date, DATEADD(day, 20,GETDATE())),
+                    CONVERT(date, DATEADD(day, 35,GETDATE())),
+                    1);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.CallForPapers WHERE JournalId=@jidCall AND Title=N'Call for Papers: Large Language Models in Practice')
+            INSERT dbo.CallForPapers(JournalId, Title, Content, StartDate, Deadline, EndDate, IsPublished)
+            VALUES (@jidCall,
+                    N'Call for Papers: Large Language Models in Practice',
+                    N'<p>欢迎投稿大语言模型在真实场景中的应用与评测：RAG、工具调用、Agent、部署优化、数据治理与安全合规。</p>',
+                    CONVERT(date, DATEADD(day,-25,GETDATE())),
+                    CONVERT(date, DATEADD(day, 75,GETDATE())),
+                    CONVERT(date, DATEADD(day, 90,GETDATE())),
+                    1);
+    END
+END
+GO
+
+/* 7) Seed a few ACCEPTED manuscripts + metrics for public "Articles" page */
+IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
+BEGIN
+    DECLARE @jidM INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
+    DECLARE @authorId INT = (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'author1');
+    DECLARE @editorId INT =
+        COALESCE((SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'editor1'),
+                 (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'editor2'),
+                 (SELECT TOP 1 UserId FROM dbo.Users WHERE Username=N'eic'));
+
+    IF @authorId IS NOT NULL AND @jidM IS NOT NULL
+    BEGIN
+        DECLARE @seed TABLE(
+            SeedKey NVARCHAR(50) NOT NULL,
+            Title NVARCHAR(500) NOT NULL,
+            Abstract NVARCHAR(MAX) NULL,
+            Keywords NVARCHAR(500) NULL,
+            SubjectArea NVARCHAR(100) NULL,
+            AuthorList NVARCHAR(500) NULL,
+            DaysAgo INT NOT NULL,
+            Views INT NOT NULL,
+            Downloads INT NOT NULL,
+            Citations INT NOT NULL
+        );
+
+        INSERT INTO @seed(SeedKey, Title, Abstract, Keywords, SubjectArea, AuthorList, DaysAgo, Views, Downloads, Citations)
+        VALUES
+          (N'A1', N'Retrieval-Augmented Generation for Domain QA: A Reproducible Benchmark',
+           N'<p>本文提出一个面向领域问答的 RAG 评测基准与可复现实验协议，系统分析检索质量、提示策略与答案一致性。</p>',
+           N'RAG; Benchmark; Reproducibility; QA', N'NLP',
+           N'Author One; Author Two; Author Three', 12, 842, 210, 18),
+
+          (N'A2', N'Trustworthy Evaluation of Large Language Models: Hallucination, Robustness, and Safety',
+           N'<p>我们构建一套可信评测框架，覆盖幻觉检测、鲁棒性测试与安全对齐指标，并给出可复现的评测流水线。</p>',
+           N'LLM; Safety; Evaluation; Hallucination', N'AI Safety',
+           N'Author A; Author B', 35, 1260, 388, 42),
+
+          (N'A3', N'Privacy-Preserving Federated Learning with Practical Deployment Considerations',
+           N'<p>本文从系统与隐私角度讨论联邦学习的部署挑战，提出一种兼顾效率与隐私保护的训练策略。</p>',
+           N'Federated Learning; Privacy; Systems', N'Systems',
+           N'Author X; Author Y; Author Z', 58, 630, 155, 11),
+
+          (N'A4', N'Graph Neural Networks for Scientific Discovery: Methods and Open Datasets',
+           N'<p>综述图神经网络在科学发现中的关键方法，并整理公开数据集与评测协议，促进领域研究可复现。</p>',
+           N'GNN; Scientific Discovery; Survey', N'Graph Learning',
+           N'Author M; Author N', 80, 520, 120, 9),
+
+          (N'A5', N'An Empirical Study of Prompting Strategies in Multimodal Models',
+           N'<p>我们系统比较多模态模型的提示策略，给出可复现的实验配置与误差分析，为工程实践提供参考。</p>',
+           N'Multimodal; Prompting; Empirical Study', N'Computer Vision',
+           N'Author P; Author Q', 100, 410, 98, 6);
+
+        DECLARE @new TABLE(ManuscriptId INT NOT NULL, SeedKey NVARCHAR(50) NOT NULL);
+
+        INSERT INTO dbo.Manuscripts(
+            JournalId, SubmitterId, CurrentEditorId,
+            Title, Abstract, Keywords, SubjectArea, AuthorList,
+            Status, Decision, CurrentRound,
+            SubmitTime, LastStatusTime, FinalDecisionTime,
+            IsArchived, IsWithdrawn
+        )
+        OUTPUT inserted.ManuscriptId, s.SeedKey INTO @new(ManuscriptId, SeedKey)
+        SELECT
+            @jidM, @authorId, @editorId,
+            s.Title, s.Abstract, s.Keywords, s.SubjectArea, s.AuthorList,
+            N'ACCEPTED', N'ACCEPT', 1,
+            DATEADD(DAY, -s.DaysAgo, SYSUTCDATETIME()),
+            DATEADD(DAY, -s.DaysAgo, SYSUTCDATETIME()),
+            DATEADD(DAY, -s.DaysAgo + 3, SYSUTCDATETIME()),
+            0, 0
+        FROM @seed s
+        WHERE NOT EXISTS (SELECT 1 FROM dbo.Manuscripts m WHERE m.Title = s.Title);
+
+        /* Ensure each seeded manuscript has a current Version row (file paths left NULL for demo) */
+        IF OBJECT_ID(N'dbo.ManuscriptVersions', N'U') IS NOT NULL
+        BEGIN
+            INSERT INTO dbo.ManuscriptVersions(ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, CoverLetterHtml, ResponseLetterPath, CreatedBy, Remark)
+            SELECT n.ManuscriptId, 1, 1, NULL, NULL, NULL, NULL, NULL, @authorId, N'Demo seed'
+            FROM @new n
+            WHERE NOT EXISTS (SELECT 1 FROM dbo.ManuscriptVersions v WHERE v.ManuscriptId=n.ManuscriptId AND v.VersionNumber=1);
+        END
+
+        /* Seed ArticleMetrics for nicer public list sorting */
+        IF OBJECT_ID(N'dbo.ArticleMetrics', N'U') IS NOT NULL
+        BEGIN
+            INSERT INTO dbo.ArticleMetrics(ManuscriptId, ViewCount, DownloadCount, CitationCount, PopularityScore)
+            SELECT
+                n.ManuscriptId,
+                s.Views, s.Downloads, s.Citations,
+                CAST((s.Views*0.2 + s.Downloads*0.6 + s.Citations*1.5) AS FLOAT)
+            FROM @new n
+            JOIN @seed s ON s.SeedKey = n.SeedKey
+            WHERE NOT EXISTS (SELECT 1 FROM dbo.ArticleMetrics am WHERE am.ManuscriptId = n.ManuscriptId);
+        END
     END
 END
 GO

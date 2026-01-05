@@ -9,63 +9,17 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">用户指南 (Guide for authors)</h2>
+            <h2 class="card-title">
+                <c:choose>
+                    <c:when test="${not empty page && not empty page.title}">
+                        <c:out value="${page.title}"/>
+                    </c:when>
+                    <c:otherwise>用户指南 (Guide for authors)</c:otherwise>
+                </c:choose>
+            </h2>
             <p class="card-subtitle">为用户提供期刊介绍、投稿指南与写作/格式要求入口</p>
         </div>
     </div>
-
-    <h3>推荐阅读</h3>
-    <ul class="list">
-        <li class="list-item">
-            <span class="avatar" aria-hidden="true"><i class="bi bi-info-circle"></i></span>
-            <div>
-                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/about/aims">About the journal</a></div>
-                <div class="list-meta">期刊主旨与投稿范围（Aims and scope）</div>
-            </div>
-        </li>
-        <li class="list-item">
-            <span class="avatar" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
-            <div>
-                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/about/policies">Ethics and policies</a></div>
-                <div class="list-meta">出版伦理、同行评审政策、版权与许可等</div>
-            </div>
-        </li>
-        <li class="list-item">
-            <span class="avatar" aria-hidden="true"><i class="bi bi-pencil"></i></span>
-            <div>
-                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/guide/writing">Writing</a></div>
-                <div class="list-meta">写作结构建议、引用规范与可复现性建议（占位页）</div>
-            </div>
-        </li>
-        <li class="list-item">
-            <span class="avatar" aria-hidden="true"><i class="bi bi-layout-text-window"></i></span>
-            <div>
-                <div class="list-title"><a style="text-decoration:none;" href="${ctx}/guide/formatting">Writing and formatting</a></div>
-                <div class="list-meta">模板与格式要求、图表/参考文献规范（占位页）</div>
-            </div>
-        </li>
-    </ul>
-
-    <h3>投稿前准备</h3>
-    <ul>
-        <li>准备稿件文件（Manuscript）与 Cover Letter。</li>
-        <li>确保标题、摘要、关键词、研究主题、作者列表等元数据齐全。</li>
-        <li>可选：填写项目资助信息与推荐审稿人。</li>
-    </ul>
-
-    <h3>系统内操作</h3>
-    <ol>
-        <li>注册并登录系统。</li>
-        <li>进入“投稿（Submit）”模块，创建新稿件。</li>
-        <li>支持先保存为草稿，再最终提交。</li>
-        <li>在“我的稿件”中查看状态流转与编辑/审稿反馈。</li>
-    </ol>
-
-    <p class="card-subtitle">
-        后端拓展建议：如果你希望“Writing/Formatting”从数据库动态读取并支持模板下载，
-        可以新增如 <span class="badge">dbo.AuthorGuidelines</span> / <span class="badge">dbo.FileResources</span> 等表，
-        并在管理员端提供富文本编辑与附件上传。
-    </p>
 
     <div class="actions">
         <a class="btn-primary" style="text-decoration:none;" href="${ctx}/manuscripts/submit">
@@ -77,6 +31,39 @@
             查看新闻
         </a>
     </div>
+
+    <c:if test="${not empty pageLoadError}">
+        <div class="notice danger" style="margin-top: 14px;">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <div>
+                未找到页面配置数据（JournalPages 中没有对应记录）：pageKey=guide
+            </div>
+        </div>
+    </c:if>
+
+    <c:choose>
+        <c:when test="${not empty page && not empty page.content}">
+            <div class="richtext" style="margin-top: 14px;">
+                <c:out value="${page.content}" escapeXml="false"/>
+            </div>
+        </c:when>
+        <c:otherwise>
+            <div style="margin-top: 14px;">
+                <h3>投稿准备</h3>
+                <ul>
+                    <li>确认研究主题符合期刊范围（Aims &amp; Scope）。</li>
+                    <li>准备作者信息、单位、基金与通讯作者邮箱。</li>
+                    <li>整理正文、图表、补充材料与数据/代码链接（如有）。</li>
+                </ul>
+                <h3>写作与格式</h3>
+                <ul>
+                    <li>摘要包含背景/方法/结果/结论四要素；关键词 3–6 个。</li>
+                    <li>图表清晰，图题与注释完整；参考文献格式统一。</li>
+                </ul>
+                <p class="muted">提示：后台“期刊管理 → 关于期刊页面”可配置本页内容。</p>
+            </div>
+        </c:otherwise>
+    </c:choose>
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

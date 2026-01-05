@@ -10,14 +10,14 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">Formatting（格式要求）</h2>
-            <p class="card-subtitle">占位页：后续可接入模板下载、格式检查后端（如上传并自动校验）。</p>
+            <p class="card-subtitle">提供投稿排版与材料准备要求，便于稿件进入同行评审流程。</p>
         </div>
         <a href="${ctx}/guide" style="white-space:nowrap; text-decoration:none;">
             返回用户指南 <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>
     </div>
 
-    <h3>基本要求（示例）</h3>
+    <h3>基本要求</h3>
     <ul>
         <li>稿件文件：建议 PDF + 源文件（Word/LaTeX）。</li>
         <li>图表：清晰、编号完整、带标题与单位；引用数据需注明来源。</li>

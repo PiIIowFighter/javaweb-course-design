@@ -7,10 +7,6 @@ public class Manuscript implements Serializable {
 
     private Integer manuscriptId;
     private Integer journalId;
-
-    // 关联专刊（Issue）
-    private Integer issueId;
-    private String issueTitle;
     private Integer submitterId;
 
     private String title;
@@ -80,24 +76,6 @@ public class Manuscript implements Serializable {
     public void setJournalId(Integer journalId) {
         this.journalId = journalId;
     }
-
-    public Integer getIssueId() {
-        return issueId;
-    }
-
-    public void setIssueId(Integer issueId) {
-        this.issueId = issueId;
-    }
-
-    public String getIssueTitle() {
-        return issueTitle;
-    }
-
-    public void setIssueTitle(String issueTitle) {
-        this.issueTitle = issueTitle;
-    }
-
-
     public Integer getSubmitterId() {
         return submitterId;
     }

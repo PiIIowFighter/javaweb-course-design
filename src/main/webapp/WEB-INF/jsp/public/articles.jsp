@@ -34,7 +34,7 @@
         <p>暂无数据。</p>
         <small class="muted">
             说明：当前实现将 <span class="badge">ACCEPTED</span> 状态稿件近似当作已发表论文。
-            如需真实“已发表论文库/卷期”，请使用 <span class="badge">dbo.Issues</span> + <span class="badge">dbo.IssueManuscripts</span>。
+            如需按卷期/专刊浏览，请前往 Issues 页面。
         </small>
     </c:if>
 

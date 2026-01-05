@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 超级管理员：期刊管理（按板块分组管理 Journals / JournalPages / Issues / CallForPapers）。
@@ -134,8 +136,9 @@ public class JournalAdminServlet extends HttpServlet {
     // -------------------- list/dashboard --------------------
 
     private void handleJournalList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
-        List<Journal> journals = journalDAO.listAll();
-        req.setAttribute("journals", journals);
+        // 本项目默认只有一个期刊：期刊管理页面直接展示“主期刊”的可编辑内容
+        Journal journal = journalDAO.findPrimary();
+        req.setAttribute("journal", journal);
         req.getRequestDispatcher("/WEB-INF/jsp/admin/journal/journal_list.jsp").forward(req, resp);
     }
 
@@ -211,8 +214,16 @@ public class JournalAdminServlet extends HttpServlet {
         Journal journal = journalDAO.findById(journalId);
         List<JournalPage> pages = journalPageDAO.listByJournal(journalId);
 
+        // 仅暴露本项目需要维护的 4 个“关于期刊页面”内容：publish/guide/aims/policies
+        Map<String, JournalPage> pageMap = new HashMap<>();
+        for (JournalPage p : pages) {
+            if (p != null && p.getPageKey() != null) {
+                pageMap.put(p.getPageKey(), p);
+            }
+        }
+
         req.setAttribute("journal", journal);
-        req.setAttribute("pages", pages);
+        req.setAttribute("pageMap", pageMap);
         req.getRequestDispatcher("/WEB-INF/jsp/admin/journal/page_list.jsp").forward(req, resp);
     }
 
@@ -223,15 +234,22 @@ public class JournalAdminServlet extends HttpServlet {
             return;
         }
         Integer id = intParam(req, "id");
+        String pageKeyParam = req.getParameter("pageKey");
 
         Journal journal = journalDAO.findById(journalId);
         JournalPage page = null;
         if (id != null) {
             page = journalPageDAO.findById(id);
+        } else if (pageKeyParam != null && !pageKeyParam.trim().isEmpty()) {
+            // 支持按 key 直接编辑固定页面（若不存在则新建）
+            page = journalPageDAO.findByJournalAndKey(journalId, pageKeyParam.trim());
         }
         if (page == null) {
             page = new JournalPage();
             page.setJournalId(journalId);
+            if (pageKeyParam != null && !pageKeyParam.trim().isEmpty()) {
+                page.setPageKey(pageKeyParam.trim());
+            }
         }
 
         req.setAttribute("journal", journal);

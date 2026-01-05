@@ -23,11 +23,11 @@
 
             <div class="form-row">
                 <label for="newPassword">新密码</label>
-                <input id="newPassword" type="password" name="newPassword" required placeholder="至少 8 位"/>
+                <input id="newPassword" type="password" name="password" required placeholder="至少 6 位"/>
             </div>
             <div class="form-row">
                 <label for="confirmNewPassword">确认新密码</label>
-                <input id="confirmNewPassword" type="password" name="confirmNewPassword" required placeholder="再次输入新密码"/>
+                <input id="confirmNewPassword" type="password" name="confirmPassword" required placeholder="再次输入新密码"/>
             </div>
 
             <div class="actions">

@@ -136,7 +136,7 @@
         </c:if>
 
         <!-- 编辑部管理员 -->
-        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
+        <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY'] or sessionScope.menuPermMap['ADMIN_JOURNALS'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
             <div class="muted" style="padding: 10px 12px;">编辑部管理</div>
             <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
                 <a class="side-link ${fn:contains(uri, '/editor/formalCheck') and not fn:contains(uri, '/history') ? 'active' : ''}" href="${ctx}/editor/formalCheck">
@@ -148,12 +148,25 @@
                     <i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史
                 </a>
             </c:if>
+
+<c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
+    <a class="side-link ${fn:contains(uri, '/admin/journals') ? 'active' : ''}" href="${ctx}/admin/journals/list">
+        <i class="bi bi-journals" aria-hidden="true"></i> 期刊管理
+    </a>
+</c:if>
+
+            <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
+                <a class="side-link ${fn:contains(uri, '/admin/news') ? 'active' : ''}" href="${ctx}/admin/news/list">
+                    <i class="bi bi-megaphone" aria-hidden="true"></i> 公告 / 新闻
+                </a>
+            </c:if>
+
         </c:if>
 
         <!-- 后台管理 -->
         <c:if test="${sessionScope.menuPermMap['ADMIN_USERS'] or sessionScope.menuPermMap['ADMIN_PERMISSIONS'] or sessionScope.menuPermMap['ADMIN_LOGS']
-            or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE'] or sessionScope.menuPermMap['ADMIN_JOURNALS']
-            or sessionScope.menuPermMap['ADMIN_EDITORIAL'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
+            or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE']
+            or sessionScope.menuPermMap['ADMIN_EDITORIAL']}">
             <div class="muted" style="padding: 10px 12px;">后台管理</div>
             <c:if test="${sessionScope.menuPermMap['ADMIN_USERS']}">
                 <a class="side-link ${fn:contains(uri, '/admin/users') ? 'active' : ''}" href="${ctx}/admin/users/list">
@@ -180,22 +193,13 @@
                     <i class="bi bi-journal-text" aria-hidden="true"></i> 系统日志
                 </a>
             </c:if>
-            <c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
-                <a class="side-link ${fn:contains(uri, '/admin/journals') ? 'active' : ''}" href="${ctx}/admin/journals/list">
-                    <i class="bi bi-journals" aria-hidden="true"></i> 期刊管理
-                </a>
-            </c:if>
             <c:if test="${sessionScope.menuPermMap['ADMIN_EDITORIAL']}">
                 <a class="side-link ${fn:contains(uri, '/admin/editorial') ? 'active' : ''}" href="${ctx}/admin/editorial/list">
                     <i class="bi bi-diagram-2" aria-hidden="true"></i> 编委管理
                 </a>
             </c:if>
-            <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
-                <a class="side-link ${fn:contains(uri, '/admin/news') ? 'active' : ''}" href="${ctx}/admin/news/list">
-                    <i class="bi bi-megaphone" aria-hidden="true"></i> 公告 / 新闻
-                </a>
-            </c:if>
-        </c:if>
+</c:if>
 
     </nav>
 </aside>
+

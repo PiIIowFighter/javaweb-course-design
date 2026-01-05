@@ -2,19 +2,35 @@ package edu.bjfu.onlinesm.service;
 
 import edu.bjfu.onlinesm.model.FormalCheckResult;
 import edu.bjfu.onlinesm.model.Manuscript;
+import edu.bjfu.onlinesm.model.ManuscriptAuthor;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 形式审查自动检查服务
+ *
+ * 调整说明（v2026-01）：
+ * 1) 作者信息：仅校验作者邮箱格式（不再要求机构邮箱）。
+ * 2) 正文字数：以从 PDF 提取的文本为准，按“字数”统计（中文字符 + 英文单词），范围 3000-8000。
+ * 3) 查重：由 PlagiarismCheckService 模拟（<20%），并可生成 PDF 报告链接。
+ */
 public class FormalCheckService {
 
-    private static final Pattern INSTITUTIONAL_EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@(edu|org)\\..*$");
+    /** 简化邮箱校验（足够应付“格式正确”） */
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})");
+
+    // 摘要字数要求：150-700（与详情页提示保持一致）
     private static final int MIN_ABSTRACT_WORDS = 150;
     private static final int MAX_ABSTRACT_WORDS = 700;
-    private static final int MIN_BODY_WORDS = 3000;
-    private static final int MAX_BODY_WORDS = 8000;
+
+    // 正文字数要求：3000-8000（按字数：中文字符 + 英文单词）
+    private static final int MIN_BODY_COUNT = 3000;
+    private static final int MAX_BODY_COUNT = 8000;
+
     private static final int MIN_KEYWORDS = 3;
-    private static final int MAX_KEYWORDS = 7;
-    private static final double HIGH_SIMILARITY_THRESHOLD = 20.0;
+    private static final int MAX_KEYWORDS = 6;
 
     private final PlagiarismCheckService plagiarismCheckService;
 
@@ -26,148 +42,283 @@ public class FormalCheckService {
         this.plagiarismCheckService = plagiarismCheckService;
     }
 
+    /**
+     * 自动形式审查（不含查重）
+     * @param manuscript 稿件
+     * @param bodyText   正文文本（建议传入从 PDF 提取的文本）
+     */
     public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText) {
+        return performAutomaticChecks(manuscript, bodyText, null);
+    }
+
+    /**
+     * 自动形式审查（不含查重）
+     * @param manuscript 稿件
+     * @param bodyText   正文文本（建议传入从 PDF 提取的文本）
+     * @param authors    详细作者信息（dbo.ManuscriptAuthors）。若传入，则以 authors 为准校验邮箱。
+     */
+    public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText, java.util.List<ManuscriptAuthor> authors) {
         FormalCheckResult result = new FormalCheckResult();
-        
+
         result.setManuscriptId(manuscript.getManuscriptId());
-        result.setAuthorInfoValid(checkAuthorInfo(manuscript));
+        result.setAuthorInfoValid(checkAuthorEmailFormat(manuscript.getAuthorList(), authors));
         result.setAbstractWordCountValid(checkAbstractWordCount(manuscript.getAbstractText()));
-        result.setBodyWordCountValid(checkBodyWordCount(bodyText));
+        result.setBodyWordCountValid(checkBodyCount(bodyText));
         result.setKeywordsValid(checkKeywords(manuscript.getKeywords()));
-        
+
+        // 其它格式项默认不自动判定（保持为 null，页面可人工选择）
+        result.setFootnoteNumberingValid(null);
+        result.setFigureTableFormatValid(null);
+        result.setReferenceFormatValid(null);
+
         return result;
     }
 
+    /**
+     * 自动形式审查（含查重模拟）
+     */
     public FormalCheckResult performAutomaticChecksWithPlagiarism(Manuscript manuscript, String bodyText) {
-        FormalCheckResult result = performAutomaticChecks(manuscript, bodyText);
-        
-        PlagiarismCheckService.PlagiarismReport plagiarismReport = 
-            plagiarismCheckService.checkPlagiarism(
+        FormalCheckResult result = performAutomaticChecks(manuscript, bodyText, null);
+
+        PlagiarismCheckService.PlagiarismReport report = plagiarismCheckService.checkPlagiarism(
                 manuscript.getManuscriptId(),
                 manuscript.getTitle(),
                 manuscript.getAbstractText(),
                 bodyText
-            );
-        
-        result.setSimilarityScore(plagiarismReport.getSimilarityScore());
-        result.setHighSimilarity(plagiarismReport.isHighSimilarity());
-        result.setPlagiarismReportUrl(plagiarismReport.getReportUrl());
-        
+        );
+
+        result.setSimilarityScore(report.getSimilarityScore());
+        result.setHighSimilarity(report.isHighSimilarity());
+        result.setPlagiarismReportUrl(report.getReportUrl());
+
         return result;
     }
 
+    /**
+     * 单独执行“查重模拟”，用于页面按钮触发
+     */
     public PlagiarismCheckService.PlagiarismReport performPlagiarismCheck(Manuscript manuscript, String bodyText) {
         return plagiarismCheckService.checkPlagiarism(
-            manuscript.getManuscriptId(),
-            manuscript.getTitle(),
-            manuscript.getAbstractText(),
-            bodyText
+                manuscript.getManuscriptId(),
+                manuscript.getTitle(),
+                manuscript.getAbstractText(),
+                bodyText
         );
     }
 
-    private boolean checkAuthorInfo(Manuscript manuscript) {
-        String authorList = manuscript.getAuthorList();
+    // =========================
+    // 具体检查项
+    // =========================
+
+    /**
+     * 作者信息仅校验：作者列表字符串里是否至少包含一个邮箱，且所有提取到的邮箱都满足格式。
+     * authorList 通常形如：张三(aa@bb.com); 李四(bb@cc.com)
+     */
+    private boolean checkAuthorEmailFormat(String authorList) {
+        return checkAuthorEmailFormat(authorList, null);
+    }
+
+    /**
+     * 作者信息仅校验：作者邮箱格式。
+     * - 若传入 authors（dbo.ManuscriptAuthors），则要求每位作者都必须填写邮箱且格式正确。
+     * - 否则回退到从 authorList 字符串中提取邮箱并校验（兼容旧数据）。
+     */
+    private boolean checkAuthorEmailFormat(String authorList, java.util.List<ManuscriptAuthor> authors) {
+        if (authors != null && !authors.isEmpty()) {
+            for (ManuscriptAuthor a : authors) {
+                if (a == null) return false;
+                String email = a.getEmail();
+                if (!isValidEmail(email)) return false;
+            }
+            return true;
+        }
+
         if (authorList == null || authorList.trim().isEmpty()) {
             return false;
         }
-        
-        boolean hasInstitutionalEmail = INSTITUTIONAL_EMAIL_PATTERN.matcher(authorList).find();
-        
-        return hasInstitutionalEmail;
+
+        Matcher m = EMAIL_PATTERN.matcher(authorList);
+        boolean foundAny = false;
+
+        while (m.find()) {
+            foundAny = true;
+            String email = m.group(1);
+            if (!isValidEmail(email)) {
+                return false;
+            }
+        }
+
+        // 若完全提取不到邮箱，判定不通过
+        return foundAny;
+    }
+
+    private boolean isValidEmail(String email) {
+        if (email == null) return false;
+        String raw = email.trim();
+        if (raw.isEmpty()) return false;
+
+        // 允许输入带有包裹符或附加字符（例如："张三 <a@b.com>"、"a@b.com;"），
+        // 只要能提取出合法邮箱即可判定通过。
+        Matcher m = EMAIL_PATTERN.matcher(raw);
+        if (!m.find()) return false;
+        String e = m.group(1);
+
+        // 进一步限制：不允许连续点、首尾点等（轻量校验）
+        if (e.startsWith(".") || e.endsWith(".")) return false;
+        if (e.contains("..")) return false;
+        return true;
     }
 
     private boolean checkAbstractWordCount(String abstractText) {
         if (abstractText == null || abstractText.trim().isEmpty()) {
             return false;
         }
-        
-        String cleanedText = abstractText.replaceAll("<[^>]+>", "").trim();
-        int wordCount = countWords(cleanedText);
-        
-        return wordCount >= MIN_ABSTRACT_WORDS && wordCount <= MAX_ABSTRACT_WORDS;
+
+        int wc = computeAbstractCount(abstractText);
+        return wc >= MIN_ABSTRACT_WORDS && wc <= MAX_ABSTRACT_WORDS;
     }
 
-    private boolean checkBodyWordCount(String bodyText) {
+    /**
+     * 正文字数（字数）检查：中文字符数 + 英文单词数。
+     * 注意：这里期望传入从 PDF 提取的文本；若提取失败导致为空，则直接判定不通过。
+     */
+    private boolean checkBodyCount(String bodyText) {
         if (bodyText == null || bodyText.trim().isEmpty()) {
-            return true;
+            return false;
         }
-        
-        String cleanedText = bodyText.replaceAll("<[^>]+>", "").trim();
-        int wordCount = countWords(cleanedText);
-        
-        return wordCount >= MIN_BODY_WORDS && wordCount <= MAX_BODY_WORDS;
+
+        String cleaned = bodyText.replaceAll("<[^>]+>", " ").trim();
+        int count = countCjkChars(cleaned) + countEnglishWordsExcludingCjk(cleaned);
+
+        return count >= MIN_BODY_COUNT && count <= MAX_BODY_COUNT;
     }
 
     private boolean checkKeywords(String keywords) {
         if (keywords == null || keywords.trim().isEmpty()) {
             return false;
         }
-        
+
         String[] keywordArray = keywords.split("[,;，；]");
         int keywordCount = 0;
-        
+
         for (String keyword : keywordArray) {
             if (keyword != null && !keyword.trim().isEmpty()) {
                 keywordCount++;
             }
         }
-        
+
         return keywordCount >= MIN_KEYWORDS && keywordCount <= MAX_KEYWORDS;
     }
 
-    private int countWords(String text) {
-        if (text == null || text.trim().isEmpty()) {
-            return 0;
+    // =========================
+    // 计数工具
+    // =========================
+
+    //（旧的按空白分词统计法会严重低估中文摘要，已改用“字数”（中文字符 + 英文单词））
+
+    /**
+     * 统计中文/日文/韩文等 CJK 文字（按“字”计）
+     */
+    private int countCjkChars(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        int c = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (isCjk(ch)) c++;
         }
-        
-        String[] words = text.split("\\s+");
+        return c;
+    }
+
+    private boolean isCjk(char ch) {
+        Character.UnicodeBlock b = Character.UnicodeBlock.of(ch);
+        return b == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+                || b == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+                || b == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+                || b == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+                || b == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+                || b == Character.UnicodeBlock.HIRAGANA
+                || b == Character.UnicodeBlock.KATAKANA
+                || b == Character.UnicodeBlock.HANGUL_SYLLABLES
+                || b == Character.UnicodeBlock.HANGUL_JAMO;
+    }
+
+    /**
+     * 英文单词数（剔除 CJK 字符后按空白统计）
+     */
+    private int countEnglishWordsExcludingCjk(String text) {
+        if (text == null || text.trim().isEmpty()) return 0;
+
+        String noCjk = text.replaceAll("[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}\\p{IsHangul}]", " ");
+        noCjk = noCjk.replaceAll("[^A-Za-z0-9]+", " ");
+        String[] words = noCjk.trim().split("\\s+");
+
         int count = 0;
-        
-        for (String word : words) {
-            if (word != null && !word.trim().isEmpty()) {
-                count++;
-            }
+        for (String w : words) {
+            if (w != null && !w.trim().isEmpty()) count++;
         }
-        
         return count;
     }
 
+    /**
+     * 供外部（Servlet）展示用：计算“字数”（中文字符 + 英文单词）
+     */
+    public int computeBodyCount(String bodyText) {
+        if (bodyText == null || bodyText.trim().isEmpty()) return 0;
+        String cleaned = bodyText.replaceAll("<[^>]+>", " ").trim();
+        return countCjkChars(cleaned) + countEnglishWordsExcludingCjk(cleaned);
+    }
+
+    /**
+     * 供外部展示用：计算“摘要字数”（中文字符 + 英文单词）
+     */
+    public int computeAbstractCount(String abstractText) {
+        if (abstractText == null || abstractText.trim().isEmpty()) return 0;
+        String cleaned = abstractText.replaceAll("<[^>]+>", " ").trim();
+        return countCjkChars(cleaned) + countEnglishWordsExcludingCjk(cleaned);
+    }
+
+    /**
+     * 生成“形式审查反馈意见”（供 EditorServlet 自动填充）。
+     * <p>若某一项为 null，视为“未检查/未选择”，不写入反馈。</p>
+     */
     public String generateFeedback(FormalCheckResult result) {
+        if (result == null) return "";
         StringBuilder feedback = new StringBuilder();
-        
-        if (result.getAuthorInfoValid() != null && !result.getAuthorInfoValid()) {
-            feedback.append("作者信息不符合标准（缺少机构邮箱）；");
+
+        if (Boolean.FALSE.equals(result.getAuthorInfoValid())) {
+            feedback.append("作者邮箱格式不正确；");
         }
-        
-        if (result.getAbstractWordCountValid() != null && !result.getAbstractWordCountValid()) {
-            feedback.append("摘要字数不符合标准（应在150-700字之间）；");
+        if (Boolean.FALSE.equals(result.getAbstractWordCountValid())) {
+            feedback.append("摘要字数不符合标准（应在").append(MIN_ABSTRACT_WORDS)
+                    .append("-").append(MAX_ABSTRACT_WORDS).append("之间）；");
         }
-        
-        if (result.getBodyWordCountValid() != null && !result.getBodyWordCountValid()) {
-            feedback.append("正文字数不符合标准（应在3000-8000字之间）；");
+        if (Boolean.FALSE.equals(result.getBodyWordCountValid())) {
+            feedback.append("正文字数不符合标准（应在").append(MIN_BODY_COUNT)
+                    .append("-").append(MAX_BODY_COUNT).append("之间）；");
         }
-        
-        if (result.getKeywordsValid() != null && !result.getKeywordsValid()) {
-            feedback.append("关键词不符合标准（应在3-7个之间）；");
+        if (Boolean.FALSE.equals(result.getKeywordsValid())) {
+            feedback.append("关键词数量不符合标准（应在").append(MIN_KEYWORDS)
+                    .append("-").append(MAX_KEYWORDS).append("个之间）；");
         }
-        
-        if (result.getFootnoteNumberingValid() != null && !result.getFootnoteNumberingValid()) {
+        if (Boolean.FALSE.equals(result.getFootnoteNumberingValid())) {
             feedback.append("注释编号不符合标准；");
         }
-        
-        if (result.getFigureTableFormatValid() != null && !result.getFigureTableFormatValid()) {
+        if (Boolean.FALSE.equals(result.getFigureTableFormatValid())) {
             feedback.append("图表格式不符合标准；");
         }
-        
-        if (result.getReferenceFormatValid() != null && !result.getReferenceFormatValid()) {
+        if (Boolean.FALSE.equals(result.getReferenceFormatValid())) {
             feedback.append("参考文献格式不符合标准；");
         }
-        
-        if (result.getHighSimilarity() != null && result.getHighSimilarity()) {
-            feedback.append(String.format("查重率过高（%.2f%%，超过阈值%.0f%%）；", 
-                result.getSimilarityScore(), HIGH_SIMILARITY_THRESHOLD));
+
+        // 查重信息：不管是否超阈值，都可展示
+        if (result.getSimilarityScore() != null) {
+            feedback.append(String.format("查重率 %.2f%%；", result.getSimilarityScore()));
+            if (Boolean.TRUE.equals(result.getHighSimilarity())) {
+                feedback.append("查重率过高（需<20%）；");
+            }
         }
-        
+
         return feedback.length() > 0 ? feedback.toString() : "所有检查项均符合标准";
     }
+
 }

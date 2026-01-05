@@ -17,7 +17,7 @@
 
     <c:if test="${empty calls}">
         <p>暂无已发布征稿通知。</p>
-        <small class="muted">提示：请在数据库 <span class="badge">dbo.CallForPapers</span> 中插入 <span class="badge">IsPublished=1</span> 的记录。</small>
+        <small class="muted">暂无征稿通知。</small>
     </c:if>
 
     <c:if test="${not empty calls}">

@@ -6,7 +6,7 @@
     <div class="card-header">
         <div>
             <h2 class="card-title">密码重置</h2>
-            <p class="card-subtitle">此处为课程项目预留页面，可后续接入邮箱验证或管理员重置流程。</p>
+            <p class="card-subtitle">通过邮箱验证码重置账号密码。</p>
         </div>
     </div>
 
@@ -24,10 +24,10 @@
                 <input id="username" type="text" name="username" required placeholder="请输入用户名"/>
             </div>
             <div class="form-row">
-                <label for="resetCode">验证码</label>
+                <label for="code">验证码</label>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input id="resetCode" type="text" name="resetCode"
-                           value="${param.resetCode}" placeholder="6 位数字" maxlength="6"/>
+                    <input id="code" type="text" name="code"
+                           value="${param.code}" placeholder="6 位数字" maxlength="6"/>
                     <button class="btn-secondary otp-btn" type="submit" name="op" value="sendResetCode" data-otp-key="reset_email_code">
                         发送验证码
                     </button>
@@ -35,7 +35,7 @@
                         验证并下一步
                     </button>
                 </div>
-                <small>首先点击“发送验证码”，收到邮件后在此输入验证码，再点击“验证并下一步”。</small>
+                <small>点击“发送验证码”，收到邮件后输入验证码，再点击“验证并下一步”。</small>
             </div>
             <div class="actions">
                 <button class="btn-primary" type="submit">

@@ -41,7 +41,7 @@
 
         <c:if test="${empty articles}">
             <p>暂无文章。</p>
-            <small class="muted">提示：请在数据库 <span class="badge">dbo.IssueManuscripts</span> 中把稿件关联到该 Issue。</small>
+            <small class="muted">该卷期下暂无论文内容。</small>
         </c:if>
 
         <c:if test="${not empty articles}">
