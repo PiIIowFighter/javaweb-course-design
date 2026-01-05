@@ -7,7 +7,10 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>发送消息给作者</h2>
+<div style="display:flex; align-items:center; justify-content:space-between; max-width: 980px;">
+    <h2 style="margin:0;">发送消息给作者</h2>
+    <a class="btn" href="${ctx}/editor/authorComm">返回沟通列表</a>
+</div>
 
 <c:if test="${empty manuscript}">
     <p>未找到稿件。</p>
@@ -15,18 +18,10 @@
 
 <c:if test="${not empty manuscript}">
 
-    <p>
-        <a href="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}#authorComm">返回稿件详情</a>
-        <span style="margin:0 8px; color:#bbb;">|</span>
-        <a href="${ctx}/editor/authorComm">返回沟通列表</a>
-    </p>
+    <!-- 顶部已提供“返回沟通列表”按钮，按需求移除“返回稿件详情”入口 -->
 
     <h3>稿件信息</h3>
     <table border="1" cellpadding="4" cellspacing="0" style="background:#fff; max-width: 980px; width:100%;">
-        <tr>
-            <th style="width:120px;">稿件ID</th>
-            <td><c:out value="${manuscript.manuscriptId}"/></td>
-        </tr>
         <tr>
             <th>标题</th>
             <td><c:out value="${manuscript.title}"/></td>
@@ -34,11 +29,38 @@
         <tr>
             <th>作者</th>
             <td>
-                <c:out value="${author.fullName}"/>
-                <c:if test="${empty author.fullName}">
-                    <c:out value="${author.username}"/>
+                <c:choose>
+                    <c:when test="${not empty manuscript.authorList}">
+                        <c:out value="${manuscript.authorList}"/>
+                    </c:when>
+                    <c:when test="${not empty authorUser}">
+                        <c:choose>
+                            <c:when test="${not empty authorUser.fullName}">
+                                <c:out value="${authorUser.fullName}"/>
+                            </c:when>
+                            <c:otherwise>
+                                <c:out value="${authorUser.username}"/>
+                            </c:otherwise>
+                        </c:choose>
+                        <c:if test="${not empty authorUser.email}">
+                            <span style="color:#666; margin-left:8px;">(<c:out value="${authorUser.email}"/>)</span>
+                        </c:if>
+                    </c:when>
+                    <c:otherwise>
+                        —
+                    </c:otherwise>
+                </c:choose>
+
+                <c:if test="${not empty authorUser}">
+                    <div style="margin-top:4px; color:#666; font-size:12px;">
+                        投稿人：
+                        <c:choose>
+                            <c:when test="${not empty authorUser.fullName}"><c:out value="${authorUser.fullName}"/></c:when>
+                            <c:otherwise><c:out value="${authorUser.username}"/></c:otherwise>
+                        </c:choose>
+                        <c:if test="${not empty authorUser.email}">（<c:out value="${authorUser.email}"/>）</c:if>
+                    </div>
                 </c:if>
-                <span style="color:#666; margin-left:8px;">(<c:out value="${author.email}"/>)</span>
             </td>
         </tr>
         <tr>
@@ -47,9 +69,9 @@
         </tr>
     </table>
 
-    <c:if test="${not empty flash}">
+    <c:if test="${not empty authorMessageFlash}">
         <div style="margin-top:10px; padding:8px 10px; background:#f0fff4; border:1px solid #b7eb8f; color:#135200; max-width: 980px;">
-            <c:out value="${flash}"/>
+            <c:out value="${authorMessageFlash}"/>
         </div>
     </c:if>
 
@@ -78,35 +100,6 @@
         <button type="submit">发送</button>
     </form>
 
-    <h3 style="margin-top:16px;">沟通历史（时间线）</h3>
-
-    <c:if test="${empty messages}">
-        <p>暂无沟通记录。</p>
-    </c:if>
-
-    <c:if test="${not empty messages}">
-        <div style="border-left:3px solid #ddd; padding-left:12px; margin: 8px 0 16px 0; max-width: 980px;">
-            <c:forEach items="${messages}" var="msg">
-                <div style="margin: 10px 0;">
-                    <div style="color:#666; font-size:12px;">
-                        <c:out value="${msg.createdAt}"/>
-                        <span style="margin:0 6px;">·</span>
-                        <strong>
-                            <c:out value="${userMap[msg.createdByUserId].fullName}"/>
-                        </strong>
-                        <span style="margin:0 6px;">→</span>
-                        <strong>
-                            <c:out value="${userMap[msg.recipientUserId].fullName}"/>
-                        </strong>
-                        <span style="margin-left:8px;">[<c:out value="${msg.category}"/>/<c:out value="${msg.type}"/>]</span>
-                    </div>
-                    <div style="margin-top:4px;">
-                        <div><strong><c:out value="${msg.title}"/></strong></div>
-                        <div style="white-space:pre-wrap;"><c:out value="${msg.content}"/></div>
-                    </div>
-                </div>
-            </c:forEach>
-        </div>
-    </c:if>
+    <!-- 按需求：移除“沟通历史（时间线）”展示区域 -->
 
 </c:if>

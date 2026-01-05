@@ -49,7 +49,7 @@ public class AdminAuthzFilter implements Filter {
             path = path.substring(ctx.length());
         }
 
-        String[] required = requiredPermissions(path);
+        String[] required = requiredPermissions(path, req.getMethod());
         if (required == null || required.length == 0) {
             chain.doFilter(request, response);
             return;
@@ -84,7 +84,7 @@ public class AdminAuthzFilter implements Filter {
      *
      * 注意：某些页面（如稿件详情）可能被多个角色复用，因此允许“任一权限满足即可”。
      */
-    private String[] requiredPermissions(String path) {
+    private String[] requiredPermissions(String path, String method) {
         if (path == null) return null;
 
         // ====== Admin ======
@@ -142,7 +142,19 @@ public class AdminAuthzFilter implements Filter {
 
         if (path.startsWith("/editor/withEditor")) return new String[]{PermissionCatalog.MENU_EDITOR_TODO};
         if (path.startsWith("/editor/underReview")) return new String[]{PermissionCatalog.MENU_EDITOR_UNDER_REVIEW};
-        if (path.startsWith("/editor/recommend")) return new String[]{PermissionCatalog.MENU_EDITOR_RECOMMEND};
+        // 主编终审页会复用 /editor/recommend?manuscriptId=... 来“查看编辑建议/审稿意见汇总”。
+        // 为避免主编误走“提交建议”流程：
+        //  - GET 允许：责任编辑入口 或 主编终审入口
+        //  - POST 仅允许：责任编辑入口
+        if (path.startsWith("/editor/recommend")) {
+            if (method != null && method.equalsIgnoreCase("GET")) {
+                return new String[]{
+                        PermissionCatalog.MENU_EDITOR_RECOMMEND,
+                        PermissionCatalog.MENU_EIC_FINAL_DECISION
+                };
+            }
+            return new String[]{PermissionCatalog.MENU_EDITOR_RECOMMEND};
+        }
         if (path.startsWith("/editor/review/invite") || path.startsWith("/editor/review/inviteExternal") || path.startsWith("/editor/review/cancel")) {
             return new String[]{PermissionCatalog.MENU_EDITOR_TODO};
         }

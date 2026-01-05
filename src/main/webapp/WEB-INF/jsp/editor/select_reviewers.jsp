@@ -45,10 +45,6 @@
     <h3>稿件基本信息</h3>
     <table border="1" cellpadding="4" cellspacing="0" style="background:#fff; max-width:960px;">
         <tr>
-            <th>稿件编号</th>
-            <td><c:out value="${manuscript.manuscriptId}"/></td>
-        </tr>
-        <tr>
             <th>标题</th>
             <td><c:out value="${manuscript.title}"/></td>
         </tr>
@@ -186,6 +182,8 @@
                     <th>用户名</th>
                     <th>邮箱</th>
                     <th>研究方向</th>
+                    <th style="width:120px;">完成审稿数</th>
+                    <th style="width:120px;">平均评分</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -202,6 +200,15 @@
                         <td><c:out value="${u.username}"/></td>
                         <td><c:out value="${u.email}"/></td>
                         <td><c:out value="${u.researchArea}"/></td>
+                        <td style="text-align:center;">
+                            <c:out value="${empty u.completedReviewCount ? 0 : u.completedReviewCount}"/>
+                        </td>
+                        <td style="text-align:center;">
+                            <c:choose>
+                                <c:when test="${empty u.avgReviewScore}">-</c:when>
+                                <c:otherwise><c:out value="${u.avgReviewScore}"/></c:otherwise>
+                            </c:choose>
+                        </td>
                     </tr>
                 </c:forEach>
                 </tbody>

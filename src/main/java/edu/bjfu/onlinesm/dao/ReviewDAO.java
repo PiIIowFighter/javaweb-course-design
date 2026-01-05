@@ -24,6 +24,12 @@ import java.util.List;
  */
 public class ReviewDAO {
 
+    /**
+     * 用于记录稿件各阶段完成时间戳。
+     * 注意：自动推进（UNDER_REVIEW -> EDITOR_RECOMMENDATION）也需要写入 UNDER_REVIEW 的完成时间。
+     */
+    private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
+
     // ========================= 查询/邀请 =========================
 
     /** 按 ReviewId 查询单条审稿记录（用于“查看稿件摘要/邀请详情”等）。 */
@@ -45,8 +51,9 @@ public class ReviewDAO {
     /**
      * 发出审稿邀请。
      *
-     * 为保证“被撤回/被拒绝后可再次邀请”，这里会先清理同一稿件+同一审稿人的历史“未提交”记录。
-     *（避免唯一约束/重复数据导致插入失败，且不会影响已提交的评审记录）
+     * 说明：
+     * - 被编辑撤回/系统过期（EXPIRED）后允许再次邀请（会清理未提交的历史记录，避免重复插入失败）；
+     * - 若该审稿人曾对该稿件明确拒绝（DECLINED），则不允许再次邀请（由编辑端显示为“已拒绝”并禁用）。
      */
     public void inviteReviewer(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
         inviteReviewerReturnId(manuscriptId, reviewerId, dueAt);
@@ -60,9 +67,25 @@ public class ReviewDAO {
      *  - 若列缺失则降级写入；
      */
     public int inviteReviewerReturnId(int manuscriptId, int reviewerId, LocalDateTime dueAt) throws SQLException {
-        String cleanup = "DELETE FROM dbo.Reviews WHERE ManuscriptId = ? AND ReviewerId = ? AND Status <> 'SUBMITTED'";
+        // DECLINED 视为终态：拒绝后不允许再邀请。
+        String checkDecline = "SELECT COUNT(1) AS Cnt FROM dbo.Reviews WHERE ManuscriptId = ? AND ReviewerId = ? AND Status = 'DECLINED'";
+
+        // 允许再次邀请：清理未提交的“非拒绝”记录，避免唯一约束/重复数据导致插入失败。
+        // 注意：不要删除 DECLINED。
+        String cleanup = "DELETE FROM dbo.Reviews WHERE ManuscriptId = ? AND ReviewerId = ? AND Status IN ('INVITED','ACCEPTED','EXPIRED')";
 
         try (Connection conn = DbUtil.getConnection()) {
+            // 0) 如果该审稿人已拒绝该稿件，则阻止再次邀请
+            try (PreparedStatement ps0 = conn.prepareStatement(checkDecline)) {
+                ps0.setInt(1, manuscriptId);
+                ps0.setInt(2, reviewerId);
+                try (ResultSet rs0 = ps0.executeQuery()) {
+                    if (rs0.next() && rs0.getInt("Cnt") > 0) {
+                        throw new SQLException("该审稿人已拒绝本稿件邀请（DECLINED），不允许再次邀请。");
+                    }
+                }
+            }
+
             // 1) 清理历史
             try (PreparedStatement ps = conn.prepareStatement(cleanup)) {
                 ps.setInt(1, manuscriptId);
@@ -72,7 +95,7 @@ public class ReviewDAO {
 
             // 2) 方案1：InvitedAt + DueAt + RemindCount
             String insert1 = "INSERT INTO dbo.Reviews (ManuscriptId, ReviewerId, Status, InvitedAt, DueAt, RemindCount) " +
-                    "OUTPUT INSERTED.ReviewId VALUES (?,?, 'INVITED', SYSUTCDATETIME(), ?, 0)";
+                    "OUTPUT INSERTED.ReviewId VALUES (?,?, 'INVITED', DATEADD(HOUR, 8, SYSUTCDATETIME()), ?, 0)";
             try {
                 return execInsertReturnId(conn, insert1, manuscriptId, reviewerId, dueAt);
             } catch (SQLException ex1) {
@@ -241,9 +264,9 @@ public class ReviewDAO {
                 "LEFT JOIN dbo.Users u ON r.ReviewerId = u.UserId " +
                 "WHERE r.Status IN ('INVITED', 'ACCEPTED') " +
                 "  AND r.DueAt IS NOT NULL " +
-                "  AND r.DueAt < DATEADD(day, -?, SYSUTCDATETIME()) " +
+                "  AND r.DueAt < DATEADD(day, -?, DATEADD(HOUR, 8, SYSUTCDATETIME())) " +
                 "  AND (r.LastRemindedAt IS NULL " +
-                "       OR r.LastRemindedAt < DATEADD(day, -?, SYSUTCDATETIME())) " +
+                "       OR r.LastRemindedAt < DATEADD(day, -?, DATEADD(HOUR, 8, SYSUTCDATETIME()))) " +
                 "ORDER BY r.DueAt ASC";
 
         try (Connection conn = DbUtil.getConnection();
@@ -267,7 +290,7 @@ public class ReviewDAO {
     /** 旧版：审稿人接受审稿邀请（仅按 reviewId）。 */
     public void acceptInvitation(int reviewId) throws SQLException {
         String sql = "UPDATE dbo.Reviews " +
-                "SET Status = 'ACCEPTED', AcceptedAt = ISNULL(AcceptedAt, SYSUTCDATETIME()) " +
+                "SET Status = 'ACCEPTED', AcceptedAt = ISNULL(AcceptedAt, DATEADD(HOUR, 8, SYSUTCDATETIME())) " +
                 "WHERE ReviewId = ? AND Status = 'INVITED'";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -283,7 +306,7 @@ public class ReviewDAO {
             return;
         }
         String sql = "UPDATE dbo.Reviews " +
-                "SET Status = 'ACCEPTED', AcceptedAt = ISNULL(AcceptedAt, SYSUTCDATETIME()) " +
+                "SET Status = 'ACCEPTED', AcceptedAt = ISNULL(AcceptedAt, DATEADD(HOUR, 8, SYSUTCDATETIME())) " +
                 "WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED'";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -307,28 +330,57 @@ public class ReviewDAO {
      * 新版：审稿人拒绝审稿邀请（带拒绝理由）。
      *
      * 说明：
-     * - 为避免出现“DECLINED”状态（你此前要求不要出现），这里将拒绝视为非活跃记录，统一写为 EXPIRED；
+     * - 拒绝后将状态写为 DECLINED；
      * - 记录 RejectionReason/DeclinedAt 便于邮件/站内通知读取；
      * - 该记录不会出现在审稿人“待评审”列表（因为列表只取 INVITED/ACCEPTED）。
      */
     public void declineInvitation(int reviewId, Integer reviewerId, String rejectionReason) throws SQLException {
-        String sql;
+        // 兼容旧库：部分同学的 sqlserver.sql 未包含 RejectionReason / DeclinedAt 列。
+        // 这里优先尝试写入拒绝理由与拒绝时间；若库中无该列，则降级为仅更新 Status，避免触发 500。
+
+        String sqlWithReason;
+        String sqlFallback;
         if (reviewerId == null) {
-            sql = "UPDATE dbo.Reviews SET Status = 'EXPIRED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() " +
+            sqlWithReason = "UPDATE dbo.Reviews SET Status = 'DECLINED', RejectionReason = ?, DeclinedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
+                    "WHERE ReviewId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
+            sqlFallback = "UPDATE dbo.Reviews SET Status = 'DECLINED' " +
                     "WHERE ReviewId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
         } else {
-            sql = "UPDATE dbo.Reviews SET Status = 'EXPIRED', RejectionReason = ?, DeclinedAt = SYSUTCDATETIME() " +
+            sqlWithReason = "UPDATE dbo.Reviews SET Status = 'DECLINED', RejectionReason = ?, DeclinedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
+                    "WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
+            sqlFallback = "UPDATE dbo.Reviews SET Status = 'DECLINED' " +
                     "WHERE ReviewId = ? AND ReviewerId = ? AND Status = 'INVITED' AND SubmittedAt IS NULL";
         }
 
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, rejectionReason);
-            ps.setInt(2, reviewId);
-            if (reviewerId != null) {
-                ps.setInt(3, reviewerId);
+        try (Connection conn = DbUtil.getConnection()) {
+            // 1) 尝试写入拒绝理由/拒绝时间（新库）
+            try (PreparedStatement ps = conn.prepareStatement(sqlWithReason)) {
+                ps.setString(1, rejectionReason);
+                ps.setInt(2, reviewId);
+                if (reviewerId != null) {
+                    ps.setInt(3, reviewerId);
+                }
+                ps.executeUpdate();
+                return;
+            } catch (SQLException ex) {
+                // 典型旧库报错：Invalid column name 'RejectionReason' / 'DeclinedAt'
+                String msg = (ex.getMessage() == null ? "" : ex.getMessage());
+                boolean missingNewColumns = msg.toLowerCase().contains("rejectionreason")
+                        || msg.toLowerCase().contains("declinedat")
+                        || msg.toLowerCase().contains("invalid column");
+                if (!missingNewColumns) {
+                    throw ex;
+                }
             }
-            ps.executeUpdate();
+
+            // 2) 降级：仅更新状态（旧库）
+            try (PreparedStatement ps2 = conn.prepareStatement(sqlFallback)) {
+                ps2.setInt(1, reviewId);
+                if (reviewerId != null) {
+                    ps2.setInt(2, reviewerId);
+                }
+                ps2.executeUpdate();
+            }
         }
     }
 
@@ -392,7 +444,7 @@ public class ReviewDAO {
     /** 基础提交（老功能）。 */
     public void submitReview(int reviewId, String content, Double score, String recommendation) throws SQLException {
         String sql = "UPDATE dbo.Reviews " +
-                "SET Content = ?, Score = ?, Recommendation = ?, Status = 'SUBMITTED', SubmittedAt = SYSUTCDATETIME() " +
+                "SET Content = ?, Score = ?, Recommendation = ?, Status = 'SUBMITTED', SubmittedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ReviewId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -434,7 +486,7 @@ public class ReviewDAO {
                 "Score = ?, " +
                 "Recommendation = ?, " +
                 "Status = 'SUBMITTED', " +
-                "SubmittedAt = SYSUTCDATETIME() " +
+                "SubmittedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ReviewId = ?";
 
         try (Connection conn = DbUtil.getConnection();
@@ -513,7 +565,7 @@ public class ReviewDAO {
                 "Score = ?, " +
                 "Recommendation = ?, " +
                 "Status = 'SUBMITTED', " +
-                "SubmittedAt = SYSUTCDATETIME() " +
+                "SubmittedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ReviewId = ? AND ReviewerId = ?";
 
         try (Connection conn = DbUtil.getConnection();
@@ -547,7 +599,7 @@ public class ReviewDAO {
 
     /** 催审：RemindCount + 1, LastRemindedAt 更新为当前时间。 */
     public void remind(int reviewId) throws SQLException {
-        String sql = "UPDATE dbo.Reviews SET RemindCount = ISNULL(RemindCount,0) + 1, LastRemindedAt = SYSUTCDATETIME() WHERE ReviewId = ?";
+        String sql = "UPDATE dbo.Reviews SET RemindCount = ISNULL(RemindCount,0) + 1, LastRemindedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ReviewId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, reviewId);
@@ -574,14 +626,55 @@ public class ReviewDAO {
      * EXPIRED 不阻塞推进。
      */
     public void promoteAllUnderReviewManuscriptsIfReady() throws SQLException {
-        String sql = "UPDATE m SET m.Status = 'EDITOR_RECOMMENDATION' " +
+        // 原实现仅 UPDATE 状态，会导致：
+        // 1) ManuscriptStageTimestamps.UnderReviewCompletedAt 不写入（作者时间线缺少“外审完成时间”）
+        // 2) Manuscripts.LastStatusTime 不刷新
+        // 这里改为：逐条推进，并为 UNDER_REVIEW 写入阶段完成时间戳。
+
+        String selectSql = "SELECT m.ManuscriptId " +
                 "FROM dbo.Manuscripts m " +
                 "WHERE m.Status = 'UNDER_REVIEW' " +
                 "AND EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = m.ManuscriptId AND r.Status = 'SUBMITTED') " +
                 "AND NOT EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = m.ManuscriptId AND r.Status IN ('INVITED','ACCEPTED'))";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.executeUpdate();
+
+        String updateSql = "UPDATE dbo.Manuscripts SET Status='EDITOR_RECOMMENDATION', LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
+                "WHERE ManuscriptId=? AND Status='UNDER_REVIEW' " +
+                "AND EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = ? AND r.Status = 'SUBMITTED') " +
+                "AND NOT EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = ? AND r.Status IN ('INVITED','ACCEPTED'))";
+
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                List<Integer> ids = new ArrayList<>();
+                try (PreparedStatement ps = conn.prepareStatement(selectSql);
+                     ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        ids.add(rs.getInt(1));
+                    }
+                }
+
+                if (!ids.isEmpty()) {
+                    try (PreparedStatement ps2 = conn.prepareStatement(updateSql)) {
+                        for (Integer manuscriptId : ids) {
+                            ps2.setInt(1, manuscriptId);
+                            ps2.setInt(2, manuscriptId);
+                            ps2.setInt(3, manuscriptId);
+                            int updated = ps2.executeUpdate();
+                            if (updated > 0) {
+                                // 记录 UNDER_REVIEW 阶段完成时间
+                                stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, "UNDER_REVIEW");
+                            }
+                        }
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
 
@@ -591,27 +684,45 @@ public class ReviewDAO {
      */
     public void promoteManuscriptToEditorRecommendationIfReadyByReviewId(int reviewId) {
         String getManuscriptSql = "SELECT ManuscriptId FROM dbo.Reviews WHERE ReviewId = ?";
-        String promoteSql = "UPDATE dbo.Manuscripts SET Status = 'EDITOR_RECOMMENDATION' " +
+        String promoteSql = "UPDATE dbo.Manuscripts SET Status='EDITOR_RECOMMENDATION', LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ManuscriptId = ? AND Status = 'UNDER_REVIEW' " +
                 "AND EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = ? AND r.Status = 'SUBMITTED') " +
                 "AND NOT EXISTS (SELECT 1 FROM dbo.Reviews r WHERE r.ManuscriptId = ? AND r.Status IN ('INVITED','ACCEPTED'))";
         try (Connection conn = DbUtil.getConnection()) {
-            Integer manuscriptId = null;
-            try (PreparedStatement ps = conn.prepareStatement(getManuscriptSql)) {
-                ps.setInt(1, reviewId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) manuscriptId = rs.getInt(1);
+            conn.setAutoCommit(false);
+            try {
+                Integer manuscriptId = null;
+                try (PreparedStatement ps = conn.prepareStatement(getManuscriptSql)) {
+                    ps.setInt(1, reviewId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) manuscriptId = rs.getInt(1);
+                    }
                 }
-            }
-            if (manuscriptId == null) return;
-            try (PreparedStatement ps2 = conn.prepareStatement(promoteSql)) {
-                ps2.setInt(1, manuscriptId);
-                ps2.setInt(2, manuscriptId);
-                ps2.setInt(3, manuscriptId);
-                ps2.executeUpdate();
+                if (manuscriptId == null) {
+                    conn.commit();
+                    return;
+                }
+                int updated;
+                try (PreparedStatement ps2 = conn.prepareStatement(promoteSql)) {
+                    ps2.setInt(1, manuscriptId);
+                    ps2.setInt(2, manuscriptId);
+                    ps2.setInt(3, manuscriptId);
+                    updated = ps2.executeUpdate();
+                }
+
+                if (updated > 0) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, "UNDER_REVIEW");
+                }
+
+                conn.commit();
+            } catch (Exception e) {
+                try { conn.rollback(); } catch (Exception ignore) {}
+                // 不影响主流程（避免提交成功后因为推进失败而报 500）
+            } finally {
+                try { conn.setAutoCommit(true); } catch (Exception ignore) {}
             }
         } catch (Exception ignore) {
-            // 不影响主流程（避免提交成功后因为推进失败而报 500）
+            // 不影响主流程
         }
     }
 

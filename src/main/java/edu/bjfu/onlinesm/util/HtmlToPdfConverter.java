@@ -1,7 +1,11 @@
 package edu.bjfu.onlinesm.util;
 
+import com.lowagie.text.pdf.BaseFont;
 import org.xhtmlrenderer.pdf.ITextRenderer;
+
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * HTML 转 PDF 工具类
@@ -31,9 +35,19 @@ public class HtmlToPdfConverter {
         
         try (OutputStream os = new FileOutputStream(outputFile)) {
             ITextRenderer renderer = new ITextRenderer();
+            // 关键：注册 CJK 字体，避免中文/日文等内容在 PDF 中渲染为空白
+            // （FlyingSaucer + iText 2.x 在未注册字体时，可能出现“PDF 有页但无文字”的情况）
+            registerCjkFonts(renderer);
+
             renderer.setDocumentFromString(xhtml);
             renderer.layout();
             renderer.createPDF(os);
+            // 某些版本需要显式 finish，否则可能出现内容丢失/不完整
+            try {
+                renderer.finishPDF();
+            } catch (Throwable ignore) {
+                // 兼容老版本 FlyingSaucer
+            }
         }
     }
     
@@ -46,9 +60,8 @@ public class HtmlToPdfConverter {
         // 清理 Quill 编辑器可能产生的非 XHTML 兼容标签
         String cleanedHtml = cleanHtmlForXhtml(htmlContent);
         
+        // 注意：不要使用外部 DTD（某些环境下解析器会尝试联网拉取 DTD，导致渲染异常/空白）
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-               "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " +
-               "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
                "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
                "<head>\n" +
                "  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>\n" +
@@ -72,6 +85,53 @@ public class HtmlToPdfConverter {
                "<body>\n" +
                cleanedHtml +
                "\n</body>\n</html>";
+    }
+
+    /**
+     * 注册常见 CJK 字体（尽量跨平台）。
+     * 目标：让 cover letter 中的中文/日文/韩文等字符能够正确渲染到 PDF。
+     */
+    private static void registerCjkFonts(ITextRenderer renderer) {
+        if (renderer == null) return;
+        List<String> candidates = new ArrayList<>();
+
+        String os = System.getProperty("os.name", "").toLowerCase();
+
+        // Windows（本地开发最常见）
+        if (os.contains("win")) {
+            candidates.add("C:/Windows/Fonts/simsun.ttc,0");
+            candidates.add("C:/Windows/Fonts/simsun.ttf");
+            candidates.add("C:/Windows/Fonts/simhei.ttf");
+            candidates.add("C:/Windows/Fonts/msyh.ttc,0");
+            candidates.add("C:/Windows/Fonts/msyh.ttf");
+            candidates.add("C:/Windows/Fonts/simkai.ttf");
+        }
+
+        // macOS
+        if (os.contains("mac")) {
+            candidates.add("/System/Library/Fonts/STHeiti Medium.ttc");
+            candidates.add("/System/Library/Fonts/STHeiti Light.ttc");
+            candidates.add("/System/Library/Fonts/PingFang.ttc");
+        }
+
+        // Linux（常见服务器环境）
+        candidates.add("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc");
+        candidates.add("/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc");
+        candidates.add("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc");
+        candidates.add("/usr/share/fonts/truetype/arphic/ukai.ttc");
+        candidates.add("/usr/share/fonts/truetype/arphic/uming.ttc");
+        candidates.add("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc");
+        candidates.add("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc");
+
+        for (String p : candidates) {
+            if (p == null || p.trim().isEmpty()) continue;
+            try {
+                // iText 2.x：IDENTITY_H 以支持 Unicode；EMBEDDED 以避免客户端缺字体
+                renderer.getFontResolver().addFont(p, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            } catch (Throwable ignore) {
+                // 忽略单个字体注册失败
+            }
+        }
     }
     
     /**

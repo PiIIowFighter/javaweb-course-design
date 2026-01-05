@@ -45,9 +45,7 @@ public class PermissionAdminServlet extends HttpServlet {
         }
 
         // 权限：必须拥有“权限管理”入口
-        if (!MenuPermissionGuard.has(req, PermissionCatalog.ADMIN_PERMISSIONS)
-                && !"SUPER_ADMIN".equals(current.getRoleCode())
-                && !"SYSTEM_ADMIN".equals(current.getRoleCode())) {
+        if (!MenuPermissionGuard.has(req, PermissionCatalog.ADMIN_PERMISSIONS)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权限访问权限管理。");
             return;
         }
@@ -79,19 +77,26 @@ public class PermissionAdminServlet extends HttpServlet {
 
             // 已勾选权限
             Set<String> assigned = new HashSet<>();
+            Set<String> lockedKeys = new HashSet<>();
+            req.setAttribute("readOnly", false); // 兼容旧 JSP：不再整体只读
+
             if (selectedUser != null) {
                 String role = selectedUser.getRoleCode();
-                if ("SUPER_ADMIN".equals(role)) {
-                    assigned = menuPermissionService.allMenuPermissionKeys();
-                    req.setAttribute("readOnly", true);
-                } else {
-                    assigned = menuPermissionDAO.findPermissionsByUser(selectedUser.getUserId());
-                    // 若无记录：首次初始化默认入口（与旧侧边栏一致）
-                    if (assigned == null || assigned.isEmpty()) {
-                        assigned = menuPermissionService.defaultMenuPermissions(role);
-                        menuPermissionDAO.addPermissionsForUser(selectedUser.getUserId(), assigned);
-                    }
-                    req.setAttribute("readOnly", false);
+
+                // 先从表里取
+                assigned = menuPermissionDAO.findPermissionsByUser(selectedUser.getUserId());
+
+                // 若无记录：首次初始化默认入口（与旧侧边栏一致）
+                if (assigned == null || assigned.isEmpty()) {
+                    assigned = menuPermissionService.defaultMenuPermissions(role);
+                    menuPermissionDAO.addPermissionsForUser(selectedUser.getUserId(), assigned);
+                }
+
+                // SUPER_ADMIN 也允许通过“权限管理”调整，但为防止锁死自己：
+                //  - “权限管理”入口不可取消（后端强制 + 前端禁用）
+                if (role != null && "SUPER_ADMIN".equalsIgnoreCase(role)) {
+                    lockedKeys.add(PermissionCatalog.ADMIN_PERMISSIONS);
+                    assigned.add(PermissionCatalog.ADMIN_PERMISSIONS);
                 }
             }
 
@@ -99,6 +104,9 @@ public class PermissionAdminServlet extends HttpServlet {
             java.util.Map<String, Boolean> assignedMap = new java.util.HashMap<>();
             for (String k : assigned) { assignedMap.put(k, Boolean.TRUE); }
             req.setAttribute("assignedMap", assignedMap);
+            java.util.Map<String, Boolean> lockedMap = new java.util.HashMap<>();
+            for (String k : lockedKeys) { lockedMap.put(k, Boolean.TRUE); }
+            req.setAttribute("lockedMap", lockedMap);
             req.setAttribute("permissions", PermissionCatalog.all());
             req.setAttribute("success", req.getParameter("success"));
 
@@ -119,9 +127,7 @@ public class PermissionAdminServlet extends HttpServlet {
             return;
         }
 
-        if (!MenuPermissionGuard.has(req, PermissionCatalog.ADMIN_PERMISSIONS)
-                && !"SUPER_ADMIN".equals(current.getRoleCode())
-                && !"SYSTEM_ADMIN".equals(current.getRoleCode())) {
+        if (!MenuPermissionGuard.has(req, PermissionCatalog.ADMIN_PERMISSIONS)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权限访问权限管理。");
             return;
         }
@@ -147,12 +153,6 @@ public class PermissionAdminServlet extends HttpServlet {
                 return;
             }
 
-            if ("SUPER_ADMIN".equals(target.getRoleCode())) {
-                // 超级管理员固定拥有全部入口，不允许修改
-                // 不在 URL 参数中携带中文，避免出现“????”编码问题
-                resp.sendRedirect(req.getContextPath() + "/admin/permissions/list?userId=" + userId + "&success=2");
-                return;
-            }
 
             String[] keys = req.getParameterValues("permissions");
             Set<String> newSet = new HashSet<>();
@@ -160,6 +160,11 @@ public class PermissionAdminServlet extends HttpServlet {
                 for (String k : keys) {
                     if (k != null && !k.trim().isEmpty()) newSet.add(k.trim());
                 }
+            }
+
+            // SUPER_ADMIN：允许编辑，但“权限管理入口”不可取消（防止锁死）
+            if (target.getRoleCode() != null && "SUPER_ADMIN".equalsIgnoreCase(target.getRoleCode())) {
+                newSet.add(PermissionCatalog.ADMIN_PERMISSIONS);
             }
 
             menuPermissionDAO.setPermissionsForUser(userId, newSet);
@@ -170,6 +175,13 @@ public class PermissionAdminServlet extends HttpServlet {
             }
 
             // success=1 表示保存成功（避免 URL 中文编码导致页面显示 ????）
+            // 如果保存的是当前登录用户，清理 session 缓存，使权限立即生效
+            if (current.getUserId() != null && current.getUserId() == userId) {
+                session.removeAttribute(MenuPermissionService.SESSION_MENU_PERMS);
+                session.removeAttribute(MenuPermissionService.SESSION_MENU_PERM_MAP);
+                menuPermissionService.loadIntoSession(session, current);
+            }
+
             resp.sendRedirect(req.getContextPath() + "/admin/permissions/list?userId=" + userId + "&success=1");
         } catch (SQLException e) {
             throw new ServletException("保存权限失败: " + e.getMessage(), e);

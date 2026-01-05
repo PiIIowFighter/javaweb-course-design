@@ -20,7 +20,8 @@
 
 <hr/>
 
-<h3>邀请审稿人（创建待审核账号）</h3>
+<h3>邀请审稿人（创建账号并发送邮件邀请）</h3>
+<p style="color:#666;">说明：此处会直接创建 <b>ACTIVE</b> 审稿人账号，并向邮箱发送账户邀请邮件（若未配置邮箱/未开启邮件，会自动跳过，不影响创建）。</p>
 <form method="post" action="${ctx}/editor/reviewers">
     <input type="hidden" name="op" value="invite"/>
 
@@ -38,8 +39,8 @@
             <td><input type="text" name="fullName" style="width:260px;"/></td>
         </tr>
         <tr>
-            <td>邮箱</td>
-            <td><input type="email" name="email" style="width:260px;"/></td>
+            <td>邮箱 *</td>
+            <td><input type="email" name="email" required style="width:260px;"/></td>
         </tr>
         <tr>
             <td>单位 / 机构</td>
@@ -51,7 +52,7 @@
         </tr>
         <tr>
             <td colspan="2">
-                <button type="submit">发送邀请（生成待审核审稿人）</button>
+                <button type="submit">创建账号并发送邀请</button>
             </td>
         </tr>
     </table>

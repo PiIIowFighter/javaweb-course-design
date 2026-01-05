@@ -59,7 +59,8 @@
                         <span style="margin:0 6px; color:#bbb;">|</span>
                         状态：<strong><c:out value="${focusManuscript.currentStatus}"/></strong>
                         <span style="margin:0 6px; color:#bbb;">|</span>
-                        <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${focusManuscript.manuscriptId}" target="_blank">打开稿件详情</a>
+                        <%-- 需求：审稿监控面板查看稿件，应跳转到“编辑处理中的稿件详情（withEditor/underReview 合并页）”，与“提出建议”模块的稿件详情页区分 --%>
+                        <a href="${pageContext.request.contextPath}/editor/underReview/detail?manuscriptId=${focusManuscript.manuscriptId}" target="_blank">打开稿件详情</a>
                     </p>
                 </div>
             </div>
@@ -101,7 +102,10 @@
                             <td><c:out value="${r.lastRemindedAt}"/></td>
                             <td><c:out value="${r.remindCount}"/></td>
                             <td>
-                                <a href="${pageContext.request.contextPath}/editor/review/remindForm?reviewId=${r.reviewId}&back=monitor">手动催审</a>
+                                <a class="btn-primary" href="${pageContext.request.contextPath}/editor/review/remindForm?reviewId=${r.reviewId}&back=monitor">
+                                    <i class="bi bi-envelope" aria-hidden="true"></i>
+                                    手动催审
+                                </a>
                             </td>
                         </tr>
                     </c:forEach>
@@ -146,13 +150,16 @@
                     <td><c:out value="${r.lastRemindedAt}"/></td>
                     <td><c:out value="${r.remindCount}"/></td>
                     <td>
-                        <a href="${pageContext.request.contextPath}/editor/review/remindForm?reviewId=${r.reviewId}&back=monitor">
-                            手动催审
-                        </a>
-                        |
-                        <a href="${pageContext.request.contextPath}/manuscripts/detail?id=${r.manuscriptId}" target="_blank">
-                            查看稿件
-                        </a>
+                        <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <a class="btn-primary" href="${pageContext.request.contextPath}/editor/review/remindForm?reviewId=${r.reviewId}&back=monitor">
+                                <i class="bi bi-envelope" aria-hidden="true"></i>
+                                手动催审
+                            </a>
+                            <a class="btn" href="${pageContext.request.contextPath}/editor/underReview/detail?manuscriptId=${r.manuscriptId}" target="_blank">
+                                <i class="bi bi-eye" aria-hidden="true"></i>
+                                查看稿件
+                            </a>
+                        </div>
                     </td>
                 </tr>
             </c:forEach>

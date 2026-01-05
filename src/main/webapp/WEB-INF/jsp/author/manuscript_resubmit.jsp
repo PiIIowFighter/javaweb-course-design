@@ -12,6 +12,16 @@
         </div>
     </div>
 
+    <!-- 退回后：展示编辑部给出的修改意见（形式审查反馈） -->
+    <c:if test="${not empty manuscript and (manuscript.currentStatus == 'RETURNED' or manuscript.currentStatus == 'REVISION') and not empty formalCheckResult and not empty formalCheckResult.feedback}">
+        <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
+            <b>修改意见（请按此修改后重新提交）</b>
+            <div style="margin-top: 6px; white-space: pre-wrap; line-height: 1.6;">
+                <c:out value="${formalCheckResult.feedback}"/>
+            </div>
+        </div>
+    </c:if>
+
     <c:if test="${not empty error}">
         <div class="alert alert-danger"><c:out value="${error}"/></div>
     </c:if>

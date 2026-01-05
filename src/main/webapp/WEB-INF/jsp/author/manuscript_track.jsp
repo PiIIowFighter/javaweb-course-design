@@ -459,7 +459,6 @@
                 稿件状态追踪
             </h2>
             <p class="card-subtitle">
-                稿件编号：<strong><c:out value="${manuscript.manuscriptId}"/></strong> |
                 标题：<c:out value="${manuscript.title}"/>
             </p>
         </div>
@@ -474,6 +473,16 @@
             </a>
         </div>
     </div>
+
+    <!-- 退回后：展示编辑部给作者的修改意见（形式审查反馈） -->
+    <c:if test="${manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
+        <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
+            <b>退回修改意见（请按此修改后重新提交）</b>
+            <div style="margin-top: 6px; white-space: pre-wrap; line-height: 1.6;">
+                <c:out value="${formalCheckResult.feedback}"/>
+            </div>
+        </div>
+    </c:if>
 
     <!-- 当前状态卡片 -->
     <div class="status-card">

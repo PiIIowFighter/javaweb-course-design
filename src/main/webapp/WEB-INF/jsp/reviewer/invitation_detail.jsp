@@ -6,6 +6,54 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
+<!-- 拒绝理由模态框（邀请详情页） -->
+<div id="rejectModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+     background:white; padding:20px; border:2px solid #ccc; border-radius:5px; z-index:1000;
+     box-shadow:0 0 20px rgba(0,0,0,0.3); min-width:400px;">
+    <h4>拒绝审稿邀请</h4>
+    <p>请填写拒绝理由：</p>
+    <form method="post" action="${ctx}/reviewer/decline" id="rejectForm">
+        <input type="hidden" name="reviewId" id="rejectReviewId" value=""/>
+        <textarea name="rejectionReason" id="rejectionReason" rows="4" style="width:100%;"
+                  placeholder="例如：时间冲突，无法审稿" required></textarea>
+        <br/><br/>
+        <div style="text-align:right;">
+            <button type="button" onclick="hideRejectModal()" style="margin-right:10px;">取消</button>
+            <button type="submit">确认拒绝</button>
+        </div>
+    </form>
+</div>
+
+<!-- 模态框背景遮罩 -->
+<div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.5); z-index:999;"></div>
+
+<script>
+// 显示拒绝理由模态框
+function showRejectModal(reviewId) {
+    document.getElementById('rejectReviewId').value = reviewId;
+    document.getElementById('rejectionReason').value = '';
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('rejectModal').style.display = 'block';
+}
+
+// 隐藏拒绝理由模态框
+function hideRejectModal() {
+    document.getElementById('modalOverlay').style.display = 'none';
+    document.getElementById('rejectModal').style.display = 'none';
+}
+
+// 点击遮罩层也可以关闭模态框
+document.getElementById('modalOverlay').addEventListener('click', function() {
+    hideRejectModal();
+});
+
+// 防止模态框内的点击事件冒泡到遮罩层
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+</script>
+
 <h2>审稿邀请 / 稿件摘要</h2>
 
 <c:if test="${empty review || empty manuscript}">
@@ -15,8 +63,6 @@
 <c:if test="${not empty review && not empty manuscript}">
     <div style="margin: 8px 0;">
         <strong>审稿记录ID：</strong><c:out value="${review.reviewId}"/>
-        <span style="margin:0 10px;">|</span>
-        <strong>稿件编号：</strong><c:out value="${manuscript.manuscriptId}"/>
         <span style="margin:0 10px;">|</span>
         <strong>当前状态：</strong><c:out value="${review.status}"/>
         <span style="margin:0 10px;">|</span>
@@ -56,7 +102,7 @@
     </table>
 
     <p style="margin-top: 10px; color: #666;">
-        限制：通常看不到其他审稿人的意见，无法查看稿件的决策历史，不能直接与作者沟通（必须通过编辑）。
+        无法看见其他审稿人的意见，无法查看稿件的决策历史，不能直接与作者沟通。
     </p>
 
     <hr/>
@@ -69,11 +115,7 @@
                 <input type="hidden" name="reviewId" value="${review.reviewId}"/>
                 <button type="submit">接受邀请</button>
             </form>
-            <form method="post" action="${ctx}/reviewer/decline" style="display:inline; margin-left: 8px;"
-                  onsubmit="return confirm('确定要拒绝该审稿邀请吗？');">
-                <input type="hidden" name="reviewId" value="${review.reviewId}"/>
-                <button type="submit">拒绝邀请</button>
-            </form>
+            <button type="button" style="display:inline; margin-left: 8px;" onclick="showRejectModal(${review.reviewId})">拒绝邀请</button>
         </c:when>
 
         <c:when test="${review.status == 'ACCEPTED'}">

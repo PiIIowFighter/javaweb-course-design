@@ -30,7 +30,7 @@ public class ManuscriptAssignmentDAO {
 
         String sql = "INSERT INTO dbo.ManuscriptAssignments " +
                      "    (ManuscriptId, EditorId, AssignedByChiefId, ChiefComment, AssignedTime) " +
-                     "VALUES (?, ?, ?, ?, SYSUTCDATETIME())";
+                     "VALUES (?, ?, ?, ?, DATEADD(HOUR, 8, SYSUTCDATETIME()))";
 
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -18,9 +18,6 @@
             <div>
                 <strong>记录编号：</strong><c:out value="${result.checkId}"/>
             </div>
-            <div>
-                <strong>稿件编号：</strong><c:out value="${result.manuscriptId}"/>
-            </div>
             <c:if test="${not empty manuscript}">
                 <div>
                     <strong>稿件标题：</strong><c:out value="${manuscript.title}"/>

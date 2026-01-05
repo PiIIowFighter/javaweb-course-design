@@ -123,6 +123,14 @@ public class MailNotifications {
 
     /** 审稿人拒绝邀请：通知编辑。 */
     public void onReviewerDeclined(int reviewId) {
+        onReviewerDeclined(reviewId, null);
+    }
+
+    /**
+     * 审稿人拒绝邀请：通知编辑（带拒绝理由覆盖）。
+     * 说明：为兼容旧库（缺少 RejectionReason 列）场景，可以在调用处直接传入拒绝理由，确保邮件中可见。
+     */
+    public void onReviewerDeclined(int reviewId, String rejectionReasonOverride) {
         if (!cfg.enabled()) return;
         try {
             // 获取审稿记录
@@ -178,8 +186,12 @@ public class MailNotifications {
             }
             content.append("</td></tr>");
             content.append("<tr><td style='font-weight: bold;'>拒绝理由：</td><td>");
-            if (review.getRejectionReason() != null && !review.getRejectionReason().isEmpty()) {
-                content.append(review.getRejectionReason());
+            String reason = rejectionReasonOverride;
+            if (reason == null || reason.trim().isEmpty()) {
+                reason = review.getRejectionReason();
+            }
+            if (reason != null && !reason.trim().isEmpty()) {
+                content.append(reason.trim());
             } else {
                 content.append("未填写拒绝理由");
             }

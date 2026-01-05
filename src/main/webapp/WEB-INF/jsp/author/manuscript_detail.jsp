@@ -20,7 +20,6 @@
         <c:otherwise>
             <!-- 基本信息 -->
             <div class="stack">
-                <p><strong>稿件编号：</strong><c:out value="${manuscript.manuscriptId}"/></p>
                 <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
                 <p><strong>期刊ID：</strong><c:out value="${manuscript.journalId}"/></p>                <p><strong>当前状态：</strong><c:out value="${manuscript.currentStatus}"/></p>
                 <p><strong>提交时间：</strong><c:out value="${manuscript.submitTime}"/></p>

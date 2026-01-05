@@ -23,8 +23,8 @@ public class EditorSuggestionDAO {
                 + "    EditorId INT NOT NULL,\n"
                 + "    Suggestion NVARCHAR(50) NOT NULL,\n"
                 + "    Summary NVARCHAR(MAX) NULL,\n"
-                + "    SubmittedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),\n"
-                + "    UpdatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),\n"
+                + "    SubmittedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),\n"
+                + "    UpdatedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),\n"
                 + "    CONSTRAINT FK_EditorSuggestions_Manuscript FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),\n"
                 + "    CONSTRAINT FK_EditorSuggestions_Editor FOREIGN KEY(EditorId) REFERENCES dbo.Users(UserId)\n"
                 + "  );\n"
@@ -106,7 +106,7 @@ public class EditorSuggestionDAO {
         }
 
         if (exists) {
-            String sql = "UPDATE dbo.EditorSuggestions SET EditorId=?, Suggestion=?, Summary=?, UpdatedAt=SYSUTCDATETIME() "
+            String sql = "UPDATE dbo.EditorSuggestions SET EditorId=?, Suggestion=?, Summary=?, UpdatedAt=DATEADD(HOUR, 8, SYSUTCDATETIME()) "
                     + "WHERE ManuscriptId=?";
             try (Connection conn = DbUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -118,7 +118,7 @@ public class EditorSuggestionDAO {
             }
         } else {
             String sql = "INSERT INTO dbo.EditorSuggestions(ManuscriptId, EditorId, Suggestion, Summary, SubmittedAt, UpdatedAt) "
-                    + "VALUES(?,?,?,?,SYSUTCDATETIME(),SYSUTCDATETIME())";
+                    + "VALUES(?,?,?,?,DATEADD(HOUR, 8, SYSUTCDATETIME()),DATEADD(HOUR, 8, SYSUTCDATETIME()))";
             try (Connection conn = DbUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, s.getManuscriptId());

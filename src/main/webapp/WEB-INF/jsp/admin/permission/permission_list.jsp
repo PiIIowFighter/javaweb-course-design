@@ -17,17 +17,12 @@
 
     <!--
       success 参数使用数字码，避免在 URL 中携带中文导致出现“????”乱码。
-        1: 保存成功
-        2: 目标为 SUPER_ADMIN（只读，无法修改）
-      如仍收到历史字符串参数，则兜底直接输出。
+        1: 保存成功      如仍收到历史字符串参数，则兜底直接输出。
     -->
     <c:if test="${param.success == '1'}">
         <div class="alert alert-success" style="margin-bottom: var(--space-4);">保存成功</div>
     </c:if>
-    <c:if test="${param.success == '2'}">
-        <div class="alert alert-info" style="margin-bottom: var(--space-4);">该用户为 SUPER_ADMIN，权限固定为“全部入口”，无法修改。</div>
-    </c:if>
-    <c:if test="${not empty param.success and param.success != '1' and param.success != '2'}">
+<c:if test="${not empty param.success and param.success != '1'}">
         <div class="alert alert-success" style="margin-bottom: var(--space-4);">
             <c:out value="${param.success}"/>
         </div>
@@ -47,7 +42,7 @@
                 </select>
             </div>
             <div style="text-align:right;">
-                <small>提示：超级管理员固定拥有全部入口权限。</small>
+                <small>提示：可按用户配置入口权限；SUPER_ADMIN 也可配置（“权限管理”入口不可取消）。</small>
             </div>
         </div>
     </form>
@@ -65,11 +60,11 @@
                 <div>
                     <strong>当前用户：</strong>
                     <c:out value="${selectedUser.username}"/> （<c:out value="${selectedUser.roleCode}"/>）
-                </div>
-                <c:if test="${readOnly}">
-                    <div class="alert alert-info">该用户为 SUPER_ADMIN，权限固定为“全部入口”，不可编辑。</div>
+                <c:if test="${selectedUser.roleCode == 'SUPER_ADMIN'}">
+                    <div class="alert alert-warning" style="margin-top: var(--space-2);">该用户为 SUPER_ADMIN：入口权限可编辑；为防止锁死自己，“权限管理”入口不可取消。</div>
                 </c:if>
-            </div>
+                </div>
+</div>
 
             <!-- 入口权限分组（与工作台 / 侧边栏一致） -->
             <div class="stack" style="gap: var(--space-4);">
@@ -83,7 +78,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -104,7 +99,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -125,7 +120,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -146,7 +141,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -167,7 +162,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -188,7 +183,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${readOnly}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -204,7 +199,7 @@
 
             <div style="display:flex; gap: var(--space-3); justify-content:flex-end;">
                 <a class="btn btn-ghost" href="${ctx}/dashboard">返回工作台</a>
-                <button class="btn btn-primary" type="submit" <c:if test="${readOnly}">disabled</c:if>>保存</button>
+                <button class="btn btn-primary" type="submit" <c:if test="${lockedMap[p.key]}">disabled</c:if>>保存</button>
             </div>
         </form>
     </c:if>

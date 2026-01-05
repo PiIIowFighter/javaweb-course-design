@@ -144,6 +144,17 @@ public class NotificationServlet extends HttpServlet {
                 return;
             }
 
+            // 机制：用户点击“查看详情”即自动将未读通知标记为已读
+            boolean isRead = (n.getRead() != null && n.getRead());
+            if (isRecipient && !isRead) {
+                try {
+                    notificationDAO.markRead(current.getUserId(), id);
+                    // 重新拉取，保证详情页展示“已读/已读时间”等字段是最新的
+                    n = notificationDAO.findById(id);
+                } catch (SQLException ignore) {
+                }
+            }
+
             if (!"inbox".equals(box) && !"sent".equals(box)) {
                 box = isCreator ? "sent" : "inbox";
             }

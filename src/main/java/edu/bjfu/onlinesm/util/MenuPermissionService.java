@@ -36,12 +36,7 @@ public class MenuPermissionService {
         if (session == null || user == null) return;
 
         String role = safeUpper(user.getRoleCode());
-        Set<String> keys;
-
-        // SUPER_ADMIN 固定拥有全部入口
-        if ("SUPER_ADMIN".equals(role)) {
-            keys = allMenuPermissionKeys();
-        } else {
+        Set<String> keys;        // 从表里读取用户“菜单入口”权限；若没有记录则初始化默认
             // 正常用户：从表里取；若没有记录则初始化默认
             Set<String> assigned = Collections.emptySet();
             Integer uidObj = user.getUserId();
@@ -66,7 +61,7 @@ public class MenuPermissionService {
                 assigned = defaultMenuPermissions(role);
             }
             keys = assigned;
-        }
+
 
         // 缓存 Set
         session.setAttribute(SESSION_MENU_PERMS, new HashSet<>(keys));
@@ -88,8 +83,6 @@ public class MenuPermissionService {
         if (session == null || user == null || permissionKey == null) return false;
 
         String role = safeUpper(user.getRoleCode());
-        if ("SUPER_ADMIN".equals(role)) return true;
-
         Object obj = session.getAttribute(SESSION_MENU_PERMS);
         if (obj instanceof Set) {
             @SuppressWarnings("unchecked")
@@ -128,6 +121,10 @@ public class MenuPermissionService {
         Set<String> set = new HashSet<>();
 
         switch (role) {
+            case "SUPER_ADMIN":
+                // 默认给满权限（仍可在权限管理中修改）
+                set.addAll(allMenuPermissionKeys());
+                break;
             case "AUTHOR":
                 set.add(PermissionCatalog.MENU_AUTHOR_MY_MANUSCRIPTS);
                 set.add(PermissionCatalog.MENU_AUTHOR_SUBMIT);

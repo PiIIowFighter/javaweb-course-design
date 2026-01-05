@@ -4,7 +4,6 @@ import edu.bjfu.onlinesm.model.ManuscriptStageTimestamps;
 import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.sql.*;
-import java.time.ZoneId;
 
 /**
  * 稿件阶段时间戳 DAO
@@ -99,7 +98,7 @@ public class ManuscriptStageTimestampsDAO {
             return; // 无效状态，静默忽略
         }
         
-        String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = SYSUTCDATETIME() " +
+        String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                      "WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -117,7 +116,7 @@ public class ManuscriptStageTimestampsDAO {
             return; // 无效状态，静默忽略
         }
         
-        String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = SYSUTCDATETIME() " +
+        String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                      "WHERE ManuscriptId = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, manuscriptId);
@@ -188,7 +187,7 @@ public class ManuscriptStageTimestampsDAO {
 
     /**
      * 映射结果集到实体对象
-     * 将数据库中的UTC时间转换为北京时间（UTC+8）
+     * 数据库中存储为北京时间（UTC+8），直接映射为 LocalDateTime
      */
     private ManuscriptStageTimestamps mapRow(ResultSet rs) throws SQLException {
         ManuscriptStageTimestamps mst = new ManuscriptStageTimestamps();
@@ -197,50 +196,32 @@ public class ManuscriptStageTimestampsDAO {
         Timestamp ts;
         
         ts = rs.getTimestamp("DraftCompletedAt");
-        if (ts != null) mst.setDraftCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setDraftCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("SubmittedAt");
-        if (ts != null) mst.setSubmittedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setSubmittedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("FormalCheckCompletedAt");
-        if (ts != null) mst.setFormalCheckCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setFormalCheckCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("DeskReviewInitialCompletedAt");
-        if (ts != null) mst.setDeskReviewInitialCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setDeskReviewInitialCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("ToAssignCompletedAt");
-        if (ts != null) mst.setToAssignCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setToAssignCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("WithEditorCompletedAt");
-        if (ts != null) mst.setWithEditorCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setWithEditorCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("UnderReviewCompletedAt");
-        if (ts != null) mst.setUnderReviewCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setUnderReviewCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("EditorRecommendationCompletedAt");
-        if (ts != null) mst.setEditorRecommendationCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setEditorRecommendationCompletedAt(ts.toLocalDateTime());
         
         ts = rs.getTimestamp("FinalDecisionPendingCompletedAt");
-        if (ts != null) mst.setFinalDecisionPendingCompletedAt(convertUtcToBeijing(ts));
+        if (ts != null) mst.setFinalDecisionPendingCompletedAt(ts.toLocalDateTime());
         
         return mst;
-    }
-    
-    /**
-     * 将UTC时间戳转换为北京时间的LocalDateTime
-     * SQL Server存储的是UTC时间，JDBC读取时可能已经转换为本地时区
-     * 这里显式地将时间戳视为UTC时间，然后转换为北京时间
-     * @param ts 时间戳（从数据库读取，数据库存储的是UTC时间）
-     * @return 北京时间的LocalDateTime
-     */
-    private java.time.LocalDateTime convertUtcToBeijing(Timestamp ts) {
-        // 北京时间时区
-        ZoneId beijingZone = ZoneId.of("Asia/Shanghai");
-        // 将Timestamp转换为Instant（UTC时间点）
-        java.time.Instant instant = ts.toInstant();
-        // 将UTC时间点转换为北京时区的LocalDateTime
-        return instant.atZone(ZoneId.of("UTC"))
-                      .withZoneSameInstant(beijingZone)
-                      .toLocalDateTime();
     }
 }

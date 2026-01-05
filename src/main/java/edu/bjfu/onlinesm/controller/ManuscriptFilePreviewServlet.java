@@ -5,6 +5,8 @@ import edu.bjfu.onlinesm.dao.ManuscriptVersionDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.ManuscriptVersion;
 import edu.bjfu.onlinesm.model.User;
+import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
+import edu.bjfu.onlinesm.util.PdfTextUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -138,6 +140,27 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
             if (!file.exists() || !file.isFile()) {
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在：" + filePath);
                 return;
+            }
+
+            // 修复：历史 Cover Letter PDF 可能因未注册中文/日文字体导致“PDF 打开为空白”。
+            // 若检测到 PDF 无文本内容，且数据库保存了 CoverLetterHtml，则在预览时自动重生成一次。
+            if ("cover".equalsIgnoreCase(type) && file.getName().toLowerCase().endsWith(".pdf")) {
+                try {
+                    String html = v.getCoverLetterHtml();
+                    if (html != null && !html.trim().isEmpty() && !HtmlToPdfConverter.isEmptyHtml(html)) {
+                        // 控制成本：只对较小文件做文本检测（Cover Letter 一般不会很大）
+                        long size = file.length();
+                        if (size > 0 && size <= 2L * 1024 * 1024) {
+                            String text = PdfTextUtil.extractText(file);
+                            if (text == null || text.trim().isEmpty()) {
+                                // 直接覆盖原文件，确保后续预览/下载也正常
+                                HtmlToPdfConverter.convert(html, file);
+                            }
+                        }
+                    }
+                } catch (Throwable ignore) {
+                    // 预览不应因自动修复失败而中断
+                }
             }
 
             String contentType = guessContentType(file);

@@ -42,7 +42,7 @@
             </c:if>
 
             <p style="margin-top: 10px;">
-                <a href="${ctx}/manuscripts/detail?id=${review.manuscriptId}">查看稿件详情</a>
+                <a href="${ctx}/editor/recommend/detail?manuscriptId=${review.manuscriptId}">查看稿件详情</a>
                 &nbsp;|&nbsp;
                 <a href="${ctx}/editor/recommend?manuscriptId=${review.manuscriptId}">返回提出建议</a>
             </p>

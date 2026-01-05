@@ -28,6 +28,12 @@ public class User implements Serializable {
     /** 注册时间（可为空，后续与数据库同步时再使用） */
     private LocalDateTime registerTime;
 
+    // ====== v2: 审稿人绩效统计（用于编辑端筛选/展示） ======
+    /** 已完成审稿次数（Reviews.Status='SUBMITTED' 的数量） */
+    private Integer completedReviewCount;
+    /** 已提交评审的平均评分（基于 Reviews.Score，可能为空） */
+    private Double avgReviewScore;
+
     public User() {
     }
 
@@ -124,6 +130,22 @@ public class User implements Serializable {
 
     public void setRegisterTime(LocalDateTime registerTime) {
         this.registerTime = registerTime;
+    }
+
+    public Integer getCompletedReviewCount() {
+        return completedReviewCount;
+    }
+
+    public void setCompletedReviewCount(Integer completedReviewCount) {
+        this.completedReviewCount = completedReviewCount;
+    }
+
+    public Double getAvgReviewScore() {
+        return avgReviewScore;
+    }
+
+    public void setAvgReviewScore(Double avgReviewScore) {
+        this.avgReviewScore = avgReviewScore;
     }
 
     @Override

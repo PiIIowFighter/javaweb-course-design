@@ -20,8 +20,6 @@
     <div style="margin: 8px 0;" class="text-muted">
         <strong>审稿记录ID：</strong><c:out value="${review.reviewId}"/>
         <span style="margin:0 10px;">|</span>
-        <strong>稿件编号：</strong><c:out value="${manuscript.manuscriptId}"/>
-        <span style="margin:0 10px;">|</span>
         <strong>审稿状态：</strong><c:out value="${review.status}"/>
         <span style="margin:0 10px;">|</span>
         <strong>截止时间：</strong><c:out value="${review.dueAt}"/>

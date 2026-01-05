@@ -8,6 +8,8 @@ import edu.bjfu.onlinesm.util.UploadPathUtil;
 import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
 import edu.bjfu.onlinesm.util.PdfTextUtil;
 import edu.bjfu.onlinesm.util.FileTextUtil;
+import edu.bjfu.onlinesm.util.mail.MailNotifications;
+import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -36,7 +38,7 @@ import java.util.*;
  *  - 推荐审稿人
  *  - 文件预览（通过 ManuscriptFilePreviewServlet 提供）
  *
- * 说明：邮件通知未在本项目中引入 JavaMail，当前只在页面提示“已提交/已保存草稿”。如需真实发送邮件，可后续扩展。
+ * 说明：已接入 MailNotifications（若邮件配置未开启/缺失邮箱，会自动跳过，不影响主流程）。
  */
 @WebServlet(name = "ManuscriptServlet", urlPatterns = {"/manuscripts/*"})
 @MultipartConfig
@@ -45,6 +47,10 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final UserDAO userDAO = new UserDAO();
+
+    // 通知（站内 + 邮件）
+    private final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
 
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
@@ -219,6 +225,13 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
 
+        // 退回/修回：向作者展示最近一次退回的修改意见（形式审查反馈）
+        try {
+            req.setAttribute("formalCheckResult", formalCheckResultDAO.findByManuscriptId(manuscriptId));
+        } catch (Exception ignore) {
+            // 不影响主流程
+        }
+
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
     }
 
@@ -262,12 +275,20 @@ public class ManuscriptServlet extends HttpServlet {
         if (manuscript != null && manuscript.getManuscriptId() != null) {
             req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
         }
+
+        // 回显时也带上最近一次形式审查反馈（用于作者查看退回修改意见）
+        if (manuscript != null && manuscript.getManuscriptId() != null) {
+            try {
+                req.setAttribute("formalCheckResult", formalCheckResultDAO.findByManuscriptId(manuscript.getManuscriptId()));
+            } catch (Exception ignore) {
+            }
+        }
         
         // 修改时期刊信息不可更改
         if (manuscript != null && manuscript.getJournalId() != null) {
             req.setAttribute("journal", journalDAO.findById(manuscript.getJournalId()));
         }
- 
+
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_resubmit.jsp").forward(req, resp);
     }
 
@@ -385,7 +406,7 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("formalCheckResult", formalCheckResult);
 
         // ===== 形式审查页右侧“当前字数”展示 =====
-        // 需求：优先用 Cover Letter 统计正文字数；若 Cover Letter 字数为 0，则回退到 Manuscript 预览/下载对应的 PDF。
+        // 需求变更：编辑部管理员（EO_ADMIN）的形式审查正文字数仅统计稿件 PDF，不再统计 Cover Letter。
         int bodyCount = 0;
         int abstractCount = 0;
         try {
@@ -393,17 +414,21 @@ public class ManuscriptServlet extends HttpServlet {
 
             String bodyText = "";
 
-            // 1) Cover Letter
-            if (currentVer != null) {
-                String coverPath = currentVer.getCoverLetterPath();
-                if (coverPath != null && !coverPath.trim().isEmpty()) {
-                    bodyText = FileTextUtil.extractText(new File(coverPath));
-                }
-            }
-            bodyCount = formalCheckService.computeBodyCount(bodyText);
+            boolean eoAdminOnlyPdf = "EO_ADMIN".equals(current.getRoleCode());
 
-            // 2) Fallback: manuscript PDF
-            if (bodyCount == 0 && currentVer != null) {
+            if (!eoAdminOnlyPdf) {
+                // 1) Cover Letter（历史逻辑：非 EO_ADMIN 仍可优先取 Cover Letter）
+                if (currentVer != null) {
+                    String coverPath = currentVer.getCoverLetterPath();
+                    if (coverPath != null && !coverPath.trim().isEmpty()) {
+                        bodyText = FileTextUtil.extractText(new File(coverPath));
+                    }
+                }
+                bodyCount = formalCheckService.computeBodyCount(bodyText);
+            }
+
+            // 2) manuscript PDF（与 /files/preview?type=manuscript 一致：优先原稿，否则匿名稿）
+            if (currentVer != null && (eoAdminOnlyPdf || bodyCount == 0)) {
                 String pdfPath = null;
                 if (currentVer.getFileOriginalPath() != null && !currentVer.getFileOriginalPath().trim().isEmpty()) {
                     pdfPath = currentVer.getFileOriginalPath();
@@ -567,9 +592,30 @@ public class ManuscriptServlet extends HttpServlet {
 
         // 获取状态变更历史
         List<ManuscriptStatusHistory> historyList = statusHistoryDAO.findByManuscriptId(manuscriptId);
-        
+
         // 获取阶段时间戳数据
         ManuscriptStageTimestamps stageTimestamps = stageTimestampsDAO.findByManuscriptId(manuscriptId);
+
+        // 兼容修复：早期版本中“自动推进 UNDER_REVIEW -> EDITOR_RECOMMENDATION”只更新了 Manuscripts.Status，
+        // 未写入 ManuscriptStageTimestamps.UnderReviewCompletedAt，导致作者时间线“外审阶段”不显示完成时间。
+        // 这里按“最后一条已提交审稿意见的 SubmittedAt”做展示兜底（仅用于显示，不回写数据库）。
+        if (stageTimestamps != null && stageTimestamps.getUnderReviewCompletedAt() == null) {
+            try {
+                List<Review> reviews = reviewDAO.findByManuscript(manuscriptId);
+                LocalDateTime maxSubmittedAt = null;
+                for (Review r : reviews) {
+                    LocalDateTime t = r.getSubmittedAt();
+                    if (t != null && (maxSubmittedAt == null || t.isAfter(maxSubmittedAt))) {
+                        maxSubmittedAt = t;
+                    }
+                }
+                if (maxSubmittedAt != null) {
+                    stageTimestamps.setUnderReviewCompletedAt(maxSubmittedAt);
+                }
+            } catch (Exception ignore) {
+                // 兜底失败不应影响页面渲染
+            }
+        }
         
         // 从ManuscriptStageTimestamps生成完整的历史记录
         List<ManuscriptStatusHistory> completeHistoryList = buildCompleteHistoryList(
@@ -586,11 +632,20 @@ public class ManuscriptServlet extends HttpServlet {
         // 获取预计审稿周期
         String estimatedCycle = statusHistoryDAO.getEstimatedReviewCycle(m.getCurrentStatus());
 
+        // 退回状态：补充最近一次形式审查反馈（用于作者查看修改意见）
+        FormalCheckResult formalCheckResult = null;
+        try {
+            formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
+        } catch (Exception ignore) {
+            formalCheckResult = null;
+        }
+
         req.setAttribute("manuscript", m);
         req.setAttribute("historyList", completeHistoryList);
         req.setAttribute("estimatedCycle", estimatedCycle);
         req.setAttribute("stageTimestamps", stageTimestamps);
         req.setAttribute("currentStatusDesc", ManuscriptStatusHistory.getStatusDescription(m.getCurrentStatus()));
+        req.setAttribute("formalCheckResult", formalCheckResult);
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_track.jsp").forward(req, resp);
     }
@@ -850,9 +905,10 @@ public class ManuscriptServlet extends HttpServlet {
                     fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
                 }
 
-                // CoverLetter：富文本转 PDF
+                // CoverLetter：保存富文本原文 + 尝试转 PDF
                 String coverPath = null;
                 String remark = null;
+                String coverHtmlToStore = coverLetterHtml;
                 if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
                     try {
                         File coverPdfFile = new File(versionDir, "cover_letter.pdf");
@@ -877,6 +933,10 @@ public class ManuscriptServlet extends HttpServlet {
                     if (coverPath == null || coverPath.trim().isEmpty()) {
                         coverPath = prevCurrent.getCoverLetterPath();
                     }
+                    // CoverLetter HTML：若本次未提供（或为空），沿用上一版
+                    if (coverHtmlToStore == null || coverHtmlToStore.trim().isEmpty() || HtmlToPdfConverter.isEmptyHtml(coverHtmlToStore)) {
+                        coverHtmlToStore = prevCurrent.getCoverLetterHtml();
+                    }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null) {
                         v.setResponseLetterPath(prevCurrent.getResponseLetterPath());
@@ -889,12 +949,20 @@ public class ManuscriptServlet extends HttpServlet {
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
                 v.setCoverLetterPath(coverPath);
+                v.setCoverLetterHtml(coverHtmlToStore);
                 v.setRemark(remark);
 
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
 
                 conn.commit();
+            }
+
+            // 投稿提交成功：站内 + 邮件通知（不影响主流程）
+            if (isFinalSubmit) {
+                String manuscriptCode = genManuscriptCode(manuscriptId);
+                inAppNotifications.onSubmissionSuccess(current, m, manuscriptCode);
+                mailNotifications.onSubmissionSuccess(current, m, manuscriptCode);
             }
 
             String msg;
@@ -1033,9 +1101,10 @@ public class ManuscriptServlet extends HttpServlet {
                     fileAnonymousPath = savePartToDir(anonymousFile, versionDir, "anonymous_");
                 }
 
-                // CoverLetter：富文本转 PDF
+                // CoverLetter：保存富文本原文 + 尝试转 PDF
                 String coverPath = null;
                 String remark = null;
+                String coverHtmlToStore = coverLetterHtml;
                 if (coverLetterHtml != null && !coverLetterHtml.isEmpty() && !HtmlToPdfConverter.isEmptyHtml(coverLetterHtml)) {
                     try {
                         File coverPdfFile = new File(versionDir, "cover_letter.pdf");
@@ -1052,6 +1121,7 @@ public class ManuscriptServlet extends HttpServlet {
                 v.setFileOriginalPath(fileOriginalPath);
                 v.setFileAnonymousPath(fileAnonymousPath);
                 v.setCoverLetterPath(coverPath);
+                v.setCoverLetterHtml(coverHtmlToStore);
                 v.setRemark(remark);
 
                 // 未重新上传文件时，沿用上一版的附件路径
@@ -1064,6 +1134,10 @@ public class ManuscriptServlet extends HttpServlet {
                     }
                     if (v.getCoverLetterPath() == null || v.getCoverLetterPath().trim().isEmpty()) {
                         v.setCoverLetterPath(prevCurrent.getCoverLetterPath());
+                    }
+                    // CoverLetter HTML：若本次未提供（或为空），沿用上一版
+                    if (v.getCoverLetterHtml() == null || v.getCoverLetterHtml().trim().isEmpty() || HtmlToPdfConverter.isEmptyHtml(v.getCoverLetterHtml())) {
+                        v.setCoverLetterHtml(prevCurrent.getCoverLetterHtml());
                     }
                     // ResponseLetter 暂未在投稿页面提供上传入口，若上一版存在则沿用
                     if (v.getResponseLetterPath() == null || v.getResponseLetterPath().trim().isEmpty()) {
@@ -1078,6 +1152,13 @@ public class ManuscriptServlet extends HttpServlet {
                 versionDAO.insert(conn, v);
 
                 conn.commit();
+            }
+
+            // Resubmit 成功（submit 模式）：站内 + 邮件通知（不影响主流程）
+            if (!"draft".equalsIgnoreCase(mode)) {
+                String manuscriptCode = genManuscriptCode(manuscriptId);
+                inAppNotifications.onSubmissionSuccess(current, toUpdate, manuscriptCode);
+                mailNotifications.onSubmissionSuccess(current, toUpdate, manuscriptCode);
             }
 
             if ("draft".equalsIgnoreCase(mode)) {

@@ -16,7 +16,6 @@
 
     <div class="stack">
         <p>
-            <b>稿件编号：</b><c:out value="${review.manuscriptId}"/><br/>
             <b>稿件标题：</b><c:out value="${reviewManuscript.title}"/><br/>
             <b>审稿人：</b>
             <c:out value="${reviewReviewer.fullName}"/>

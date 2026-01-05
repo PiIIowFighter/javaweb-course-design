@@ -6,6 +6,7 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<c:set var="roleCode" value="${sessionScope.currentUser.roleCode}"/>
 
 <h2>稿件详情</h2>
 
@@ -33,10 +34,6 @@
     </div>
 </c:if>
     <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
-        <tr>
-            <th>稿件编号</th>
-            <td><c:out value="${manuscript.manuscriptId}"/></td>
-        </tr>
         <tr>
             <th>标题</th>
             <td><c:out value="${manuscript.title}"/></td>
@@ -71,6 +68,18 @@
             <th>当前状态</th>
             <td><c:out value="${manuscript.currentStatus}"/></td>
         </tr>
+
+        <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
+        <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
+            <tr>
+                <th>退回修改意见</th>
+                <td>
+                    <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
+                        <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${formalCheckResult.feedback}"/></div>
+                    </div>
+                </td>
+            </tr>
+        </c:if>
         <tr>
             <th>提交时间</th>
             <td><c:out value="${manuscript.submitTime}"/></td>
@@ -628,7 +637,7 @@
         </td>
         <td>
             <c:out value="${r.status}"/>
-            <c:if test="${r.status == 'EXPIRED'}">
+            <c:if test="${r.status == 'DECLINED' || (r.status == 'EXPIRED' && (not empty r.rejectionReason || not empty r.declinedAt))}">
                 <div style="margin:6px 0;padding:6px 10px;border:1px solid #ffc107;border-radius:6px;background:#fff3cd;color:#856404;">
                     <strong>拒绝理由：</strong>
                     <c:out value="${r.rejectionReason}"/>
@@ -653,21 +662,25 @@
                         <a href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">单页查看</a>
                     </div>
                     <div id="detail${r.reviewId}" style="display:none; margin-top:8px;">
-                        <p><strong>关键评价 KeyEvaluation：</strong></p>
-                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
-                            <c:out value="${r.keyEvaluation}"/>
-                        </div>
-                        <p><strong>给编辑的保密意见 ConfidentialToEditor：</strong></p>
-                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
-                            <c:out value="${r.confidentialToEditor}"/>
-                        </div>
+                        <c:if test="${roleCode != 'AUTHOR'}">
+                            <p><strong>关键评价 KeyEvaluation：</strong></p>
+                            <div class="rich-text" style="border:1px solid #ddd; padding:8px; background:#fafafa; line-height:1.6;">
+                                <c:out value="${r.keyEvaluation}" escapeXml="false"/>
+                            </div>
+
+                            <p><strong>给编辑的保密意见 ConfidentialToEditor：</strong></p>
+                            <div class="rich-text" style="border:1px solid #ddd; padding:8px; background:#fafafa; line-height:1.6;">
+                                <c:out value="${r.confidentialToEditor}" escapeXml="false"/>
+                            </div>
+                        </c:if>
+
                         <p><strong>给作者的意见 Content：</strong></p>
-                        <div style="border:1px solid #ddd; padding:8px; background:#fafafa;">
-                            <c:out value="${r.content}"/>
+                        <div class="rich-text" style="border:1px solid #ddd; padding:8px; background:#fafafa; line-height:1.6;">
+                            <c:out value="${r.content}" escapeXml="false"/>
                         </div>
                     </div>
                 </c:when>
-                <c:when test="${r.status == 'EXPIRED'}">
+                <c:when test="${r.status == 'DECLINED' || (r.status == 'EXPIRED' && (not empty r.rejectionReason || not empty r.declinedAt))}">
                     <span style="color:#856404;">审稿人已拒绝邀请</span>
                 </c:when>
                 <c:otherwise>-</c:otherwise>
@@ -723,7 +736,7 @@
             </div>
             <div>
                 <label><b>最低平均分</b><br/>
-                    <input type="number" name="minAvgScore" value="${fn:escapeXml(param.minAvgScore)}" style="width:140px;" min="0" max="100"/>
+                    <input type="number" name="minAvgScore" value="${fn:escapeXml(param.minAvgScore)}" style="width:140px;" min="0" max="10" step="0.1"/>
                 </label>
             </div>
             <div>
@@ -749,6 +762,8 @@
                     <th>用户名</th>
                     <th>邮箱</th>
                     <th>研究方向</th>
+                    <th style="width:120px;">完成审稿数</th>
+                    <th style="width:120px;">平均评分</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -765,6 +780,15 @@
                         <td><c:out value="${u.username}"/></td>
                         <td><c:out value="${u.email}"/></td>
                         <td><c:out value="${u.researchArea}"/></td>
+                        <td style="text-align:center;">
+                            <c:out value="${empty u.completedReviewCount ? 0 : u.completedReviewCount}"/>
+                        </td>
+                        <td style="text-align:center;">
+                            <c:choose>
+                                <c:when test="${empty u.avgReviewScore}">-</c:when>
+                                <c:otherwise><c:out value="${u.avgReviewScore}"/></c:otherwise>
+                            </c:choose>
+                        </td>
                     </tr>
                 </c:forEach>
                 </tbody>
@@ -900,7 +924,11 @@
                     <tr>
                         <td><c:out value="${r.recommendation}"/></td>
                         <td><c:out value="${r.score}"/></td>
-                        <td style="white-space:pre-wrap;"><c:out value="${r.content}"/></td>
+                        <td>
+                            <div class="rich-text" style="line-height: 1.6;">
+                                <c:out value="${r.content}" escapeXml="false"/>
+                            </div>
+                        </td>
                     </tr>
                 </c:if>
             </c:forEach>

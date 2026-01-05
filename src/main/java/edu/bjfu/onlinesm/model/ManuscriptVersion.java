@@ -16,6 +16,11 @@ public class ManuscriptVersion implements Serializable {
     private String fileAnonymousPath;
     private String fileOriginalPath;
     private String coverLetterPath;
+    /**
+     * Cover Letter 富文本原文（可用于重新生成 PDF、或在 PDF 转换失败时回退显示）。
+     * 对应 dbo.ManuscriptVersions.CoverLetterHtml（若库中存在该列）。
+     */
+    private String coverLetterHtml;
     private String responseLetterPath;
 
     private LocalDateTime createdAt;
@@ -76,6 +81,14 @@ public class ManuscriptVersion implements Serializable {
 
     public void setCoverLetterPath(String coverLetterPath) {
         this.coverLetterPath = coverLetterPath;
+    }
+
+    public String getCoverLetterHtml() {
+        return coverLetterHtml;
+    }
+
+    public void setCoverLetterHtml(String coverLetterHtml) {
+        this.coverLetterHtml = coverLetterHtml;
     }
 
     public String getResponseLetterPath() {

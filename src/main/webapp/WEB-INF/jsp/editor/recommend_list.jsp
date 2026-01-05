@@ -9,6 +9,12 @@
 <h2>提出建议（编辑）</h2>
 <p>当稿件状态进入 <strong>EDITOR_RECOMMENDATION</strong> 后，责任编辑可查看审稿意见汇总并向主编提交处理建议（无最终决策权）。</p>
 
+<c:if test="${param.ok == '1'}">
+    <div class="alert" style="max-width: 1100px; padding: 12px; border: 1px solid #d0f0d0; background: #f3fff3; border-radius: 10px; margin: 10px 0;">
+        已成功提交编辑建议，等待主编终审。
+    </div>
+</c:if>
+
 <c:if test="${empty readyList}">
     <p style="color:#d00;">当前没有可提交建议的稿件。</p>
 </c:if>

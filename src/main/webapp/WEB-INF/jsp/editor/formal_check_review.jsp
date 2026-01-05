@@ -17,7 +17,7 @@
         <div class="card-header">
             <div>
                 <h3 class="card-title">稿件信息</h3>
-                <p class="card-subtitle">稿件编号：<c:out value="${manuscript.manuscriptId}"/> ｜ 当前状态：<c:out value="${manuscript.currentStatus}"/></p>
+                <p class="card-subtitle">当前状态：<c:out value="${manuscript.currentStatus}"/></p>
             </div>
             <div class="toolbar" style="gap:10px;">
                 <a class="btn btn-quiet" href="${ctx}/editor/formalCheck">返回列表</a>

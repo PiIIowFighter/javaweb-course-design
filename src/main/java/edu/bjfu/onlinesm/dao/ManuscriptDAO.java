@@ -73,7 +73,7 @@ public class ManuscriptDAO {
     public Manuscript insertWithStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
         String sql = "INSERT INTO dbo.Manuscripts " +
                 "(JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
-                "VALUES (?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "SYSUTCDATETIME()" : "NULL") + ")";
+                "VALUES (?,?,?,?,?,?,?,?,?, " + (setSubmitTime ? "DATEADD(HOUR, 8, SYSUTCDATETIME())" : "NULL") + ")";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -132,8 +132,8 @@ public class ManuscriptDAO {
         String sql = "UPDATE dbo.Manuscripts SET " +
                 "JournalId = ?, Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, " +
                 "Status = ?, " +
-                (setSubmitTime ? "SubmitTime = ISNULL(SubmitTime, SYSUTCDATETIME()), " : "") +
-                "LastStatusTime = SYSUTCDATETIME() " +
+                (setSubmitTime ? "SubmitTime = ISNULL(SubmitTime, DATEADD(HOUR, 8, SYSUTCDATETIME())), " : "") +
+                "LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ManuscriptId = ?";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -453,7 +453,7 @@ public class ManuscriptDAO {
                    + "SET Status = 'FINAL_DECISION_PENDING', "
                    + "    Decision = NULL, "
                    + "    FinalDecisionTime = NULL, "
-                   + "    LastStatusTime = SYSUTCDATETIME() "
+                   + "    LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) "
                    + "WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -471,7 +471,7 @@ public class ManuscriptDAO {
                    + "SET IsWithdrawn = 1, "
                    + "    IsArchived = 1, "
                    + "    Status = 'ARCHIVED', "
-                   + "    LastStatusTime = SYSUTCDATETIME() "
+                   + "    LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) "
                    + "WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -490,7 +490,7 @@ public class ManuscriptDAO {
                 "    Decision = 'REJECT', " +
                 "    FinalDecisionTime = NULL, " +
                 "    CurrentEditorId = NULL, " +
-                "    LastStatusTime = SYSUTCDATETIME() " +
+                "    LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                 "WHERE ManuscriptId = ? AND Status = 'DESK_REVIEW_INITIAL'";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -537,7 +537,7 @@ public class ManuscriptDAO {
                     throw new IllegalStateException("不支持的 deskOp：" + deskOp);
                 }
 
-                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=NULL, CurrentEditorId=NULL, LastStatusTime=SYSUTCDATETIME() " +
+                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=NULL, CurrentEditorId=NULL, LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId=? AND IsArchived=0 AND IsWithdrawn=0";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setString(1, toStatus);
@@ -604,7 +604,7 @@ public class ManuscriptDAO {
                     throw new IllegalStateException("不支持的 finalOp：" + finalOp);
                 }
 
-                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=SYSUTCDATETIME(), CurrentEditorId=NULL, LastStatusTime=SYSUTCDATETIME() " +
+                String updateSql = "UPDATE dbo.Manuscripts SET Status=?, Decision=?, FinalDecisionTime=DATEADD(HOUR, 8, SYSUTCDATETIME()), CurrentEditorId=NULL, LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId=? AND IsArchived=0 AND IsWithdrawn=0";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setString(1, toStatus);
@@ -656,7 +656,7 @@ public class ManuscriptDAO {
                 String fromStatus = snap.status;
                 String toStatus = "ARCHIVED";
 
-                String updateSql = "UPDATE dbo.Manuscripts SET IsWithdrawn=1, IsArchived=1, Status='ARCHIVED', LastStatusTime=SYSUTCDATETIME() WHERE ManuscriptId=?";
+                String updateSql = "UPDATE dbo.Manuscripts SET IsWithdrawn=1, IsArchived=1, Status='ARCHIVED', LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId=?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setInt(1, manuscriptId);
                     ps.executeUpdate();
@@ -758,7 +758,7 @@ public class ManuscriptDAO {
                 
                 // 更新状态
                 String sql = "UPDATE dbo.Manuscripts " +
-                        "SET Status = ?, LastStatusTime = SYSUTCDATETIME() " +
+                        "SET Status = ?, LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, newStatus);
@@ -806,7 +806,7 @@ public class ManuscriptDAO {
                 }
 
                 // 更新状态
-                String updateSql = "UPDATE dbo.Manuscripts SET Status = ?, LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                String updateSql = "UPDATE dbo.Manuscripts SET Status = ?, LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setString(1, newStatus);
                     ps.setInt(2, manuscriptId);
@@ -854,7 +854,7 @@ public class ManuscriptDAO {
                 
                 // 更新状态和编辑
                 String sql = "UPDATE dbo.Manuscripts " +
-                        "SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() " +
+                        "SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, editorUserId);
@@ -897,7 +897,7 @@ public class ManuscriptDAO {
                 }
 
                 // 更新状态和编辑
-                String updateSql = "UPDATE dbo.Manuscripts SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = SYSUTCDATETIME() WHERE ManuscriptId = ?";
+                String updateSql = "UPDATE dbo.Manuscripts SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setInt(1, editorUserId);
                     ps.setInt(2, manuscriptId);
@@ -945,7 +945,7 @@ public class ManuscriptDAO {
                 
                 // 更新状态
                 String sql = "UPDATE dbo.Manuscripts " +
-                        "SET Status = ?, Decision = ?, FinalDecisionTime = SYSUTCDATETIME(), LastStatusTime = SYSUTCDATETIME() " +
+                        "SET Status = ?, Decision = ?, FinalDecisionTime = DATEADD(HOUR, 8, SYSUTCDATETIME()), LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, newStatus);
@@ -1001,7 +1001,7 @@ public class ManuscriptDAO {
             sql.append("FinalDecisionTime = NULL, ");
         }
 
-        sql.append("LastStatusTime = SYSUTCDATETIME() ");
+        sql.append("LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) ");
         sql.append("WHERE ManuscriptId = ?");
 
         try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
@@ -1038,7 +1038,7 @@ public class ManuscriptDAO {
 public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLException {
     String sql = "UPDATE dbo.Manuscripts SET " +
             "Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, JournalId = ?, " +
-            "LastStatusTime = SYSUTCDATETIME() " +
+            "LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
             "WHERE ManuscriptId = ?";
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1185,7 +1185,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
     public void incrementViewCount(int manuscriptId) throws SQLException {
         String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
                 "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
-        String upd = "UPDATE dbo.ArticleMetrics SET ViewCount = ViewCount + 1, UpdatedAt = SYSUTCDATETIME() WHERE ManuscriptId=?";
+        String upd = "UPDATE dbo.ArticleMetrics SET ViewCount = ViewCount + 1, UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId=?";
 
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -1213,7 +1213,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
     public void incrementDownloadCount(int manuscriptId) throws SQLException {
         String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
                 "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
-        String upd = "UPDATE dbo.ArticleMetrics SET DownloadCount = DownloadCount + 1, UpdatedAt = SYSUTCDATETIME() WHERE ManuscriptId=?";
+        String upd = "UPDATE dbo.ArticleMetrics SET DownloadCount = DownloadCount + 1, UpdatedAt = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId=?";
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement ps1 = conn.prepareStatement(ensure);

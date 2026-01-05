@@ -9,6 +9,7 @@ import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.mail.MailNotifications; // 添加导入
 import edu.bjfu.onlinesm.util.MenuPermissionGuard;
 import edu.bjfu.onlinesm.util.PermissionCatalog;
+import edu.bjfu.onlinesm.util.HtmlSanitizer;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 
 import javax.servlet.ServletException;
@@ -146,6 +147,17 @@ public class ReviewerServlet extends HttpServlet {
             int reviewId = Integer.parseInt(reviewIdStr);
             User current = getCurrentUser(req);
             reviewDAO.acceptInvitation(reviewId, current.getUserId());
+
+            // 通知编辑：审稿人已接受邀请（站内 + 邮件）。通知失败不应影响主流程。
+            try {
+                inAppNotifications.onReviewerResponded(reviewId, true);
+            } catch (Exception ignore) {
+            }
+            try {
+                mailNotifications.onReviewerResponded(reviewId, true);
+            } catch (Exception ignore) {
+            }
+
             resp.sendRedirect(req.getContextPath() + "/reviewer/assigned");
         } catch (NumberFormatException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "审稿记录 ID 非法。");
@@ -171,8 +183,14 @@ public class ReviewerServlet extends HttpServlet {
             return;
         }
         
-        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
-            // 如果没有拒绝理由，可以提供一个默认值
+        // 清理用户输入，避免在邮件/站内消息中出现不必要的 HTML。
+        if (rejectionReason != null) {
+            rejectionReason = rejectionReason.trim();
+            // 去掉所有 HTML 标签（拒绝理由按纯文本处理）
+            rejectionReason = rejectionReason.replaceAll("(?s)<[^>]*>", "");
+        }
+        if (rejectionReason == null || rejectionReason.isEmpty()) {
+            // 没有填写时给一个默认值，保证后续通知可读
             rejectionReason = "时间冲突，无法审稿";
         }
 
@@ -184,8 +202,9 @@ public class ReviewerServlet extends HttpServlet {
             reviewDAO.declineInvitation(reviewId, current.getUserId(), rejectionReason.trim());
 
             // 2) 通知编辑（邮件/站内）
-            mailNotifications.onReviewerDeclined(reviewId);
-            inAppNotifications.onReviewerResponded(reviewId, false);
+            // 说明：为兼容旧库（缺少 RejectionReason 列）场景，这里把拒绝理由一并传入，确保通知中可见。
+            mailNotifications.onReviewerDeclined(reviewId, rejectionReason);
+            inAppNotifications.onReviewerResponded(reviewId, false, rejectionReason);
             
             // 简化：不在Servlet中通知编辑，可以改为异步处理或日志记录
             System.out.println("审稿人 " + current.getFullName() + 
@@ -433,6 +452,11 @@ public class ReviewerServlet extends HttpServlet {
         return;
     }
 
+    // === 富文本基础消毒（防 XSS / 非预期标签）===
+    confidentialToEditor = HtmlSanitizer.sanitizeBasic(confidentialToEditor);
+    commentsToAuthor = HtmlSanitizer.sanitizeBasic(commentsToAuthor);
+    keyEvaluation = HtmlSanitizer.sanitizeBasic(keyEvaluation);
+
     try {
         int reviewId = Integer.parseInt(reviewIdStr.trim());
 
@@ -474,9 +498,9 @@ public class ReviewerServlet extends HttpServlet {
         reviewDAO.submitReviewV2(
                 reviewId,
                 current.getUserId(),
-                commentsToAuthor.trim(),          // 给作者的意见
-                confidentialToEditor.trim(),      // 给编辑的保密意见
-                keyEvaluation.trim(),             // 关键评价（可空）
+                commentsToAuthor == null ? "" : commentsToAuthor.trim(),          // 给作者的意见
+                confidentialToEditor == null ? "" : confidentialToEditor.trim(),  // 给编辑的保密意见
+                keyEvaluation == null ? "" : keyEvaluation.trim(),                // 关键评价（可空）
                 scoreOverall,                     // 总体分（服务端重算）
                 scoreOriginality,                 // 原创性评分
                 scoreSignificance,                // 重要性评分

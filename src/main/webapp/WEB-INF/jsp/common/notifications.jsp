@@ -77,7 +77,7 @@
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
                                         <c:if test="${not empty n.relatedManuscriptId}">
-                                            · <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
+                                            · <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
                                         </c:if>
                                     </div>
                                 </td>
@@ -141,7 +141,7 @@
                                         <c:out value="${n.type}"/>
                                         <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
                                         <c:if test="${not empty n.relatedManuscriptId}">
-                                            · <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
+                                            · <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}">查看稿件</a>
                                         </c:if>
                                     </div>
                                 </td>

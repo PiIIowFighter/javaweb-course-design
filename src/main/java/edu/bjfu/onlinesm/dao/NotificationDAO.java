@@ -210,7 +210,7 @@ public class NotificationDAO {
 
     public void markRead(int recipientUserId, int notificationId) throws SQLException {
         ensureTable();
-        String sql = "UPDATE dbo.Notifications SET IsRead=1, ReadAt=SYSUTCDATETIME() WHERE NotificationId=? AND RecipientUserId=?";
+        String sql = "UPDATE dbo.Notifications SET IsRead=1, ReadAt=DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE NotificationId=? AND RecipientUserId=?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, notificationId);
@@ -221,7 +221,7 @@ public class NotificationDAO {
 
     public void markAllRead(int recipientUserId) throws SQLException {
         ensureTable();
-        String sql = "UPDATE dbo.Notifications SET IsRead=1, ReadAt=SYSUTCDATETIME() WHERE RecipientUserId=? AND IsRead=0";
+        String sql = "UPDATE dbo.Notifications SET IsRead=1, ReadAt=DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE RecipientUserId=? AND IsRead=0";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, recipientUserId);

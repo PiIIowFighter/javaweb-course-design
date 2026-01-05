@@ -58,7 +58,7 @@ public final class SchemaUtil {
                 "    Action NVARCHAR(200) NOT NULL,\n" +
                 "    Detail NVARCHAR(MAX) NULL,\n" +
                 "    Ip NVARCHAR(64) NULL,\n" +
-                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME()\n" +
+                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME())\n" +
                 "  );\n" +
                 "  CREATE INDEX IX_OperationLogs_CreatedAt ON dbo.OperationLogs(CreatedAt DESC, LogId DESC);\n" +
                 "  CREATE INDEX IX_OperationLogs_ActorUsername ON dbo.OperationLogs(ActorUsername);\n" +
@@ -87,7 +87,7 @@ public final class SchemaUtil {
                 "    RelatedManuscriptId INT NULL,\n" +
                 "    IsRead BIT NOT NULL DEFAULT 0,\n" +
                 "    ReadAt DATETIME2(0) NULL,\n" +
-                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),\n" +
+                "    CreatedAt DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),\n" +
                 "    CONSTRAINT FK_Notifications_Recipient FOREIGN KEY(RecipientUserId) REFERENCES dbo.Users(UserId)\n" +
                 "  );\n" +
                 "END\n" +

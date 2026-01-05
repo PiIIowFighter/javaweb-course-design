@@ -88,8 +88,8 @@
                 </td>
             </c:if>
             <td>
-                <!-- 逻辑优化：统一详情入口（审稿邀请/撤回/催审等功能已合并至详情页） -->
-                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers">查看详细信息</a>
+                <!-- 编辑专用详情页：稿件详情/作者/推荐审稿人/审稿记录 + 添加审稿人入口 -->
+                <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/withEditor/detail?manuscriptId=${m.manuscriptId}">查看详细信息</a>
 
                 <!-- 主编 / 编辑部管理员可以对单条稿件发送“催办编辑”提醒 -->
                 <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF' || sessionScope.currentUser.roleCode == 'EO_ADMIN'}">

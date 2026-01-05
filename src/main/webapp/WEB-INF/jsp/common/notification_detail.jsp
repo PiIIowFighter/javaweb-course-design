@@ -27,17 +27,6 @@
             <a class="btn" href="${ctx}/notifications?box=${box}">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i> 返回列表
             </a>
-
-            <c:if test="${isRecipient and (not n.read)}">
-                <form action="${ctx}/notifications/markRead" method="post" style="margin:0;">
-                    <input type="hidden" name="id" value="${n.notificationId}"/>
-                    <input type="hidden" name="box" value="${box}"/>
-                    <input type="hidden" name="redirect" value="view"/>
-                    <button class="btn" type="submit">
-                        <i class="bi bi-check2" aria-hidden="true"></i> 标记已阅
-                    </button>
-                </form>
-            </c:if>
         </div>
     </div>
 
@@ -50,7 +39,7 @@
             <c:out value="${n.type}"/>
             <c:if test="${not empty n.category}"> · <c:out value="${n.category}"/></c:if>
             <c:if test="${not empty n.relatedManuscriptId}">
-                · <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}" style="overflow-wrap:anywhere; word-break:break-word;">查看关联稿件</a>
+                · <a href="${ctx}/editor/recommend/detail?manuscriptId=${n.relatedManuscriptId}" style="overflow-wrap:anywhere; word-break:break-word;">查看关联稿件</a>
             </c:if>
         </div>
 

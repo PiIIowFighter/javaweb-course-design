@@ -83,6 +83,14 @@ public class InAppNotifications {
 
     /** 审稿人接受/拒绝：通知编辑（主责编辑）。 */
     public void onReviewerResponded(int reviewId, boolean accepted) {
+        onReviewerResponded(reviewId, accepted, null);
+    }
+
+    /**
+     * 审稿人接受/拒绝：通知编辑（主责编辑）。
+     * @param rejectionReasonOverride 如果是拒绝操作且希望在旧库（缺少 RejectionReason 列）也能显示理由，可通过此参数传入。
+     */
+    public void onReviewerResponded(int reviewId, boolean accepted, String rejectionReasonOverride) {
         try {
             Review r = reviewDAO.findById(reviewId);
             if (r == null) return;
@@ -96,6 +104,15 @@ public class InAppNotifications {
             String title = accepted ? "审稿邀请已接受" : "审稿邀请被拒绝";
             String content = "审稿人：" + (reviewer == null ? "" : safe(reviewer.getUsername())) + (accepted ? " 已接受" : " 已拒绝") + "审稿邀请。";
             if (m != null) content += "\n稿件标题：" + safe(m.getTitle());
+
+            // 关键：拒绝邀请时，把拒绝理由写进站内消息，方便编辑在“消息/通知”中直接看到。
+            if (!accepted) {
+                String reason = (rejectionReasonOverride != null ? rejectionReasonOverride : r.getRejectionReason());
+                if (reason != null) reason = reason.trim();
+                if (reason != null && !reason.isEmpty()) {
+                    content += "\n拒绝理由：" + reason;
+                }
+            }
             notificationDAO.create(editor.getUserId(), null, "SYSTEM", "REVIEW_RESPONSE", title, content, r.getManuscriptId());
         } catch (Exception ignore) {
         }

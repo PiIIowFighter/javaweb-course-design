@@ -54,14 +54,12 @@
             </c:otherwise>
         </c:choose>
 
-        <div class="alert">本文页面展示公开信息。若需查看全文与附件，请登录后在稿件详情页中访问。</div>
-
         <div class="actions">
-            <a class="btn-primary" style="text-decoration:none;" href="${ctx}/auth/login">
-                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                登录后查看全文
+            <a class="btn-primary" style="text-decoration:none;" href="${ctx}/articles/download?id=${article.manuscriptId}">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                下载论文
             </a>
-            <a style="text-decoration:none;" href="${ctx}/articles?type=latest">
+            <a class="btn" style="text-decoration:none;" href="${ctx}/articles?type=latest">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i>
                 返回列表
             </a>

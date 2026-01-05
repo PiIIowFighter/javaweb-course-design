@@ -40,7 +40,7 @@ public class AuthServlet extends HttpServlet {
     // === Register email OTP (simple session-based) ===
     private static final String SESSION_REG_OTP_CODE = "REG_OTP_CODE";
     private static final String SESSION_REG_OTP_EMAIL = "REG_OTP_EMAIL";
-    private static final String SESSION_REG_OTP_EXPIRES_AT = "REG_OTP_EXPIRES_AT"; // long millis
+    private static final String SESSION_REG_OTP_EXPIRES_AT = "REG_OTP_EXPIRES_AT"; // long 
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

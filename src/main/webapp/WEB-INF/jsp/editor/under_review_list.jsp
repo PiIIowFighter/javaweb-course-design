@@ -48,7 +48,7 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/manuscripts/detail?id=${m.manuscriptId}#inviteReviewers">查看详细信息</a>
+                    <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/underReview/detail?manuscriptId=${m.manuscriptId}">查看详细信息</a>
                 </td>
             </tr>
         </c:forEach>
