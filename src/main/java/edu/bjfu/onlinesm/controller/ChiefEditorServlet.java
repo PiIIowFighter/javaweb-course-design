@@ -51,7 +51,12 @@ public class ChiefEditorServlet extends EditorServlet {
                     handleDeskList(req, resp, current);
                     return;
                 case "/editor/toAssign":
-                    handleToAssignList(req, resp, current);
+                    String pi = req.getPathInfo();
+                    if (pi != null && pi.startsWith("/pickEditor")) {
+                        handlePickEditorPage(req, resp, current);
+                    } else {
+                        handleToAssignList(req, resp, current);
+                    }
                     return;
                 case "/editor/reviewers":
                     handleReviewerPoolPage(req, resp, current);

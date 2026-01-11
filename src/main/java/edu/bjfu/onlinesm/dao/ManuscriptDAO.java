@@ -676,6 +676,63 @@ public class ManuscriptDAO {
     }
 
     /**
+     * 主编案头退稿（带退稿理由 + 写入状态历史 + 写入终审字段）。
+     *
+     * 需求：
+     * 1) 退稿理由必须保存，作者侧可见；
+     * 2) 退稿属于流程性决策，因此同时写入 Decision / FinalDecisionTime，便于统计；
+     * 3) 记录状态历史，便于追踪审稿流程节点。
+     */
+    public void deskRejectWithReason(int manuscriptId, int changedBy, String rejectReason) throws SQLException {
+        if (rejectReason != null) rejectReason = rejectReason.trim();
+        if (rejectReason == null || rejectReason.isEmpty()) {
+            throw new SQLException("退稿理由不能为空。");
+        }
+
+        try (Connection conn = DbUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 获取当前状态
+                String oldStatus = null;
+                String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(querySql)) {
+                    ps.setInt(1, manuscriptId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) oldStatus = rs.getString("Status");
+                    }
+                }
+
+                // 更新稿件状态 + 终审字段
+                String updateSql = "UPDATE dbo.Manuscripts " +
+                        "SET Status='REJECTED', Decision='REJECT', FinalDecisionTime=DATEADD(HOUR, 8, SYSUTCDATETIME()), " +
+                        "    CurrentEditorId=NULL, LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
+                        "WHERE ManuscriptId=?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setInt(1, manuscriptId);
+                    ps.executeUpdate();
+                }
+
+                // 写入状态历史（作者侧可见）
+                insertStatusHistory(conn, manuscriptId, oldStatus, "REJECTED", "DESK_REJECT", changedBy, rejectReason);
+
+                // 记录阶段完成时间戳（以 oldStatus 为准）
+                if (oldStatus != null) {
+                    stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    
+
+    /**
      * 主编特殊权限：更改案头初审决定。
      * - deskAccept  -> Status=TO_ASSIGN
      * - deskReject  -> Status=REJECTED (Decision='REJECT')

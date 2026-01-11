@@ -630,6 +630,21 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("authorMessages", authorMessages);
         req.setAttribute("authorMessageUserMap", authorMessageUserMap);
 
+        // ✅ 案头退稿理由：作者侧可见（来自状态历史 Remark）
+        try {
+            List<ManuscriptStatusHistory> history = statusHistoryDAO.findByManuscriptId(manuscriptId);
+            String deskRejectReason = null;
+            for (int i = history.size() - 1; i >= 0; i--) {
+                ManuscriptStatusHistory h = history.get(i);
+                if (h != null && "DESK_REJECT".equalsIgnoreCase(h.getEvent())) {
+                    deskRejectReason = h.getRemark();
+                    break;
+                }
+            }
+            req.setAttribute("deskRejectReason", deskRejectReason);
+        } catch (Exception ignore) {
+        }
+
         req.getRequestDispatcher("/WEB-INF/jsp/manuscript/detail.jsp").forward(req, resp);
     }
     

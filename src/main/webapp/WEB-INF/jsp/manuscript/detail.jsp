@@ -89,6 +89,14 @@
                         <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${formalCheckResult.feedback}"/></div>
                     </div>
                 </c:if>
+
+                <!-- 作者视角：案头退稿后，展示主编填写的退稿理由 -->
+                <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'REJECTED' and not empty deskRejectReason}">
+                    <div class="alert" style="border-color: rgba(239, 68, 68, 0.55); background: rgba(239, 68, 68, 0.08); margin-top:12px;">
+                        <div class="kicker" style="margin-bottom:6px;">退稿理由</div>
+                        <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${deskRejectReason}"/></div>
+                    </div>
+                </c:if>
             </div>
         </div>
 

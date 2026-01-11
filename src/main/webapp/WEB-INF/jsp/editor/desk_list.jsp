@@ -75,11 +75,12 @@
                     <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
                         <form method="post" action="${pageContext.request.contextPath}/editor/desk">
                             <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
+                            <input type="hidden" name="rejectReason" value=""/>
                             <button type="submit" name="op" value="deskAccept">
                                 送外审 / 指派编辑
                             </button>
                             <button type="submit" name="op" value="deskReject"
-                                    onclick="return confirm('确认直接退稿？该操作将把稿件状态标记为 REJECTED。');">
+                                    onclick="return deskReject(this);">
                                 退稿
                             </button>
                         </form>
@@ -94,6 +95,30 @@
 </c:if>
 
 
+
+
+<script>
+  function deskReject(btn) {
+    try {
+      var form = btn && btn.closest ? btn.closest('form') : null;
+      if (!form) return false;
+
+      var reason = window.prompt('请输入退稿理由（作者可见）：', '');
+      if (reason === null) return false; // cancel
+      reason = (reason || '').trim();
+      if (!reason) {
+        alert('退稿理由不能为空。');
+        return false;
+      }
+      var input = form.querySelector('input[name="rejectReason"]');
+      if (input) input.value = reason;
+
+      return confirm('确认退稿？退稿理由将同步给作者，并记录在状态历史中。');
+    } catch (e) {
+      return confirm('确认退稿？');
+    }
+  }
+</script>
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

@@ -38,13 +38,16 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.File;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
@@ -260,7 +263,6 @@ public abstract class EditorServlet extends HttpServlet {
 
         // 若直接访问审查页，且仍为 SUBMITTED，则自动推进到 FORMAL_CHECK（与“开始审查”按钮效果一致）
         if ("SUBMITTED".equalsIgnoreCase(manuscript.getCurrentStatus())) {
-            manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
             manuscript.setCurrentStatus("FORMAL_CHECK");
         }
 
@@ -393,11 +395,175 @@ public abstract class EditorServlet extends HttpServlet {
         if ("EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
             List<User> editors = userDAO.findByRoleCode("EDITOR");
             req.setAttribute("editorList", editors);
+
+            // ✅ 智能推荐：按“稿件领域/关键词”与“编辑研究方向”匹配，生成每篇稿件的推荐编辑列表
+            Map<Integer, List<User>> recommendedEditorsMap = new HashMap<>();
+            for (Manuscript m : toAssignList) {
+                recommendedEditorsMap.put(m.getManuscriptId(), rankEditorsByResearchArea(editors, m));
+            }
+            req.setAttribute("recommendedEditorsMap", recommendedEditorsMap);
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/editor/to_assign_list.jsp")
                 .forward(req, resp);
     }
+
+
+
+    /**
+     * 主编：指派责任编辑（高级筛选页面）
+     * URL: /editor/toAssign/pickEditor?manuscriptId=...
+     *
+     * 功能：
+     *  - 按编辑研究方向（ResearchArea）筛选
+     *  - 支持关键词搜索（姓名/用户名/邮箱/单位/研究方向）
+     *  - 支持“仅显示与稿件领域匹配”的过滤（基于 token 交集与子串加权）
+     *  - 支持分页（复用 PaginationUtil，避免编辑数量过多页面放不下）
+     */
+    protected void handlePickEditorPage(HttpServletRequest req, HttpServletResponse resp, User current)
+            throws ServletException, IOException, SQLException {
+
+        if (current == null || !"EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "仅主编可使用该功能。");
+            return;
+        }
+
+        String idStr = req.getParameter("manuscriptId");
+        if (idStr == null || idStr.trim().isEmpty()) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少参数 manuscriptId。");
+            return;
+        }
+
+        int manuscriptId;
+        try {
+            manuscriptId = Integer.parseInt(idStr.trim());
+        } catch (NumberFormatException nfe) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "manuscriptId 必须为整数。");
+            return;
+        }
+
+        Manuscript manuscript = manuscriptDAO.findById(manuscriptId);
+        if (manuscript == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到稿件。");
+            return;
+        }
+
+        // --- 读取筛选条件 ---
+        String q = req.getParameter("q");
+        if (q != null) q = q.trim();
+        String areaParam = req.getParameter("area");
+        String area = (areaParam == null) ? null : areaParam.trim();
+
+        // 初次进入（未传 area）时，默认用稿件 SubjectArea 作为筛选提示/默认值
+        boolean autoFillArea = false;
+        if (areaParam == null) {
+            String msArea = manuscript.getSubjectArea();
+            if (msArea != null && !msArea.trim().isEmpty()) {
+                area = msArea.trim();
+                autoFillArea = true;
+            }
+        }
+        if (area == null) area = "";
+
+        String mo = req.getParameter("matchOnly");
+        boolean matchOnly = "1".equals(mo) || "true".equalsIgnoreCase(mo) || "on".equalsIgnoreCase(mo);
+
+        // --- 准备稿件 token ---
+        String msArea = manuscript.getSubjectArea();
+        String msKw = manuscript.getKeywords();
+        Set<String> msTokens = tokenizeKeywords((msArea == null ? "" : msArea) + " " + (msKw == null ? "" : msKw));
+
+        // --- 拉取编辑并过滤 ---
+        List<User> editors = userDAO.findByRoleCode("EDITOR");
+        List<User> filtered = new ArrayList<>();
+        Map<Integer, Integer> scoreMap = new HashMap<>();
+
+        String qLower = (q == null) ? "" : q.toLowerCase();
+        String areaLower = area.toLowerCase();
+
+        for (User e : editors) {
+            if (e == null) continue;
+
+            // 默认只显示 ACTIVE（兼容旧数据：Status 为空也放行）
+            String st = e.getStatus();
+            if (st != null && !"ACTIVE".equalsIgnoreCase(st)) continue;
+
+            // keyword match
+            if (q != null && !q.isEmpty()) {
+                if (!containsIgnoreCase(e.getFullName(), qLower)
+                        && !containsIgnoreCase(e.getUsername(), qLower)
+                        && !containsIgnoreCase(e.getEmail(), qLower)
+                        && !containsIgnoreCase(e.getAffiliation(), qLower)
+                        && !containsIgnoreCase(e.getResearchArea(), qLower)) {
+                    continue;
+                }
+            }
+
+            // area filter: ResearchArea 包含（或 token 命中）
+            if (!area.isEmpty()) {
+                String ra = e.getResearchArea();
+                String raLower = (ra == null) ? "" : ra.toLowerCase();
+                if (!raLower.contains(areaLower)) {
+                    // token fallback：area 被拆成 token，任意 token 命中 ResearchArea 即认为通过
+                    Set<String> areaTokens = tokenizeKeywords(area);
+                    if (!areaTokens.isEmpty()) {
+                        boolean hit = false;
+                        for (String t : areaTokens) {
+                            if (t == null) continue;
+                            String tl = t.toLowerCase();
+                            if (!tl.isEmpty() && raLower.contains(tl)) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                        if (!hit) continue;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
+            int score = editorMatchScore(e, manuscript.getSubjectArea(), msTokens);
+            scoreMap.put(e.getUserId(), score);
+
+            if (matchOnly && score <= 0) continue;
+
+            filtered.add(e);
+        }
+
+        // --- 排序：先按匹配分（降序），再按是否填写研究方向，再按 UserId ---
+        filtered.sort((a, b) -> {
+            int sa = scoreMap.getOrDefault(a.getUserId(), 0);
+            int sb = scoreMap.getOrDefault(b.getUserId(), 0);
+            if (sa != sb) return Integer.compare(sb, sa);
+
+            boolean ha = a.getResearchArea() != null && !a.getResearchArea().trim().isEmpty();
+            boolean hb = b.getResearchArea() != null && !b.getResearchArea().trim().isEmpty();
+            if (ha != hb) return hb ? 1 : -1;
+
+            return Integer.compare(a.getUserId(), b.getUserId());
+        });
+
+        // --- 分页 ---
+        PaginationUtil.apply(req, filtered, "editors");
+
+        req.setAttribute("manuscript", manuscript);
+        req.setAttribute("filterQ", q == null ? "" : q);
+        req.setAttribute("filterArea", area);
+        req.setAttribute("filterMatchOnly", matchOnly);
+        req.setAttribute("autoFillArea", autoFillArea);
+        req.setAttribute("editorScoreMap", scoreMap);
+
+        req.getRequestDispatcher("/WEB-INF/jsp/editor/pick_editor.jsp")
+                .forward(req, resp);
+    }
+
+    private boolean containsIgnoreCase(String s, String qLower) {
+        if (qLower == null || qLower.isEmpty()) return true;
+        if (s == null) return false;
+        return s.toLowerCase().contains(qLower);
+    }
+
 
     protected void handleWithEditorList(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
@@ -758,7 +924,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
 
         // 返回“审稿人库选择页”链接（同样携带 backTo）
         String selectUrl = req.getContextPath() + "/editor/review/select?manuscriptId=" + manuscriptId;
-        selectUrl = appendQueryParam(selectUrl, "backTo", URLEncoder.encode(backToUrl, StandardCharsets.UTF_8));
+        selectUrl = appendQueryParam(selectUrl, "backTo", URLEncoder.encode(backToUrl, "UTF-8"));
 
         req.setAttribute("manuscript", m);
         req.setAttribute("backToUrl", backToUrl);
@@ -1041,19 +1207,19 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
                 ? backTo.trim()
                 : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
         if (invitedCount == 0) {
-            String err = URLEncoder.encode("所选审稿人均不可邀请（可能已分配或已拒绝）。", StandardCharsets.UTF_8);
+            String err = URLEncoder.encode("所选审稿人均不可邀请（可能已分配或已拒绝）。", "UTF-8");
             resp.sendRedirect(appendQueryParam(base, "inviteErr", err));
             return;
         }
 
-        String msg = URLEncoder.encode("已向所选审稿人发送邀请（" + invitedCount + "人）。", StandardCharsets.UTF_8);
+        String msg = URLEncoder.encode("已向所选审稿人发送邀请（" + invitedCount + "人）。", "UTF-8");
         String target = appendQueryParam(base, "inviteMsg", msg);
 
         if (!skippedDecline.isEmpty()) {
-            String err = URLEncoder.encode("部分审稿人已拒绝邀请（已拒绝：" + skippedDecline.size() + "人），已自动跳过。", StandardCharsets.UTF_8);
+            String err = URLEncoder.encode("部分审稿人已拒绝邀请（已拒绝：" + skippedDecline.size() + "人），已自动跳过。","UTF-8");
             target = appendQueryParam(target, "inviteErr", err);
         } else if (!skippedAssigned.isEmpty()) {
-            String err = URLEncoder.encode("部分审稿人已被分配/已评审（已跳过：" + skippedAssigned.size() + "人）。", StandardCharsets.UTF_8);
+            String err = URLEncoder.encode("部分审稿人已被分配/已评审（已跳过：" + skippedAssigned.size() + "人）。", "UTF-8");
             target = appendQueryParam(target, "inviteErr", err);
         }
 
@@ -1101,7 +1267,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         String base = (backTo != null && !backTo.trim().isEmpty())
                 ? backTo.trim()
                 : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
-        String msg = URLEncoder.encode("用户名/初始密码/邮箱均不能为空。", StandardCharsets.UTF_8);
+        String msg = URLEncoder.encode("用户名/初始密码/邮箱均不能为空。", "UTF-8");
         resp.sendRedirect(appendQueryParam(base, "inviteErr", msg));
         return;
     }
@@ -1128,7 +1294,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         String base = (backTo != null && !backTo.trim().isEmpty())
                 ? backTo.trim()
                 : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
-        String msg = URLEncoder.encode("用户名已存在，请更换用户名后再邀请。", StandardCharsets.UTF_8);
+        String msg = URLEncoder.encode("用户名已存在，请更换用户名后再邀请。", "UTF-8");
         resp.sendRedirect(appendQueryParam(base, "inviteErr", msg));
         return;
     }
@@ -1164,7 +1330,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
     String base = (backTo != null && !backTo.trim().isEmpty())
             ? backTo.trim()
             : (req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId + "#inviteReviewers");
-    String msg = URLEncoder.encode("外部审稿人账号已创建，并已发送邮件邀请。", StandardCharsets.UTF_8);
+    String msg = URLEncoder.encode("外部审稿人账号已创建，并已发送邮件邀请。", "UTF-8");
     resp.sendRedirect(appendQueryParam(base, "inviteMsg", msg));
 }
 
@@ -1544,7 +1710,9 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
         switch (op) {
             case "start":
-                manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
+                // SUBMITTED/RETURNED -> FORMAL_CHECK
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "FORMAL_CHECK", "FORMAL_CHECK_START", current.getUserId(), "编辑部开始进行形式审查");
+                inAppNotifications.onFormalCheckStarted(manuscriptId);
                 resp.sendRedirect(req.getContextPath() + "/manuscripts/detail?id=" + manuscriptId);
                 return;
             case "autoCheck":
@@ -1560,13 +1728,18 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
                 handleReturnForRevision(req, resp, current, manuscriptId);
                 return;
             case "approve":
-                manuscriptDAO.updateStatus(manuscriptId, "DESK_REVIEW_INITIAL");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "DESK_REVIEW_INITIAL", "FORMAL_CHECK_PASS", current.getUserId(), "形式审查通过");
+                inAppNotifications.onFormalCheckPassed(manuscriptId);
                 break;
             case "return":
-                manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
                 String issues = req.getParameter("issues");
+                if (issues != null) issues = issues.trim();
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "RETURNED", "FORMAL_CHECK_RETURN", current.getUserId(),
+                        (issues == null || issues.isEmpty()) ? "形式审查未通过，已退回修改" : issues);
+
                 String guideUrl = req.getParameter("guideUrl");
                 mailNotifications.onFormalCheckReturn(manuscriptId, issues, guideUrl);
+                inAppNotifications.onFormalCheckReturn(manuscriptId, issues);
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -1811,14 +1984,17 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
             formalCheckResultDAO.save(result);
 
-            manuscriptDAO.updateStatus(manuscriptId, "FORMAL_CHECK");
 
             if ("PASS".equals(checkResult)) {
-                manuscriptDAO.updateStatus(manuscriptId, "DESK_REVIEW_INITIAL");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "DESK_REVIEW_INITIAL", "FORMAL_CHECK_PASS", current.getUserId(),
+                        "形式审查通过");
+                inAppNotifications.onFormalCheckPassed(manuscriptId);
             } else if ("FAIL".equals(checkResult)) {
-                manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
+                manuscriptDAO.updateStatusWithHistory(manuscriptId, "RETURNED", "FORMAL_CHECK_RETURN", current.getUserId(),
+                        feedback);
                 String guideUrl = req.getContextPath() + "/static/guides/format_guide.pdf";
                 mailNotifications.onFormalCheckReturn(manuscriptId, feedback, guideUrl);
+                inAppNotifications.onFormalCheckReturn(manuscriptId, feedback);
             }
 
             jsonResponse.put("success", true);
@@ -1876,13 +2052,14 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
             formalCheckResultDAO.save(result);
 
-            manuscriptDAO.updateStatus(manuscriptId, "RETURNED");
+            manuscriptDAO.updateStatusWithHistory(manuscriptId, "RETURNED", "FORMAL_CHECK_RETURN", current.getUserId(), feedback);
 
             String guideUrl = req.getContextPath() + "/static/guides/format_guide.pdf";
             mailNotifications.onFormalCheckReturn(manuscriptId, feedback, guideUrl);
+            inAppNotifications.onFormalCheckReturn(manuscriptId, feedback);
 
             jsonResponse.put("success", true);
-            jsonResponse.put("message", "已退回修改，邮件已发送给作者");
+            jsonResponse.put("message", "已退回修改，邮件已发送给作者，站内消息已同步发送");
             
         } catch (Exception e) {
             jsonResponse.put("success", false);
@@ -1910,12 +2087,25 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
             case "deskAccept":
                 // DESK_REVIEW_INITIAL -> TO_ASSIGN
                 manuscriptDAO.updateStatusWithHistory(manuscriptId, "TO_ASSIGN", "DESK_REVIEW_ACCEPT", current.getUserId(), "案头初审通过");
+
+                // ✅ 站内消息：通知作者“已通过案头初审”
+                inAppNotifications.onDeskAccepted(manuscriptId);
                 break;
             case "deskReject":
-                // DESK_REVIEW_INITIAL -> REJECTED
-                manuscriptDAO.deskReject(manuscriptId);
-                // deskReject方法内部已经记录了历史，这里不需要再记录
-                manuscriptDAO.updateFinalDecision(manuscriptId, "REJECT", "REJECTED");
+                // DESK_REVIEW_INITIAL -> REJECTED（需要退稿理由，作者可见）
+                String rejectReason = req.getParameter("rejectReason");
+                if (rejectReason == null || rejectReason.trim().isEmpty()) {
+                    req.getSession().setAttribute("errorMsg", "退稿理由不能为空。请填写退稿理由后再提交。");
+                    resp.sendRedirect(req.getContextPath() + "/editor/desk");
+                    return;
+                }
+                rejectReason = rejectReason.trim();
+
+                manuscriptDAO.deskRejectWithReason(manuscriptId, current.getUserId(), rejectReason);
+
+                // ✅ 站内消息 + 邮件：通知作者退稿原因
+                inAppNotifications.onDeskRejected(manuscriptId, rejectReason);
+                mailNotifications.onDeskRejected(manuscriptId, rejectReason);
                 break;
             default:
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的操作类型：" + op);
@@ -1944,8 +2134,11 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         int manuscriptId = Integer.parseInt(idStr);
         int editorId = Integer.parseInt(editorIdStr);
 
-        // 1）保持原有逻辑：更新稿件当前编辑、状态 -> WITH_EDITOR
-        manuscriptDAO.assignEditor(manuscriptId, editorId);
+        // 1）更新稿件当前编辑、状态 -> WITH_EDITOR，并写入状态历史
+        String historyRemark = (chiefComment == null || chiefComment.trim().isEmpty())
+                ? "主编指派责任编辑"
+                : ("主编指派责任编辑：" + chiefComment.trim());
+        manuscriptDAO.assignEditorWithHistory(manuscriptId, editorId, current.getUserId(), historyRemark);
 
         // 2）新增逻辑：记录“主编指派编辑”的建议
         assignmentDAO.createAssignment(
@@ -1958,6 +2151,9 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         // 主编指派编辑：站内 + 邮件通知（不影响主流程）
         inAppNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
         mailNotifications.onEditorAssigned(manuscriptId, current, editorId, chiefComment);
+
+        // ✅ 同步通知作者：稿件已分配责任编辑
+        inAppNotifications.onEditorAssignedToAuthor(manuscriptId, current, editorId);
 
         resp.sendRedirect(req.getContextPath() + "/editor/toAssign");
     }
@@ -2385,7 +2581,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
     }
 
     // 追加 cancelMsg（注意处理 #fragment）
-    String encoded = URLEncoder.encode(msg, StandardCharsets.UTF_8);
+    String encoded = URLEncoder.encode(msg, "UTF-8");
     int hash = target.indexOf('#');
     String frag = "";
     if (hash >= 0) {
@@ -2663,13 +2859,93 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
     /**
      * 若请求中存在某个参数（非空），则把它透传到目标 URL 上。
+     * @throws UnsupportedEncodingException 
      */
-    protected String appendQueryParamIfPresent(HttpServletRequest req, String url, String key) {
+    protected String appendQueryParamIfPresent(HttpServletRequest req, String url, String key) throws UnsupportedEncodingException {
         String v = req.getParameter(key);
         if (v == null || v.trim().isEmpty()) return url;
-        String enc = URLEncoder.encode(v, StandardCharsets.UTF_8);
+        String enc = URLEncoder.encode(v, "UTF-8");
         return appendQueryParam(url, key, enc);
     }
+
+
+    // =========================
+    // 编辑指派：按领域/关键词匹配的推荐排序
+    // =========================
+    private List<User> rankEditorsByResearchArea(List<User> editors, Manuscript manuscript) {
+        if (editors == null) return Collections.emptyList();
+        if (manuscript == null) return new ArrayList<>(editors);
+
+        String msArea = manuscript.getSubjectArea();
+        String msKeywords = manuscript.getKeywords();
+        Set<String> msTokens = tokenizeKeywords((msArea == null ? "" : msArea) + " " + (msKeywords == null ? "" : msKeywords));
+
+        List<User> copy = new ArrayList<>(editors);
+        copy.sort((a, b) -> {
+            int sa = editorMatchScore(a, msArea, msTokens);
+            int sb = editorMatchScore(b, msArea, msTokens);
+            if (sa != sb) return Integer.compare(sb, sa); // 降序
+            boolean ha = a != null && a.getResearchArea() != null && !a.getResearchArea().trim().isEmpty();
+            boolean hb = b != null && b.getResearchArea() != null && !b.getResearchArea().trim().isEmpty();
+            if (ha != hb) return hb ? 1 : -1;
+            String ua = a == null ? "" : String.valueOf(a.getUsername());
+            String ub = b == null ? "" : String.valueOf(b.getUsername());
+            return ua.compareToIgnoreCase(ub);
+        });
+        return copy;
+    }
+
+    private int editorMatchScore(User editor, String manuscriptSubjectArea, Set<String> manuscriptTokens) {
+        if (editor == null) return 0;
+        String ra = editor.getResearchArea();
+        if (ra == null) ra = "";
+        ra = ra.trim();
+        if (ra.isEmpty()) return 0;
+
+        int score = 0;
+
+        // token 交集
+        Set<String> eTokens = tokenizeKeywords(ra);
+        if (manuscriptTokens != null && !manuscriptTokens.isEmpty()) {
+            for (String t : eTokens) {
+                if (manuscriptTokens.contains(t)) score++;
+            }
+        }
+
+        // 额外：subjectArea 与 researchArea 互为子串时加权
+        String ms = manuscriptSubjectArea == null ? "" : manuscriptSubjectArea.trim();
+        if (!ms.isEmpty()) {
+            String msLower = ms.toLowerCase();
+            String raLower = ra.toLowerCase();
+            if (msLower.contains(raLower) || raLower.contains(msLower)) score += 2;
+        }
+
+        return score;
+    }
+
+    private Set<String> tokenizeKeywords(String s) {
+        if (s == null) return Collections.emptySet();
+        String normalized = s.toLowerCase()
+                .replaceAll("[\u3000\t\r\n]+", " ")
+                .replaceAll("[，、；;|/\\\\]+", " ")   // 注意这里是 /\\\\
+                .replaceAll("[,]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (normalized.isEmpty()) return Collections.emptySet();
+
+        String[] parts = normalized.split(" ");
+        Set<String> set = new LinkedHashSet<>();
+        for (String p : parts) {
+            if (p == null) continue;
+            String t = p.trim();
+            if (t.isEmpty()) continue;
+            if (t.length() == 1 && t.charAt(0) <= 127) continue; // 过滤英文单字符
+            set.add(t);
+        }
+        return set;
+    }
+
 
 
 

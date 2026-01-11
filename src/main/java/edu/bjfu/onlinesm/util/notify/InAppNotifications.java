@@ -50,6 +50,119 @@ public class InAppNotifications {
         } catch (Exception ignore) {
         }
     }
+    /** 形式审查开始：给作者发通知。 */
+    public void onFormalCheckStarted(int manuscriptId) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null) return;
+            String title = "形式审查已开始";
+            String content = "编辑部已开始对您的稿件进行形式审查，请耐心等待处理结果。";
+            if (m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            notificationDAO.create(author.getUserId(), null, "SYSTEM", "FORMAL_CHECK", title, content, manuscriptId);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /** 形式审查通过：给作者发通知。 */
+    public void onFormalCheckPassed(int manuscriptId) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null) return;
+            String title = "形式审查已通过";
+            String content = "您的稿件已通过形式审查，已进入编辑部案头初审阶段。";
+            if (m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            notificationDAO.create(author.getUserId(), null, "SYSTEM", "FORMAL_CHECK", title, content, manuscriptId);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /** 主编案头初审通过：给作者发通知。 */
+    public void onDeskAccepted(int manuscriptId) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null) return;
+            String title = "案头初审通过";
+            String content = "您的稿件已通过主编案头初审，编辑部将为您分配责任编辑并进入外审流程。";
+            if (m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            notificationDAO.create(author.getUserId(), null, "SYSTEM", "DESK_REVIEW", title, content, manuscriptId);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /** 主编案头退稿：给作者发通知（含退稿理由）。 */
+    public void onDeskRejected(int manuscriptId, String rejectReason) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null) return;
+            String title = "案头退稿通知";
+            String content = "很遗憾，您的稿件未通过主编案头初审，已做退稿处理。";
+            if (m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            if (rejectReason != null && !rejectReason.trim().isEmpty()) {
+                content += "\n退稿理由：" + rejectReason.trim();
+            }
+            notificationDAO.create(author.getUserId(), null, "SYSTEM", "DESK_REVIEW", title, content, manuscriptId);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /** 主编指派责任编辑：同步通知作者。 */
+    public void onEditorAssignedToAuthor(int manuscriptId, User chief, int editorId) {
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null) return;
+            User editor = userDAO.findById(editorId);
+
+            String title = "稿件已分配责任编辑";
+            String content = "您的稿件已分配责任编辑处理，后续流程将由责任编辑推进。";
+            if (m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            if (editor != null) {
+                String editorName = editor.getFullName() != null ? editor.getFullName() : editor.getUsername();
+                content += "\n责任编辑：" + safe(editorName);
+            }
+            notificationDAO.create(author.getUserId(), chief == null ? null : chief.getUserId(), "SYSTEM", "ASSIGN", title, content, manuscriptId);
+        } catch (Exception ignore) {
+        }
+    }
+
+    /** 审稿意见提交：通知责任编辑/主编。 */
+    public void onReviewSubmitted(int reviewId) {
+        try {
+            Review r = reviewDAO.findById(reviewId);
+            if (r == null) return;
+
+            Manuscript m = manuscriptDAO.findById(r.getManuscriptId());
+            Integer editorId = manuscriptDAO.findCurrentEditorId(r.getManuscriptId());
+            if (editorId == null) return;
+
+            User editor = userDAO.findById(editorId);
+            if (editor == null) return;
+
+            User reviewer = userDAO.findById(r.getReviewerId());
+
+            String title = "收到新的外审意见";
+            String content = "一位审稿人已提交外审意见，请及时查看并推进后续处理。";
+            if (m != null && m.getTitle() != null) content += "\n稿件标题：" + safe(m.getTitle());
+            if (reviewer != null) content += "\n审稿人：" + safe(reviewer.getUsername());
+            if (r.getRecommendation() != null && !r.getRecommendation().trim().isEmpty()) {
+                content += "\n推荐结论：" + safe(r.getRecommendation().trim());
+            }
+
+            notificationDAO.create(editor.getUserId(), null, "SYSTEM", "REVIEW_SUBMITTED", title, content, r.getManuscriptId());
+        } catch (Exception ignore) {
+        }
+    }
+
+    
 
     /** 邀请审稿人：给审稿人发通知。 */
     public void onReviewerInvited(int reviewId) {

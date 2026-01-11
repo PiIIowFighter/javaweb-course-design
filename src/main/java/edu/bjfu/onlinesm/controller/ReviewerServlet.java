@@ -523,6 +523,13 @@ public class ReviewerServlet extends HttpServlet {
                 scorePracticality,                // 实用性
                 recommendation.trim());           // 推荐结论
 
+
+        // ✅ 站内消息：通知责任编辑（或主编）该稿件的外审意见已提交
+        try {
+            inAppNotifications.onReviewSubmitted(reviewId);
+        } catch (Exception ignore) {
+        }
+
         req.getSession().setAttribute("successMsg", "评审意见已成功提交！");
         resp.sendRedirect(req.getContextPath() + "/reviewer/history");
 

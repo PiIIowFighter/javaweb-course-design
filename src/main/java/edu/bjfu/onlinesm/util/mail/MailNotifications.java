@@ -8,8 +8,6 @@ import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.UploadPathUtil;
 import java.io.IOException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -62,6 +60,26 @@ public class MailNotifications {
             log("退回修改邮件发送失败", e);
         }
     }
+    /** 主编案头退稿：通知作者（含退稿理由）。 */
+    public void onDeskRejected(int manuscriptId, String rejectReason) {
+        if (!cfg.enabled()) return;
+        try {
+            Manuscript m = manuscriptDAO.findById(manuscriptId);
+            if (m == null) return;
+            User author = userDAO.findById(m.getSubmitterId());
+            if (author == null || author.getEmail() == null || author.getEmail().trim().isEmpty()) return;
+
+            String code = edu.bjfu.onlinesm.util.ManuscriptCodeUtil.code(manuscriptId);
+
+            MailMessage msg = MailTemplates.deskRejectToAuthor(cfg, author, m, code, rejectReason)
+                    .addTo(author.getEmail());
+            mailer.send(msg);
+        } catch (Exception e) {
+            log("案头退稿邮件发送失败", e);
+        }
+    }
+
+    
 
     /** 编辑邀请审稿人：给审稿人发"审稿邀请邮件"。 */
     public void onReviewerInvited(int reviewId) {
@@ -133,102 +151,37 @@ public class MailNotifications {
     public void onReviewerDeclined(int reviewId, String rejectionReasonOverride) {
         if (!cfg.enabled()) return;
         try {
-            // 获取审稿记录
             Review review = reviewDAO.findById(reviewId);
-            if (review == null) {
-                System.out.println("[MailNotifications] Review not found: " + reviewId);
-                return;
-            }
-            
-            // 获取稿件信息
+            if (review == null) return;
+
             Manuscript manuscript = manuscriptDAO.findById(review.getManuscriptId());
-            if (manuscript == null) {
-                System.out.println("[MailNotifications] Manuscript not found: " + review.getManuscriptId());
-                return;
-            }
-            
-            // 获取编辑信息
+            if (manuscript == null) return;
+
+            // 找到负责编辑
             User editor = null;
             Integer editorId = manuscriptDAO.findCurrentEditorId(manuscript.getManuscriptId());
-            if (editorId != null) {
-                editor = userDAO.findById(editorId);
-            }
-            
-            // 获取审稿人信息
+            if (editorId != null) editor = userDAO.findById(editorId);
+            if (editor == null) editor = findEditorForManuscript(manuscript.getManuscriptId());
+
+            if (editor == null || editor.getEmail() == null || editor.getEmail().trim().isEmpty()) return;
+
             User reviewer = userDAO.findById(review.getReviewerId());
-            
-            // 如果编辑不存在，尝试找到系统管理员或任何编辑
-            if (editor == null) {
-                editor = findEditorForManuscript(manuscript.getManuscriptId());
-            }
-            
-            if (editor == null || editor.getEmail() == null || editor.getEmail().trim().isEmpty()) {
-                System.out.println("[MailNotifications] Editor email not found for review: " + reviewId);
-                return;
-            }
-            
-            String subject = "审稿人拒绝审稿邀请通知 - 稿件 #" + manuscript.getManuscriptId();
-            
-            StringBuilder content = new StringBuilder();
-            content.append("<html><body>");
-            content.append("<h3>审稿人拒绝审稿邀请</h3>");
-            content.append("<p>尊敬的编辑：</p>");
-            content.append("<p>审稿人已拒绝审稿邀请，详情如下：</p>");
-            
-            content.append("<table border='0' cellpadding='5' style='border-collapse: collapse;'>");
-            content.append("<tr><td style='font-weight: bold;'>稿件编号：</td><td>").append(manuscript.getManuscriptId()).append("</td></tr>");
-            content.append("<tr><td style='font-weight: bold;'>稿件标题：</td><td>").append(manuscript.getTitle()).append("</td></tr>");
-            content.append("<tr><td style='font-weight: bold;'>审稿人：</td><td>");
-            if (reviewer != null) {
-                content.append(reviewer.getFullName()).append(" (ID: ").append(reviewer.getUserId()).append(")");
-            } else {
-                content.append("ID: ").append(review.getReviewerId());
-            }
-            content.append("</td></tr>");
-            content.append("<tr><td style='font-weight: bold;'>拒绝理由：</td><td>");
+
             String reason = rejectionReasonOverride;
-            if (reason == null || reason.trim().isEmpty()) {
-                reason = review.getRejectionReason();
-            }
-            if (reason != null && !reason.trim().isEmpty()) {
-                content.append(reason.trim());
-            } else {
-                content.append("未填写拒绝理由");
-            }
-            content.append("</td></tr>");
-            content.append("<tr><td style='font-weight: bold;'>拒绝时间：</td><td>");
-            if (review.getDeclinedAt() != null) {
-                content.append(review.getDeclinedAt());
-            } else {
-                content.append(new Timestamp(System.currentTimeMillis()).toLocalDateTime());
-            }
-            content.append("</td></tr>");
-            content.append("</table>");
-            
-            content.append("<br/><p>请及时为该稿件分配其他审稿人。</p>");
-            content.append("<p>系统自动发送，请勿回复。</p>");
-            content.append("</body></html>");
-            
-            // 创建邮件消息 - 使用正确的MailMessage构造方式
-            MailMessage msg = new MailMessage()
-                    .subject(subject)
-                    .htmlBody(content.toString())
+            if (reason == null || reason.trim().isEmpty()) reason = review.getRejectionReason();
+
+            MailMessage msg = MailTemplates.reviewerDeclinedToEditor(cfg, editor, reviewer, manuscript, reason)
                     .addTo(editor.getEmail());
-            
-            // 发送邮件
+
             mailer.send(msg);
-            
-            System.out.println("[MailNotifications] Declined invitation email sent to editor: " + editor.getEmail());
-            
         } catch (Exception e) {
-            System.err.println("[MailNotifications] Failed to send declined invitation email: " + e.getMessage());
-            e.printStackTrace();
-            // 不抛出异常，避免影响主流程
+            log("审稿人拒绝邀请邮件发送失败", e);
         }
     }
-    
+
     /**
      * 查找稿件的编辑（如果稿件没有指定编辑，则查找系统管理员或任何编辑）
+     （如果稿件没有指定编辑，则查找系统管理员或任何编辑）
      */
     private User findEditorForManuscript(int manuscriptId) {
         try {
