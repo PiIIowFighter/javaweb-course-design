@@ -6,13 +6,12 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>邀请外部审稿人（创建账号并邮件邀请）</h2>
-
-<p style="color: var(--muted); max-width: 980px;">
-    当审稿人不在现有审稿人库中时，可在此创建审稿人账号，并向其发送账号信息及本稿件的审稿邀请邮件。
-</p>
-
-<div class="stack" style="flex-direction: row; gap: 10px; margin-top: var(--space-4);">
+<div class="page-head">
+        <h2 class="page-title">邀请外部审稿人（创建账号并邮件邀请）</h2>
+        <div class="chips">
+            <span class="chip">当审稿人不在现有审稿人库中时，可在此创建审稿人账号，并向其发送账号信息及本稿件的审稿邀请邮件。</span>
+        </div>
+    </div><div class="stack" style="flex-direction: row; gap: 10px; margin-top: var(--space-4);">
     <c:if test="${not empty backToUrl}">
         <a class="btn btn-quiet" href="${backToUrl}">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>

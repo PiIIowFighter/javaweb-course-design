@@ -4,19 +4,13 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>卷期 / 专刊管理</h2>
-
-<p>
-    期刊：<b><c:out value="${journal.name}"/></b>
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="${pageContext.request.contextPath}/admin/journals/list">返回期刊列表</a>
-</p>
-
-<p style="margin: 12px 0;">
-    <a href="${pageContext.request.contextPath}/admin/journals/issues/edit?journalId=${journal.journalId}">➕ 新增期次/专刊</a>
-</p>
-
-<c:if test="${empty issues}">
+<div class="page-head">
+        <h2 class="page-title">卷期 / 专刊管理</h2>
+        <div class="chips">
+            <span class="chip">期刊：<b><c:out value="${journal.name}"/></b> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="${pageContext.request.contextPath}/admin/journals/list">返回期刊列表</a></span>
+            <span class="chip"><a href="${pageContext.request.contextPath}/admin/journals/issues/edit?journalId=${journal.journalId}">➕ 新增期次/专刊</a></span>
+        </div>
+    </div><c:if test="${empty issues}">
     <p>暂无期次/专刊记录。</p>
 </c:if>
 
@@ -103,4 +97,7 @@
     </div>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

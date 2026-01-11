@@ -5,9 +5,12 @@
 <div class="card" style="max-width: 720px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">创建账号</h2>
-            <p class="card-subtitle">注册成功后账号状态将直接为 ACTIVE，可立即登录。</p>
+            <div class="page-head">
+        <h2 class="page-title">创建账号</h2>
+        <div class="chips">
+            <span class="chip">注册成功后账号状态将直接为 ACTIVE，可立即登录。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

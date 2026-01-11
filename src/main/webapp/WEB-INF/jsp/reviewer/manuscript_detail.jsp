@@ -6,9 +6,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>稿件详情（审稿人匿名视图）</h2>
-
-<c:if test="${empty review || empty manuscript}">
+<div class="page-head">
+        <h2 class="page-title">稿件详情（审稿人匿名视图）</h2>
+    </div><c:if test="${empty review || empty manuscript}">
     <p>未找到审稿记录或稿件信息。</p>
 </c:if>
 

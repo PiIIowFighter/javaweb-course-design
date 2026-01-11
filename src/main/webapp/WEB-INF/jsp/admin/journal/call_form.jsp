@@ -5,20 +5,15 @@
 
 <link href="${pageContext.request.contextPath}/static/css/quill.snow.css" rel="stylesheet"/>
 
-<h2>
-    <c:choose>
+<div class="page-head">
+        <h2 class="page-title"><c:choose>
         <c:when test="${call != null && call.callId != null}">编辑征稿通知</c:when>
         <c:otherwise>新增征稿通知</c:otherwise>
-    </c:choose>
-</h2>
-
-<p>
-    期刊：<b><c:out value="${journal.name}"/></b>
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="${pageContext.request.contextPath}/admin/journals/calls/list?journalId=${journal.journalId}">返回列表</a>
-</p>
-
-<form method="post" action="${pageContext.request.contextPath}/admin/journals/calls/save"
+    </c:choose></h2>
+        <div class="chips">
+            <span class="chip">期刊：<b><c:out value="${journal.name}"/></b> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="${pageContext.request.contextPath}/admin/journals/calls/list?journalId=${journal.journalId}">返回列表</a></span>
+        </div>
+    </div><form method="post" action="${pageContext.request.contextPath}/admin/journals/calls/save"
       enctype="multipart/form-data" style="max-width: 980px;" onsubmit="return syncCallEditor();">
     <input type="hidden" name="journalId" value="${journal.journalId}"/>
     <input type="hidden" name="callId" value="${call.callId}"/>

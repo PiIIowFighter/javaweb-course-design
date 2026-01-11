@@ -4,9 +4,9 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>编辑委员会成员编辑</h2>
-
-<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<div class="page-head">
+        <h2 class="page-title">编辑委员会成员编辑</h2>
+    </div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <c:set var="resolvedJournalId" value="${not empty member.journalId ? member.journalId : (not empty primaryJournal ? primaryJournal.journalId : '')}"/>
 

@@ -27,9 +27,6 @@ import java.util.concurrent.ThreadLocalRandom;
  *  POST /auth/login      执行登录
  *  POST /auth/register   执行注册
  *  POST /auth/reset      执行密码重置（当前仅给出提示信息）
- *
- * 本实现已经使用真正的 SQL Server 数据库（通过 UserDAO），
- * 不再依赖 SimpleUserStore 内存假数据。
  */
 @WebServlet(name = "AuthServlet", urlPatterns = {"/auth/*"})
 public class AuthServlet extends HttpServlet {

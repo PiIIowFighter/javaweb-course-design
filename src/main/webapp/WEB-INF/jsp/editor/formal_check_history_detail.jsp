@@ -6,9 +6,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>审查记录详情</h2>
-
-<c:if test="${empty result}">
+<div class="page-head">
+        <h2 class="page-title">审查记录详情</h2>
+    </div><c:if test="${empty result}">
     <p>未找到该审查记录。</p>
 </c:if>
 
@@ -74,4 +74,7 @@
     </div>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

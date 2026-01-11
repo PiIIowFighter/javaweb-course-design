@@ -21,6 +21,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 审稿人端页面路由控制器。
@@ -328,7 +329,7 @@ public class ReviewerServlet extends HttpServlet {
         try {
             List<Review> list =
                     reviewDAO.findByReviewerAndStatus(current.getUserId(), "UNDER_REVIEW");
-            req.setAttribute("reviews", list);
+            PaginationUtil.apply(req, list, "reviews");
             req.getRequestDispatcher("/WEB-INF/jsp/reviewer/assigned_list.jsp")
                     .forward(req, resp);
         } catch (SQLException e) {
@@ -347,7 +348,7 @@ public class ReviewerServlet extends HttpServlet {
         try {
         List<Review> list =
          reviewDAO.findHistoryByReviewer(current.getUserId());
-        req.setAttribute("reviews", list);
+        PaginationUtil.apply(req, list, "reviews");
         req.getRequestDispatcher("/WEB-INF/jsp/reviewer/review_history.jsp")
          .forward(req, resp);
         } catch (SQLException e) {

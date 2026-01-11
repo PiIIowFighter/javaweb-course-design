@@ -9,8 +9,9 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">通知中心</h2>
-            <div style="margin-top:10px;">
+            <div class="page-head">
+        <h2 class="page-title">通知中心</h2>
+    </div><div style="margin-top:10px;">
                 <a class="btn" href="${ctx}/notifications?box=inbox" style="${box ne 'sent' ? 'font-weight:700;' : ''}">收件箱</a>
                 <a class="btn" href="${ctx}/notifications?box=sent" style="${box eq 'sent' ? 'font-weight:700;' : ''}">已发送</a>
             </div>

@@ -4,14 +4,13 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>用户列表</h2>
-<p>此页面展示系统用户信息，并支持按角色筛选、编辑、删除、禁用等操作。</p>
-
-<p>
-    <a href="${pageContext.request.contextPath}/admin/users/add">+ 新增用户</a>
-</p>
-
-<form action="${pageContext.request.contextPath}/admin/users/list" method="get" style="margin: 12px 0;">
+<div class="page-head">
+        <h2 class="page-title">用户列表</h2>
+        <div class="chips">
+            <span class="chip">此页面展示系统用户信息，并支持按角色筛选、编辑、删除、禁用等操作。</span>
+            <span class="chip"><a href="${pageContext.request.contextPath}/admin/users/add">+ 新增用户</a></span>
+        </div>
+    </div><form action="${pageContext.request.contextPath}/admin/users/list" method="get" style="margin: 12px 0;">
     <label>按角色筛选：
         <select name="roleCode">
             <option value="ALL" <c:if test="${selectedRole == 'ALL'}">selected</c:if>>全部</option>
@@ -97,4 +96,7 @@
 </table>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

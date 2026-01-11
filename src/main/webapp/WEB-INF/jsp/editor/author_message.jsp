@@ -8,8 +8,9 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <div style="display:flex; align-items:center; justify-content:space-between; max-width: 980px;">
-    <h2 style="margin:0;">发送消息给作者</h2>
-    <a class="btn" href="${ctx}/editor/authorComm">返回沟通列表</a>
+    <div class="page-head">
+        <h2 class="page-title">发送消息给作者</h2>
+    </div><a class="btn" href="${ctx}/editor/authorComm">返回沟通列表</a>
 </div>
 
 <c:if test="${empty manuscript}">

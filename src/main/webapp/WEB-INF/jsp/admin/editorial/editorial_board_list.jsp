@@ -4,10 +4,12 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>编辑委员会管理</h2>
-<p>维护期刊的主编、副主编、编委等成员信息。</p>
-
-<c:set var="ctx" value="${pageContext.request.contextPath}"/>
+<div class="page-head">
+        <h2 class="page-title">编辑委员会管理</h2>
+        <div class="chips">
+            <span class="chip">维护期刊的主编、副主编、编委等成员信息。</span>
+        </div>
+    </div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <div style="margin: 12px 0;">
     <div style="margin-bottom: 8px;">
@@ -67,4 +69,7 @@
     </table>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

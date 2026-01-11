@@ -10,9 +10,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">新闻列表</h2>
-            <p class="card-subtitle">仅展示已发布新闻/公告。</p>
+            <div class="page-head">
+        <h2 class="page-title">新闻列表</h2>
+        <div class="chips">
+            <span class="chip">仅展示已发布新闻/公告。</span>
         </div>
+    </div></div>
         <div>
             <a class="btn" style="text-decoration:none;" href="${ctx}/about/news">
                 <i class="bi bi-arrow-left"></i> 返回关于期刊
@@ -48,4 +51,7 @@
     </c:if>
 </div>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

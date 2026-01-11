@@ -18,9 +18,10 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
- * 权限管理（按“菜单入口”粒度，用户级）。
+ * 权限管理。
  *
  * 说明：
  *  - 超级管理员/系统管理员（或被授予 ADMIN_PERMISSIONS 的用户）可为任意用户勾选入口权限；
@@ -107,7 +108,7 @@ public class PermissionAdminServlet extends HttpServlet {
             java.util.Map<String, Boolean> lockedMap = new java.util.HashMap<>();
             for (String k : lockedKeys) { lockedMap.put(k, Boolean.TRUE); }
             req.setAttribute("lockedMap", lockedMap);
-            req.setAttribute("permissions", PermissionCatalog.all());
+            PaginationUtil.apply(req, PermissionCatalog.all(), "permissions");
             req.setAttribute("success", req.getParameter("success"));
 
             req.getRequestDispatcher("/WEB-INF/jsp/admin/permission/permission_list.jsp").forward(req, resp);

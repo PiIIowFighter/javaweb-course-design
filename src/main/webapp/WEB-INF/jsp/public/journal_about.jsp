@@ -9,9 +9,12 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">关于期刊 (About the journal)</h2>
-            <p class="card-subtitle">期刊介绍、编委会信息与基本指标</p>
+            <div class="page-head">
+        <h2 class="page-title">关于期刊 (About the journal)</h2>
+        <div class="chips">
+            <span class="chip">期刊介绍、编委会信息与基本指标</span>
         </div>
+    </div></div>
     </div>
 
     <h3>期刊介绍</h3>

@@ -7,11 +7,12 @@
 <div class="card" style="max-width: 720px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">手动催审</h2>
-            <p class="card-subtitle">
-                向审稿人发送一封自定义内容的催审邮件。
-            </p>
+            <div class="page-head">
+        <h2 class="page-title">手动催审</h2>
+        <div class="chips">
+            <span class="chip">向审稿人发送一封自定义内容的催审邮件。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

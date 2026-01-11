@@ -8,115 +8,240 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="roleCode" value="${sessionScope.currentUser.roleCode}"/>
 
-<h2>稿件详情</h2>
+<div class="page-head">
+    <div>
+        <h2 class="page-title">稿件详情</h2>
+        <div class="muted" style="margin-top:4px;">稿件编号：MS<c:out value="${manuscript.manuscriptId}"/></div>
+    </div>
+</div>
 
 <c:if test="${empty manuscript}">
-    <p>未找到稿件记录。</p>
+    <div class="card"><div class="card-content">未找到稿件记录。</div></div>
 </c:if>
 
 <c:if test="${not empty manuscript}">
-<c:set var="backToUrl" value="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}#inviteReviewers"/>
+    <c:set var="backToUrl" value="${ctx}/manuscripts/detail?id=${manuscript.manuscriptId}#inviteReviewers"/>
 
-<c:if test="${not empty param.cancelMsg}">
-    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
-        <c:out value="${param.cancelMsg}"/>
-    </div>
-</c:if>
+    <c:if test="${not empty param.cancelMsg}">
+        <div class="alert" style="border-color:#b7eb8f; background:#f6ffed; color:#135200;">
+            <c:out value="${param.cancelMsg}"/>
+        </div>
+    </c:if>
 
-<c:if test="${not empty param.inviteMsg}">
-    <div style="margin:10px 0; padding:10px 12px; border:1px solid #b7eb8f; background:#f6ffed; color:#135200; border-radius:6px;">
-        <c:out value="${param.inviteMsg}"/>
-    </div>
-</c:if>
-<c:if test="${not empty param.inviteErr}">
-    <div style="margin:10px 0; padding:10px 12px; border:1px solid #ffa39e; background:#fff1f0; color:#a8071a; border-radius:6px;">
-        <c:out value="${param.inviteErr}"/>
-    </div>
-</c:if>
-    <table border="1" cellpadding="4" cellspacing="0" style="background:#fff;">
-        <tr>
-            <th>标题</th>
-            <td><c:out value="${manuscript.title}"/></td>
-        </tr>
-        <tr>
-            <th>期刊ID</th>
-            <td><c:out value="${manuscript.journalId}"/></td>
-        </tr>
-<tr>
-            <th>项目资助情况</th>
-            <td><c:out value="${manuscript.fundingInfo}"/></td>
-        </tr>
-        <tr>
-            <th>关键词</th>
-            <td><c:out value="${manuscript.subjectArea}"/></td>
-        </tr>
-        <tr>
-            <th>摘要（HTML）</th>
-            <td>
-                                    <div class="ql-snow richtext-view">
+    <c:if test="${not empty param.inviteMsg}">
+        <div class="alert" style="border-color:#b7eb8f; background:#f6ffed; color:#135200;">
+            <c:out value="${param.inviteMsg}"/>
+        </div>
+    </c:if>
+    <c:if test="${not empty param.inviteErr}">
+        <div class="alert" style="border-color:#ffa39e; background:#fff1f0; color:#a8071a;">
+            <c:out value="${param.inviteErr}"/>
+        </div>
+    </c:if>
+
+    <div class="stack">
+        <!-- 基本信息（不展示期刊ID，改为展示期刊名称） -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title" style="margin:0;"><c:out value="${manuscript.title}"/></h3>
+                    <div class="muted" style="margin-top:6px;">
+                        期刊：<c:out value="${not empty journal ? journal.name : '—'}"/>
+                        <span style="margin:0 10px;">|</span>
+                        状态：<c:out value="${manuscript.currentStatus}"/>
+                        <span style="margin:0 10px;">|</span>
+                        决策：<c:out value="${empty manuscript.decision ? '—' : manuscript.decision}"/>
+                    </div>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="grid grid-3">
+                    <div>
+                        <div class="kicker">提交时间</div>
+                        <div><c:out value="${empty manuscript.submitTime ? '—' : manuscript.submitTime}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">终审时间</div>
+                        <div><c:out value="${empty manuscript.finalDecisionTime ? '—' : manuscript.finalDecisionTime}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">研究方向</div>
+                        <div><c:out value="${empty manuscript.subjectArea ? '—' : manuscript.subjectArea}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">关键词</div>
+                        <div><c:out value="${empty manuscript.keywords ? '—' : manuscript.keywords}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">资助信息</div>
+                        <div><c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">语言</div>
+                        <div><c:out value="${empty manuscript.language ? '—' : manuscript.language}"/></div>
+                    </div>
+                </div>
+
+                <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
+                <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
+                    <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08); margin-top:12px;">
+                        <div class="kicker" style="margin-bottom:6px;">退回修改意见</div>
+                        <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${formalCheckResult.feedback}"/></div>
+                    </div>
+                </c:if>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- 摘要 -->
+            <div class="card">
+                <div class="card-header"><div class="card-title">摘要</div></div>
+                <div class="card-content">
+                    <div class="ql-snow richtext-view">
                         <div class="ql-editor">
                             <c:out value="${manuscript.abstractText}" escapeXml="false"/>
                         </div>
                     </div>
-            </td>
-        </tr>
-        <tr>
-            <th>当前状态</th>
-            <td><c:out value="${manuscript.currentStatus}"/></td>
-        </tr>
+                </div>
+            </div>
 
-        <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
-        <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
-            <tr>
-                <th>退回修改意见</th>
-                <td>
-                    <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
-                        <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${formalCheckResult.feedback}"/></div>
+            <!-- 文件与附件 -->
+            <div class="card">
+                <div class="card-header"><div class="card-title">文件与附件</div></div>
+                <div class="card-content">
+                    <c:choose>
+                        <c:when test="${not empty currentVersion}">
+                            <ul style="margin:0; padding-left:18px;">
+                                <c:if test="${not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath}">
+                                    <li><a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">Manuscript 预览/下载</a></li>
+                                </c:if>
+                                <c:if test="${not empty currentVersion.fileAnonymousPath}">
+                                    <li><a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=anonymous">匿名稿 预览/下载</a></li>
+                                </c:if>
+
+                                <c:if test="${sessionScope.currentUser.roleCode != 'REVIEWER'}">
+                                    <c:if test="${not empty currentVersion.coverLetterPath}">
+                                        <li><a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">Cover Letter 预览/下载</a></li>
+                                    </c:if>
+                                    <c:if test="${not empty currentVersion.responseLetterPath}">
+                                        <li><a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=response">Response Letter 预览/下载</a></li>
+                                    </c:if>
+
+                                    <c:if test="${not empty coverAttachments}">
+                                        <li>
+                                            <div class="kicker" style="margin:8px 0 6px;">Cover Letter 附件</div>
+                                            <ul style="margin:0; padding-left:18px;">
+                                                <c:forEach var="f" items="${coverAttachments}">
+                                                    <li>
+                                                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=attachment&fileId=${f.fileId}">
+                                                            <i class="bi bi-paperclip"></i> <c:out value="${f.fileName}"/>
+                                                        </a>
+                                                    </li>
+                                                </c:forEach>
+                                            </ul>
+                                        </li>
+                                    </c:if>
+                                </c:if>
+                            </ul>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="muted">暂无版本文件</div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+
+        <!-- 作者信息 + 投稿人信息 -->
+        <div class="card">
+            <div class="card-header"><div class="card-title">作者信息</div></div>
+            <div class="card-content">
+                <c:choose>
+                    <c:when test="${not empty authors}">
+                        <table class="table" style="width:100%;">
+                            <thead>
+                            <tr>
+                                <th style="width:60px;">#</th>
+                                <th>姓名</th>
+                                <th>机构</th>
+                                <th>学位</th>
+                                <th>职称</th>
+                                <th>职务</th>
+                                <th>邮箱</th>
+                                <th style="width:100px;">通讯作者</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <c:forEach var="a" items="${authors}" varStatus="st">
+                                <tr>
+                                    <td><c:out value="${st.index + 1}"/></td>
+                                    <td><c:out value="${a.fullName}"/></td>
+                                    <td><c:out value="${a.affiliation}"/></td>
+                                    <td><c:out value="${a.degree}"/></td>
+                                    <td><c:out value="${a.title}"/></td>
+                                    <td><c:out value="${a.position}"/></td>
+                                    <td><c:out value="${a.email}"/></td>
+                                    <td><c:out value="${a.corresponding ? '是' : '否'}"/></td>
+                                </tr>
+                            </c:forEach>
+                            </tbody>
+                        </table>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="muted">未录入作者信息</div>
+                    </c:otherwise>
+                </c:choose>
+
+                <div style="margin-top:12px;" class="divider"></div>
+                <div class="grid grid-3" style="margin-top:12px;">
+                    <div>
+                        <div class="kicker">投稿人</div>
+                        <div><c:out value="${not empty submitter ? submitter.fullName : '—'}"/></div>
                     </div>
-                </td>
-            </tr>
-        </c:if>
-        <tr>
-            <th>提交时间</th>
-            <td><c:out value="${manuscript.submitTime}"/></td>
-        </tr>
-        <tr>
-            <th>决策</th>
-            <td><c:out value="${manuscript.decision}"/></td>
-        </tr>
-        <tr>
-            <th>附件</th>
-            <td>
-                <c:if test="${not empty currentVersion}">
-                    <!-- 手稿：审稿人默认查看匿名稿（由 /files/preview 内部根据角色选择文件路径） -->
-                    <c:if test="${not empty currentVersion.fileOriginalPath or not empty currentVersion.fileAnonymousPath}">
-                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=manuscript">Manuscript 预览/下载</a>
-                    </c:if>
+                    <div>
+                        <div class="kicker">用户名</div>
+                        <div><c:out value="${not empty submitter ? submitter.username : '—'}"/></div>
+                    </div>
+                    <div>
+                        <div class="kicker">邮箱</div>
+                        <div><c:out value="${not empty submitter ? submitter.email : '—'}"/></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- 匿名稿：若系统已生成匿名稿，可额外提供入口（工作人员也可用来核查匿名处理是否到位） -->
-                    <c:if test="${not empty currentVersion.fileAnonymousPath}">
-                        <span style="margin-left:12px;"></span>
-                        <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=anonymous">匿名稿 预览/下载</a>
-                    </c:if>
+        <!-- 完整字段（除期刊ID） -->
+        <div class="card">
+            <div class="card-header"><div class="card-title">完整字段（除期刊ID）</div></div>
+            <div class="card-content">
+                <div class="grid grid-3">
+                    <div><div class="kicker">投稿人ID</div><div><c:out value="${empty manuscript.submitterId ? '—' : manuscript.submitterId}"/></div></div>
+                    <div><div class="kicker">责任编辑ID</div><div><c:out value="${empty manuscript.editorId ? '—' : manuscript.editorId}"/></div></div>
+                    <div><div class="kicker">作者列表</div><div><c:out value="${empty manuscript.authorList ? '—' : manuscript.authorList}"/></div></div>
 
-                    <!-- Cover/Response：审稿人通常不应看到 -->
-                    <c:if test="${sessionScope.currentUser.roleCode != 'REVIEWER'}">
-                        <c:if test="${not empty currentVersion.coverLetterPath}">
-                            <span style="margin-left:12px;"></span>
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=cover">Cover Letter 预览/下载</a>
-                        </c:if>
-                        <c:if test="${not empty currentVersion.responseLetterPath}">
-                            <span style="margin-left:12px;"></span>
-                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=response">Response Letter 预览/下载</a>
-                        </c:if>
-                    </c:if>
-                </c:if>
-                <c:if test="${empty currentVersion}">
-                    暂无版本文件
-                </c:if>
-            </td>
-        </tr>
-    </table>
+                    <div><div class="kicker">DOI</div><div><c:out value="${empty manuscript.doi ? '—' : manuscript.doi}"/></div></div>
+                    <div><div class="kicker">文章类型</div><div><c:out value="${empty manuscript.articleType ? '—' : manuscript.articleType}"/></div></div>
+                    <div><div class="kicker">分类号</div><div><c:out value="${empty manuscript.classificationNo ? '—' : manuscript.classificationNo}"/></div></div>
+
+                    <div><div class="kicker">CNKI URL</div><div><c:out value="${empty manuscript.cnkiUrl ? '—' : manuscript.cnkiUrl}"/></div></div>
+                    <div><div class="kicker">出版时间</div><div><c:out value="${empty manuscript.publishedAt ? '—' : manuscript.publishedAt}"/></div></div>
+                    <div><div class="kicker">卷/期</div><div><c:out value="${empty manuscript.volume ? '—' : manuscript.volume}"/> / <c:out value="${empty manuscript.issue ? '—' : manuscript.issue}"/></div></div>
+
+                    <div><div class="kicker">页码范围</div><div><c:out value="${empty manuscript.pageRange ? '—' : manuscript.pageRange}"/></div></div>
+                    <div><div class="kicker">出版年份</div><div><c:out value="${empty manuscript.publishYear ? '—' : manuscript.publishYear}"/></div></div>
+                    <div><div class="kicker">ISSN</div><div><c:out value="${empty manuscript.journalIssn ? '—' : manuscript.journalIssn}"/></div></div>
+
+                    <div><div class="kicker">浏览量</div><div><c:out value="${empty manuscript.viewCount ? '—' : manuscript.viewCount}"/></div></div>
+                    <div><div class="kicker">下载量</div><div><c:out value="${empty manuscript.downloadCount ? '—' : manuscript.downloadCount}"/></div></div>
+                    <div><div class="kicker">被引量</div><div><c:out value="${empty manuscript.citationCount ? '—' : manuscript.citationCount}"/></div></div>
+
+                    <div><div class="kicker">热度分</div><div><c:out value="${empty manuscript.popularityScore ? '—' : manuscript.popularityScore}"/></div></div>
+                    <div><div class="kicker">期刊名称(元数据)</div><div><c:out value="${empty manuscript.journalName ? '—' : manuscript.journalName}"/></div></div>
+                    <div><div class="kicker">当前状态</div><div><c:out value="${empty manuscript.currentStatus ? '—' : manuscript.currentStatus}"/></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 形式审查界面 -->
     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN' and (manuscript.currentStatus == 'SUBMITTED' or manuscript.currentStatus == 'FORMAL_CHECK')}">

@@ -5,20 +5,15 @@
 
 <link href="${pageContext.request.contextPath}/static/css/quill.snow.css" rel="stylesheet"/>
 
-<h2>
-    <c:choose>
+<div class="page-head">
+        <h2 class="page-title"><c:choose>
         <c:when test="${page != null && page.pageId != null}">编辑页面</c:when>
         <c:otherwise>新增页面</c:otherwise>
-    </c:choose>
-</h2>
-
-<p>
-    期刊：<b><c:out value="${journal.name}"/></b>
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="${pageContext.request.contextPath}/admin/journals/pages/list?journalId=${journal.journalId}">返回页面列表</a>
-</p>
-
-<form method="post" action="${pageContext.request.contextPath}/admin/journals/pages/save"
+    </c:choose></h2>
+        <div class="chips">
+            <span class="chip">期刊：<b><c:out value="${journal.name}"/></b> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="${pageContext.request.contextPath}/admin/journals/pages/list?journalId=${journal.journalId}">返回页面列表</a></span>
+        </div>
+    </div><form method="post" action="${pageContext.request.contextPath}/admin/journals/pages/save"
       enctype="multipart/form-data" style="max-width: 980px;" onsubmit="return syncPageEditor();">
     <input type="hidden" name="journalId" value="${journal.journalId}"/>
     <input type="hidden" name="pageId" value="${page.pageId}"/>

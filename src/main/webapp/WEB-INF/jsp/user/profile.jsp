@@ -8,9 +8,12 @@
 <div class="card" style="max-width: 880px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">个人信息</h2>
-            <p class="card-subtitle">更新邮箱、资料与附件。信息会用于投稿与审稿流程中的联系与识别。</p>
+            <div class="page-head">
+        <h2 class="page-title">个人信息</h2>
+        <div class="chips">
+            <span class="chip">更新邮箱、资料与附件。信息会用于投稿与审稿流程中的联系与识别。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

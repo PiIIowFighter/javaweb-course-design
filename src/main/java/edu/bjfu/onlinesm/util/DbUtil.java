@@ -8,13 +8,10 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 /**
- * 简单的 JDBC 工具类：
+ * JDBC 工具类：
  *  - 从 classpath 下的 db.properties 加载 SQL Server 配置；
  *  - 注册 JDBC 驱动；
  *  - 提供获取 Connection 的静态方法。
- *
- * 在 MyEclipse / Tomcat 中部署时，只要 db.properties 位于 WEB-INF/classes 下，
- * 本工具类即可正常读取。
  */
 public final class DbUtil {
 
@@ -55,7 +52,6 @@ public final class DbUtil {
 
     /**
      * 获取一个新的数据库连接。
-     * 调用者使用后需要自行关闭：
      * try (Connection conn = DbUtil.getConnection()) { ... }
      */
     public static Connection getConnection() throws SQLException {

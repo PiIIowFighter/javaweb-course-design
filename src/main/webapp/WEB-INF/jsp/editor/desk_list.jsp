@@ -4,10 +4,12 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>案头稿件列表（FORMAL_CHECK 之后、待进一步处理）</h2>
-<p>此页面展示已经通过形式审查、进入编辑部案头阶段（状态：DESK_REVIEW_INITIAL）的稿件。</p>
-
-<!--
+<div class="page-head">
+        <h2 class="page-title">案头稿件列表（FORMAL_CHECK 之后、待进一步处理）</h2>
+        <div class="chips">
+            <span class="chip">此页面展示已经通过形式审查、进入编辑部案头阶段（状态：DESK_REVIEW_INITIAL）的稿件。</span>
+        </div>
+    </div><!--
   响应式优化：
   - 表格外层使用 table-wrap，窄屏可横向滚动；
   - 操作区按钮使用 flex-wrap，避免挤压导致大片空白/错位。
@@ -91,4 +93,7 @@
 </div>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

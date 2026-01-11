@@ -3,19 +3,13 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>征稿通知管理</h2>
-
-<p>
-    期刊：<b><c:out value="${journal.name}"/></b>
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="${pageContext.request.contextPath}/admin/journals/list">返回期刊列表</a>
-</p>
-
-<p style="margin: 12px 0;">
-    <a href="${pageContext.request.contextPath}/admin/journals/calls/edit?journalId=${journal.journalId}">➕ 新增征稿通知</a>
-</p>
-
-<c:if test="${empty calls}">
+<div class="page-head">
+        <h2 class="page-title">征稿通知管理</h2>
+        <div class="chips">
+            <span class="chip">期刊：<b><c:out value="${journal.name}"/></b> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="${pageContext.request.contextPath}/admin/journals/list">返回期刊列表</a></span>
+            <span class="chip"><a href="${pageContext.request.contextPath}/admin/journals/calls/edit?journalId=${journal.journalId}">➕ 新增征稿通知</a></span>
+        </div>
+    </div><c:if test="${empty calls}">
     <p>暂无征稿通知。</p>
 </c:if>
 
@@ -72,4 +66,7 @@
     </table>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

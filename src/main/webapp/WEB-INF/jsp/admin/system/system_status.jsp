@@ -4,13 +4,12 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>系统运行状态</h2>
-
-<p style="color:#666;">
-    系统管理员/超级管理员可在此查看运行环境与数据库连通性，并通过“日志查询”对所有操作进行审计和排查故障。
-</p>
-
-<table border="1" cellpadding="6" cellspacing="0">
+<div class="page-head">
+        <h2 class="page-title">系统运行状态</h2>
+        <div class="chips">
+            <span class="chip">系统管理员/超级管理员可在此查看运行环境与数据库连通性，并通过“日志查询”对所有操作进行审计和排查故障。</span>
+        </div>
+    </div><table border="1" cellpadding="6" cellspacing="0">
     <tr><th>当前时间</th><td>${now}</td></tr>
     <tr><th>Java 版本</th><td>${javaVersion}</td></tr>
     <tr><th>操作系统</th><td>${osName}</td></tr>

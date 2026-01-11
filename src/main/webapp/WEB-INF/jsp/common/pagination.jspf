@@ -1,0 +1,55 @@
+<%@ page pageEncoding="UTF-8" %>
+
+<c:if test="${not empty pageCount and pageCount > 1}">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:14px;">
+        <div class="chips">
+            <span class="chip">共 ${totalCount} 条</span>
+            <span class="chip">第 ${page} / ${pageCount} 页</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <!-- First / Prev -->
+            <c:choose>
+                <c:when test="${page > 1}">
+                    <a class="btn" href="${paginationPrefix}1">首页</a>
+                    <a class="btn" href="${paginationPrefix}${page-1}">上一页</a>
+                </c:when>
+                <c:otherwise>
+                    <span class="btn" style="opacity:.45; cursor:not-allowed;">首页</span>
+                    <span class="btn" style="opacity:.45; cursor:not-allowed;">上一页</span>
+                </c:otherwise>
+            </c:choose>
+
+            <!-- Windowed page numbers -->
+            <c:set var="start" value="${page-2}" />
+            <c:set var="end" value="${page+2}" />
+            <c:if test="${start < 1}"><c:set var="start" value="1"/></c:if>
+            <c:if test="${end > pageCount}"><c:set var="end" value="${pageCount}"/></c:if>
+
+            <c:forEach var="p" begin="${start}" end="${end}">
+                <c:choose>
+                    <c:when test="${p == page}">
+                        <span class="btn" style="pointer-events:none; border-color:rgba(30,64,175,.55); background:rgba(30,64,175,.08);">
+                            ${p}
+                        </span>
+                    </c:when>
+                    <c:otherwise>
+                        <a class="btn" href="${paginationPrefix}${p}">${p}</a>
+                    </c:otherwise>
+                </c:choose>
+            </c:forEach>
+
+            <!-- Next / Last -->
+            <c:choose>
+                <c:when test="${page < pageCount}">
+                    <a class="btn" href="${paginationPrefix}${page+1}">下一页</a>
+                    <a class="btn" href="${paginationPrefix}${pageCount}">末页</a>
+                </c:when>
+                <c:otherwise>
+                    <span class="btn" style="opacity:.45; cursor:not-allowed;">下一页</span>
+                    <span class="btn" style="opacity:.45; cursor:not-allowed;">末页</span>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </div>
+</c:if>

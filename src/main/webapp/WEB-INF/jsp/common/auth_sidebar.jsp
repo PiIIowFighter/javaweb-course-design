@@ -8,6 +8,33 @@
 <c:set var="roleCode" value="${empty sessionScope.currentUser.roleCode ? 'AUTHOR' : sessionScope.currentUser.roleCode}"/>
 <c:set var="uri" value="${pageContext.request.requestURI}"/>
 
+<%--
+  侧边栏中：我的稿件二级菜单需要识别当前分组（group=incomplete/processing/revision/decision）。
+  说明：有些页面/表单可能会产生多个 group 参数，request.getParameter(...) 取“第一个”，
+  导致高亮不准。这里取“最后一个非空”的 group 作为最终值，更稳。
+--%>
+<%
+    String __msGroup = null;
+    String[] __groups = request.getParameterValues("group");
+    if (__groups != null) {
+        for (int i = __groups.length - 1; i >= 0; i--) {
+            if (__groups[i] != null && !__groups[i].trim().isEmpty()) {
+                __msGroup = __groups[i].trim();
+                break;
+            }
+        }
+    }
+    if (__msGroup == null || __msGroup.isEmpty()) {
+        Object gObj = request.getAttribute("group");
+        if (gObj != null) __msGroup = String.valueOf(gObj);
+    }
+    if (__msGroup == null || __msGroup.isEmpty()) __msGroup = "processing";
+    __msGroup = __msGroup.toLowerCase();
+    request.setAttribute("__msGroup", __msGroup);
+%>
+<c:set var="msGroup" value="${requestScope.__msGroup}"/>
+<c:set var="isManuscriptArea" value="${fn:contains(uri, '/manuscripts/list') or fn:contains(uri, '/manuscripts/detail') or fn:contains(uri, '/manuscripts/track') or fn:contains(uri, '/manuscripts/edit') or fn:contains(uri, '/manuscripts/resubmit')}"/>
+
 <aside class="sidebar">
     <div class="card mini sidebar-user">
         <div class="media">
@@ -39,9 +66,23 @@
 
 	    <c:choose>
             <c:when test="${roleCode == 'AUTHOR'}">
-                <a class="side-link ${fn:contains(uri, '/manuscripts/list') ? 'active' : ''}" href="${ctx}/manuscripts/list">
-                    <i class="bi bi-folder2-open" aria-hidden="true"></i> 我的稿件
-                </a>
+                <details class="side-group" ${isManuscriptArea ? 'open' : ''}>
+                    <summary class="side-link ${isManuscriptArea ? 'active' : ''}">
+                        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+                        我的稿件
+                        <span class="side-caret" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+                    </summary>
+                    <div class="side-subnav" aria-label="我的稿件分类">
+                        <a class="side-link side-sublink ${fn:contains(uri, '/manuscripts/list') and msGroup == 'incomplete' ? 'active' : ''}"
+                           href="${ctx}/manuscripts/list?group=incomplete">Incomplete（草稿）</a>
+                        <a class="side-link side-sublink ${fn:contains(uri, '/manuscripts/list') and msGroup == 'processing' ? 'active' : ''}"
+                           href="${ctx}/manuscripts/list?group=processing">Processing（处理中）</a>
+                        <a class="side-link side-sublink ${fn:contains(uri, '/manuscripts/list') and msGroup == 'revision' ? 'active' : ''}"
+                           href="${ctx}/manuscripts/list?group=revision">Revision（待修改）</a>
+                        <a class="side-link side-sublink ${fn:contains(uri, '/manuscripts/list') and msGroup == 'decision' ? 'active' : ''}"
+                           href="${ctx}/manuscripts/list?group=decision">Decision（已决策）</a>
+                    </div>
+                </details>
                 <a class="side-link ${fn:contains(uri, '/manuscripts/submit') ? 'active' : ''}" href="${ctx}/manuscripts/submit">
                     <i class="bi bi-upload" aria-hidden="true"></i> 提交稿件
                 </a>

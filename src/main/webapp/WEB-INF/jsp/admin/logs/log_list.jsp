@@ -7,9 +7,12 @@
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">系统日志查询</h2>
-            <p class="card-subtitle">展示系统的操作日志，支持按时间范围、用户、模块等条件检索。</p>
+            <div class="page-head">
+        <h2 class="page-title">系统日志查询</h2>
+        <div class="chips">
+            <span class="chip">展示系统的操作日志，支持按时间范围、用户、模块等条件检索。</span>
         </div>
+    </div></div>
     </div>
 
     <form action="${pageContext.request.contextPath}/admin/logs/list" method="get" class="stack">
@@ -90,4 +93,7 @@
 </c:if>
     
 </div>
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

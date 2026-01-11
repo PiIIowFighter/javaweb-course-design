@@ -7,9 +7,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">发送站内通知</h2>
-            <p class="card-subtitle">主编/编辑部管理员/系统管理员可以向任意用户发送自定义通知（单向）。</p>
+            <div class="page-head">
+        <h2 class="page-title">发送站内通知</h2>
+        <div class="chips">
+            <span class="chip">主编/编辑部管理员/系统管理员可以向任意用户发送自定义通知（单向）。</span>
         </div>
+    </div></div>
         <div class="actions" style="margin:0">
             <a class="btn" href="${ctx}/notifications"><i class="bi bi-bell" aria-hidden="true"></i> 返回通知中心</a>
         </div>

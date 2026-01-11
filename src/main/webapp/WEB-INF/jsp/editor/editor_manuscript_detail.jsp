@@ -7,9 +7,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>稿件详情</h2>
-
-<c:if test="${not empty param.cancelMsg}">
+<div class="page-head">
+        <h2 class="page-title">稿件详情</h2>
+    </div><c:if test="${not empty param.cancelMsg}">
     <div class="alert success" style="margin-top: var(--space-4);">
         <c:out value="${param.cancelMsg}"/>
     </div>

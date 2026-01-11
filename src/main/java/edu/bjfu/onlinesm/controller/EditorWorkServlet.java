@@ -13,11 +13,9 @@ import java.sql.SQLException;
 
 /**
  * 责任编辑（EDITOR）相关功能入口。
+
  *
- * 说明：本项目早期将 EDITOR / EO_ADMIN / EDITOR_IN_CHIEF 的功能混杂在一个 /editor/* 的 Servlet 中。
- * 现按角色拆分：责任编辑功能统一由本 Servlet 处理。
- *
- * URL 仍保持兼容（不改 JSP 链接）：
+ * URL：
  *  - /editor/withEditor
  *  - /editor/underReview
  *  - /editor/recommend

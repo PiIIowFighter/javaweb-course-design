@@ -6,9 +6,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>提出建议</h2>
-
-<c:if test="${empty manuscript}">
+<div class="page-head">
+        <h2 class="page-title">提出建议</h2>
+    </div><c:if test="${empty manuscript}">
     <p style="color:#d00;">未找到稿件。</p>
 </c:if>
 

@@ -8,6 +8,7 @@ import edu.bjfu.onlinesm.util.UploadPathUtil;
 import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
 import edu.bjfu.onlinesm.util.PdfTextUtil;
 import edu.bjfu.onlinesm.util.FileTextUtil;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 import edu.bjfu.onlinesm.util.mail.MailNotifications;
 import edu.bjfu.onlinesm.util.notify.InAppNotifications;
 import javax.servlet.ServletException;
@@ -16,6 +17,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 import java.io.File;
 import java.io.IOException;
@@ -29,16 +31,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * 投稿/稿件列表/详情控制器
- *
- * 新增（2025课设投稿模块补全）：
+ * 投稿/稿件列表/详情控制器：
  *  - 保存草稿（DRAFT）与最终提交（SUBMITTED）
  *  - 投稿元数据：研究主题 SubjectArea、作者列表（多作者）、资助信息 FundingInfo
  *  - 文件上传：Manuscript、Cover Letter（支持富文本 Cover Letter）
  *  - 推荐审稿人
  *  - 文件预览（通过 ManuscriptFilePreviewServlet 提供）
  *
- * 说明：已接入 MailNotifications（若邮件配置未开启/缺失邮箱，会自动跳过，不影响主流程）。
  */
 @WebServlet(name = "ManuscriptServlet", urlPatterns = {"/manuscripts/*"})
 @MultipartConfig
@@ -56,6 +55,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
+    private final FileDAO fileDAO = new FileDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
     private final FormalCheckResultDAO formalCheckResultDAO = new FormalCheckResultDAO();
     private final FormalCheckService formalCheckService = new FormalCheckService();
@@ -169,7 +169,18 @@ public class ManuscriptServlet extends HttpServlet {
             // 推荐审稿人
             req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(draft.getManuscriptId()));
             // 当前版本
-            req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(draft.getManuscriptId()));
+            ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(draft.getManuscriptId());
+            req.setAttribute("currentVersion", cv);
+
+            // Cover Letter 多附件（仅作者/编辑可见；审稿人没有详情页权限）
+            try {
+                if (cv != null) {
+                    req.setAttribute("coverAttachments",
+                            fileDAO.findByManuscriptVersionAndType(draft.getManuscriptId(), cv.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT));
+                }
+            } catch (Exception ignore) {
+                // 不影响主流程
+            }
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
@@ -211,6 +222,8 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+        resolveAndRememberGroup(req, m);
+
         // 准备期刊和专刊数据（作者可能想要修改）
         List<Journal> journals = journalDAO.findAll();
         req.setAttribute("journals", journals);
@@ -223,7 +236,15 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", m);
         req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
-        req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
+        ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscriptId);
+        req.setAttribute("currentVersion", cv);
+        try {
+            if (cv != null) {
+                req.setAttribute("coverAttachments",
+                        fileDAO.findByManuscriptVersionAndType(manuscriptId, cv.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT));
+            }
+        } catch (Exception ignore) {
+        }
 
         // 退回/修回：向作者展示最近一次退回的修改意见（形式审查反馈）
         try {
@@ -251,7 +272,15 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
         // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
-            req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
+            ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId());
+            req.setAttribute("currentVersion", cv);
+            try {
+                if (cv != null) {
+                    req.setAttribute("coverAttachments",
+                            fileDAO.findByManuscriptVersionAndType(manuscript.getManuscriptId(), cv.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT));
+                }
+            } catch (Exception ignore) {
+            }
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
@@ -273,7 +302,15 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
         // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
-            req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId()));
+            ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId());
+            req.setAttribute("currentVersion", cv);
+            try {
+                if (cv != null) {
+                    req.setAttribute("coverAttachments",
+                            fileDAO.findByManuscriptVersionAndType(manuscript.getManuscriptId(), cv.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT));
+                }
+            } catch (Exception ignore) {
+            }
         }
 
         // 回显时也带上最近一次形式审查反馈（用于作者查看退回修改意见）
@@ -363,6 +400,8 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+        // 继续编辑草稿：对应 incomplete 分组
+        resolveAndRememberGroup(req, m);
         handleSubmitForm(req, resp, current, m);
     }
 
@@ -397,10 +436,40 @@ public class ManuscriptServlet extends HttpServlet {
             return;
         }
 
+
+        resolveAndRememberGroup(req, m);
+
         req.setAttribute("manuscript", m);
+
+        // 期刊信息：详情页展示“期刊名称”，不直接展示 journalId
+        try {
+            if (m.getJournalId() != null) {
+                req.setAttribute("journal", journalDAO.findById(m.getJournalId()));
+            }
+        } catch (Exception ignore) {
+        }
+
+        // 投稿人信息（提交人）
+        try {
+            if (m.getSubmitterId() != null) {
+                req.setAttribute("submitter", userDAO.findById(m.getSubmitterId()));
+            }
+        } catch (Exception ignore) {
+        }
+
         req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
-        req.setAttribute("currentVersion", versionDAO.findCurrentByManuscriptId(manuscriptId));
+        ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscriptId);
+        req.setAttribute("currentVersion", cv);
+
+        // Cover Letter 多附件
+        try {
+            if (cv != null) {
+                req.setAttribute("coverAttachments",
+                        fileDAO.findByManuscriptVersionAndType(manuscriptId, cv.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT));
+            }
+        } catch (Exception ignore) {
+        }
 
         FormalCheckResult formalCheckResult = formalCheckResultDAO.findByManuscriptId(manuscriptId);
         req.setAttribute("formalCheckResult", formalCheckResult);
@@ -589,6 +658,9 @@ public class ManuscriptServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看他人稿件状态。");
             return;
         }
+
+
+        resolveAndRememberGroup(req, m);
 
         // 获取状态变更历史
         List<ManuscriptStatusHistory> historyList = statusHistoryDAO.findByManuscriptId(manuscriptId);
@@ -816,6 +888,8 @@ public class ManuscriptServlet extends HttpServlet {
             // 版本文件
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
             Part anonymousFile = safeGetPart(req, "anonymousFile");
+            // Cover Letter 附件（支持多文件）
+            List<Part> coverAttachmentParts = safeGetParts(req, "coverAttachments");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             // 最终提交时，必须上传稿件文件（新稿件或之前未上传过的情况）
@@ -955,6 +1029,41 @@ public class ManuscriptServlet extends HttpServlet {
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
 
+                // ========== Cover Letter 多附件保存（支持多文件） ==========
+                try {
+                    // 生成新版本时，默认沿用上一版附件（便于作者“只改正文/cover，不用每次重复上传附件”）
+                    if (prevCurrent != null && prevCurrent.getVersionId() != null) {
+                        fileDAO.copyByVersionAndType(conn, manuscriptId, prevCurrent.getVersionId(), v.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT);
+                    }
+
+                    if (coverAttachmentParts != null) {
+                        File attachDir = new File(versionDir, "cover_attachments");
+                        if (!attachDir.exists()) {
+                            //noinspection ResultOfMethodCallIgnored
+                            attachDir.mkdirs();
+                        }
+                        for (Part p : coverAttachmentParts) {
+                            if (p == null || p.getSize() <= 0) continue;
+                            String originalName = p.getSubmittedFileName();
+                            if (originalName == null || originalName.trim().isEmpty()) continue;
+
+                            String savedPath = savePartToDir(p, attachDir, "cover_attach_");
+
+                            edu.bjfu.onlinesm.model.StoredFile sf = new edu.bjfu.onlinesm.model.StoredFile();
+                            sf.setFileName(originalName);
+                            sf.setFilePath(savedPath);
+                            sf.setFileType(FileDAO.TYPE_COVER_ATTACHMENT);
+                            sf.setFileSize(p.getSize());
+                            sf.setUploaderId(current.getUserId());
+                            sf.setManuscriptId(manuscriptId);
+                            sf.setVersionId(v.getVersionId());
+                            fileDAO.insert(conn, sf);
+                        }
+                    }
+                } catch (Exception ignore) {
+                    // 多附件不影响主流程（如失败仍可完成投稿）
+                }
+
                 conn.commit();
             }
 
@@ -1043,6 +1152,8 @@ public class ManuscriptServlet extends HttpServlet {
 
             Part manuscriptFile = safeGetPart(req, "manuscriptFile");
             Part anonymousFile = safeGetPart(req, "anonymousFile");
+            // Cover Letter 附件（支持多文件）
+            List<Part> coverAttachmentParts = safeGetParts(req, "coverAttachments");
             String coverLetterHtml = trim(req.getParameter("coverLetterHtml"));
 
             // PDF 格式验证
@@ -1151,6 +1262,41 @@ public class ManuscriptServlet extends HttpServlet {
                 versionDAO.markAllNotCurrent(conn, manuscriptId);
                 versionDAO.insert(conn, v);
 
+                // ========== Cover Letter 多附件保存（支持多文件） ==========
+                try {
+                    // 生成新版本时，默认沿用上一版附件
+                    if (prevCurrent != null && prevCurrent.getVersionId() != null) {
+                        fileDAO.copyByVersionAndType(conn, manuscriptId, prevCurrent.getVersionId(), v.getVersionId(), FileDAO.TYPE_COVER_ATTACHMENT);
+                    }
+
+                    if (coverAttachmentParts != null) {
+                        File attachDir = new File(versionDir, "cover_attachments");
+                        if (!attachDir.exists()) {
+                            //noinspection ResultOfMethodCallIgnored
+                            attachDir.mkdirs();
+                        }
+                        for (Part p : coverAttachmentParts) {
+                            if (p == null || p.getSize() <= 0) continue;
+                            String originalName = p.getSubmittedFileName();
+                            if (originalName == null || originalName.trim().isEmpty()) continue;
+
+                            String savedPath = savePartToDir(p, attachDir, "cover_attach_");
+
+                            edu.bjfu.onlinesm.model.StoredFile sf = new edu.bjfu.onlinesm.model.StoredFile();
+                            sf.setFileName(originalName);
+                            sf.setFilePath(savedPath);
+                            sf.setFileType(FileDAO.TYPE_COVER_ATTACHMENT);
+                            sf.setFileSize(p.getSize());
+                            sf.setUploaderId(current.getUserId());
+                            sf.setManuscriptId(manuscriptId);
+                            sf.setVersionId(v.getVersionId());
+                            fileDAO.insert(conn, sf);
+                        }
+                    }
+                } catch (Exception ignore) {
+                    // 多附件不影响主流程
+                }
+
                 conn.commit();
             }
 
@@ -1189,10 +1335,23 @@ public class ManuscriptServlet extends HttpServlet {
         List<Manuscript> allList = manuscriptDAO.findBySubmitter(current.getUserId());
 
         // 2. 解析查询参数：分组、状态、日期范围、排序及分页
-        String group = trim(req.getParameter("group"));
+        String group = null;
+        String[] groupArr = req.getParameterValues("group");
+        if (groupArr != null) {
+            for (int i = groupArr.length - 1; i >= 0; i--) {
+                String g = trim(groupArr[i]);
+                if (g != null && !g.isEmpty()) {
+                    group = g;
+                    break;
+                }
+            }
+        }
         if (group == null || group.isEmpty()) {
             group = "processing"; // 默认展示处理中稿件
         }
+        group = group.toLowerCase();
+        // 记住当前分组（用于详情/追踪/编辑等页面保持侧边栏高亮）
+        req.getSession().setAttribute("__msGroup", group);
         String statusFilter = trim(req.getParameter("status"));
         String fromDateStr = trim(req.getParameter("fromDate"));
         String toDateStr = trim(req.getParameter("toDate"));
@@ -1205,29 +1364,9 @@ public class ManuscriptServlet extends HttpServlet {
             dir = "desc";
         }
 
-        int page = 1;
-        try {
-            String pageStr = req.getParameter("page");
-            if (pageStr != null && !pageStr.isEmpty()) {
-                page = Integer.parseInt(pageStr);
-            }
-        } catch (NumberFormatException ignore) {
-        }
-        if (page < 1) {
-            page = 1;
-        }
-
-        int pageSize = 10;
-        try {
-            String pageSizeStr = req.getParameter("pageSize");
-            if (pageSizeStr != null && !pageSizeStr.isEmpty()) {
-                pageSize = Integer.parseInt(pageSizeStr);
-            }
-        } catch (NumberFormatException ignore) {
-        }
-        if (pageSize <= 0) {
-            pageSize = 10;
-        }
+	        // 分页参数（统一工具类处理）
+	        int page = PaginationUtil.getPage(req);
+	        int pageSize = PaginationUtil.getPageSize(req);
 
         LocalDate fromDate = null;
         LocalDate toDate = null;
@@ -1288,20 +1427,8 @@ public class ManuscriptServlet extends HttpServlet {
             Collections.reverse(filtered);
         }
 
-        // 5. 分页
-        int total = filtered.size();
-        int pageCount = (total + pageSize - 1) / pageSize;
-        if (page > pageCount && pageCount > 0) {
-            page = pageCount;
-        }
-        int fromIndex = (page - 1) * pageSize;
-        int toIndex = Math.min(fromIndex + pageSize, total);
-        List<Manuscript> pageList;
-        if (fromIndex >= 0 && fromIndex < toIndex) {
-            pageList = filtered.subList(fromIndex, toIndex);
-        } else {
-            pageList = filtered;
-        }
+	        // 5. 分页（写入 manuscripts / page / pageSize / totalCount / pageCount / paginationPrefix）
+	        PaginationUtil.apply(req, filtered, "manuscripts");
 
         // 6. 统计每个分组的数量，用于页面 Tab 显示
         int countIncomplete = 0;
@@ -1324,11 +1451,7 @@ public class ManuscriptServlet extends HttpServlet {
             }
         }
 
-        req.setAttribute("manuscripts", pageList);
-        req.setAttribute("totalCount", total);
-        req.setAttribute("page", page);
-        req.setAttribute("pageSize", pageSize);
-        req.setAttribute("pageCount", pageCount);
+	        // manuscripts、分页元数据已由 PaginationUtil.apply 写入
         req.setAttribute("group", group);
         req.setAttribute("statusFilter", statusFilter);
         req.setAttribute("fromDate", fromDateStr);
@@ -1473,6 +1596,65 @@ public class ManuscriptServlet extends HttpServlet {
                 return true;
         }
     }
+    /**
+     * 解析并记住当前“我的稿件”分组（incomplete/processing/revision/decision），
+     * 用于详情/追踪/编辑/修回等页面保持侧边栏展开与高亮。
+     *
+     * 优先级：
+     *  1) 参数 group（若重复出现取最后一个非空）
+     *  2) request attribute "group"
+     *  3) session "__msGroup"
+     *  4) 若给定 manuscript，则根据状态 matchGroup(...) 推断
+     *  5) 默认 processing
+     */
+    private String resolveAndRememberGroup(HttpServletRequest req, Manuscript manuscript) {
+        HttpSession session = req.getSession();
+
+        // 1) 参数 group（可能重复出现）
+        String group = null;
+        String[] groupArr = req.getParameterValues("group");
+        if (groupArr != null) {
+            for (int i = groupArr.length - 1; i >= 0; i--) {
+                String g = trim(groupArr[i]);
+                if (g != null && !g.isEmpty()) {
+                    group = g;
+                    break;
+                }
+            }
+        }
+
+        // 2) request attribute
+        if (group == null || group.isEmpty()) {
+            Object gObj = req.getAttribute("group");
+            if (gObj != null) group = String.valueOf(gObj).trim();
+        }
+
+        // 3) session 记忆
+        if (group == null || group.isEmpty()) {
+            Object gSess = session.getAttribute("__msGroup");
+            if (gSess != null) group = String.valueOf(gSess).trim();
+        }
+
+        // 4) 根据状态推断
+        if ((group == null || group.isEmpty()) && manuscript != null) {
+            String st = manuscript.getCurrentStatus();
+            if (matchGroup(st, "incomplete")) group = "incomplete";
+            else if (matchGroup(st, "revision")) group = "revision";
+            else if (matchGroup(st, "decision")) group = "decision";
+            else group = "processing";
+        }
+
+        // 5) 默认值
+        if (group == null || group.isEmpty()) group = "processing";
+        group = group.toLowerCase();
+
+        // 写回 request + session
+        req.setAttribute("group", group);
+        session.setAttribute("__msGroup", group);
+
+        return group;
+    }
+
 
     // ------------------------- 投稿表单解析/文件保存辅助 -------------------------
 
@@ -1584,6 +1766,29 @@ public class ManuscriptServlet extends HttpServlet {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 获取同名多文件上传的所有 Part。
+     * 适用于 <input type="file" name="xxx" multiple>。
+     */
+    private List<Part> safeGetParts(HttpServletRequest req, String name) {
+        List<Part> list = new ArrayList<>();
+        try {
+            Collection<Part> parts = req.getParts();
+            if (parts == null) return list;
+            for (Part p : parts) {
+                if (p == null) continue;
+                if (!name.equals(p.getName())) continue;
+                // 多附件：只保留有内容的上传
+                if (p.getSubmittedFileName() == null || p.getSubmittedFileName().trim().isEmpty()) continue;
+                if (p.getSize() <= 0) continue;
+                list.add(p);
+            }
+        } catch (Exception ignore) {
+            // ignore
+        }
+        return list;
     }
 
     private String savePartToDir(Part part, File dir, String prefix) throws IOException {

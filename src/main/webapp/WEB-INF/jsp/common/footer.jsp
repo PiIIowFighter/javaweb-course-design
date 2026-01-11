@@ -120,7 +120,7 @@
 
 
 
-    // Sidebar active link highlight (client-side, best-match)
+    // Sidebar: keep <details> open state across navigation + correct highlight (especially for manuscripts?group=...)
     (function () {
         function normalizePath(p) {
             if (!p) return '';
@@ -133,65 +133,205 @@
             return p;
         }
 
-        function pickBestSidebarLink() {
-            var sidebar = document.querySelector('.sidebar');
-            if (!sidebar) return null;
-
-            var links = sidebar.querySelectorAll('a.side-link[href]');
-            if (!links || links.length === 0) return null;
-
-            var cur = normalizePath(window.location.pathname);
-            var best = null;
-            var bestScore = -1;
-
-            for (var i = 0; i < links.length; i++) {
-                var a = links[i];
-                var href = a.getAttribute('href');
-                if (!href) continue;
-
-                var path = '';
-                try {
-                    path = normalizePath(new URL(href, window.location.origin).pathname);
-                } catch (e) {
-                    continue;
-                }
-                if (!path) continue;
-
-                var score = -1;
-                if (cur === path) {
-                    score = 10000 + path.length;
-                } else if (cur.indexOf(path + '/') === 0) {
-                    score = 5000 + path.length;
-                } else if (path.indexOf(cur + '/') === 0) {
-                    // fallback: current path is shorter than the link (rare)
-                    score = 1000 + cur.length;
-                }
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    best = a;
-                }
-            }
-
-            // only accept a match if we have a meaningful score
-            return bestScore > 0 ? best : null;
+        function scoreLink(curPath, linkPath) {
+            if (!curPath || !linkPath) return -1;
+            if (curPath === linkPath) return 10000 + linkPath.length;
+            if (curPath.indexOf(linkPath + '/') === 0) return 5000 + linkPath.length;
+            if (linkPath.indexOf(curPath + '/') === 0) return 1000 + curPath.length;
+            return -1;
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            var best = pickBestSidebarLink();
-            if (!best) return;
+        function getMsGroupFromHref(href) {
+            if (!href) return null;
+            try {
+                var u = new URL(href, window.location.origin);
+                var g = u.searchParams.get('group');
+                return g ? String(g).toLowerCase() : null;
+            } catch (e) {
+                return null;
+            }
+        }
 
-            var sidebar = document.querySelector('.sidebar');
+        function restoreDetailsOpenState(sidebar) {
             if (!sidebar) return;
+            var detailsList = sidebar.querySelectorAll('details.side-group');
+            if (!detailsList || detailsList.length === 0) return;
 
-            // remove "active" from all links to avoid double highlight (e.g. /notifications & /notifications/send)
-            var links = sidebar.querySelectorAll('a.side-link');
+            for (var i = 0; i < detailsList.length; i++) {
+                (function (idx) {
+                    var d = detailsList[idx];
+                    var key = d.getAttribute('data-side-key') || ('side-group-' + idx);
+
+                    // restore
+                    try {
+                        var stored = window.sessionStorage ? sessionStorage.getItem('sidebar_open_' + key) : null;
+                        if (stored === '1') d.open = true;
+                        if (stored === '0') d.open = false;
+                    } catch (e) {
+                        // ignore
+                    }
+
+                    // persist
+                    d.addEventListener('toggle', function () {
+                        try {
+                            if (!window.sessionStorage) return;
+                            sessionStorage.setItem('sidebar_open_' + key, d.open ? '1' : '0');
+                        } catch (e2) {
+                            // ignore
+                        }
+                    });
+                })(i);
+            }
+        }
+
+        function markActive(a) {
+            if (!a) return;
+            a.classList.add('active');
+            a.setAttribute('aria-current', 'page');
+
+            // if inside a <details>, force it open (so sidebar stays expanded)
+            var parent = a.parentElement;
+            while (parent) {
+                if (parent.tagName && parent.tagName.toLowerCase() === 'details') {
+                    parent.open = true;
+                    break;
+                }
+                parent = parent.parentElement;
+            }
+        }
+
+        function clearActive(links) {
             for (var i = 0; i < links.length; i++) {
                 links[i].classList.remove('active');
                 links[i].removeAttribute('aria-current');
             }
-            best.classList.add('active');
-            best.setAttribute('aria-current', 'page');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var sidebar = document.querySelector('.sidebar');
+            if (!sidebar) return;
+
+            restoreDetailsOpenState(sidebar);
+
+            var allLinks = sidebar.querySelectorAll('a.side-link[href]');
+            if (!allLinks || allLinks.length === 0) return;
+
+            var curPath = normalizePath(window.location.pathname);
+            var params = new URLSearchParams(window.location.search || '');
+
+            // --- 1) Special: manuscripts list should highlight by ?group=... ---
+            var rawPath = window.location.pathname || '';
+            var isMsPath = rawPath.indexOf('/manuscripts/list') !== -1
+                || rawPath.indexOf('/manuscripts/detail') !== -1
+                || rawPath.indexOf('/manuscripts/track') !== -1
+                || rawPath.indexOf('/manuscripts/edit') !== -1
+                || rawPath.indexOf('/manuscripts/resubmit') !== -1;
+            var msGroup = (params.get('group') || '').toLowerCase();
+
+            // remember last group on click
+            var msLinks = sidebar.querySelectorAll('a.side-sublink[data-ms-group]');
+            for (var k = 0; k < msLinks.length; k++) {
+                msLinks[k].addEventListener('click', function () {
+                    try {
+                        if (!window.sessionStorage) return;
+                        var g = (this.getAttribute('data-ms-group') || '').toLowerCase();
+                        if (g) sessionStorage.setItem('sidebar_ms_group', g);
+                    } catch (e) {
+                        // ignore
+                    }
+                });
+            }
+
+            if (isMsPath) {
+                if (!msGroup) {
+                    try {
+                        if (window.sessionStorage) msGroup = (sessionStorage.getItem('sidebar_ms_group') || '').toLowerCase();
+                    } catch (e0) {
+                        // ignore
+                    }
+                }
+
+                if (msGroup) {
+                    // Only clear active on manuscript sublinks, don't touch other menu items.
+                    clearActive(msLinks);
+
+                    var picked = null;
+                    for (var m = 0; m < msLinks.length; m++) {
+                        var g2 = (msLinks[m].getAttribute('data-ms-group') || '').toLowerCase();
+                        if (g2 === msGroup) {
+                            picked = msLinks[m];
+                            break;
+                        }
+                    }
+
+                    if (!picked) {
+                        // fallback: match via href query
+                        for (var n = 0; n < msLinks.length; n++) {
+                            if (getMsGroupFromHref(msLinks[n].getAttribute('href')) === msGroup) {
+                                picked = msLinks[n];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (picked) {
+                        markActive(picked);
+                        return; // manuscripts handled
+                    }
+                }
+            }
+
+            // --- 2) If server already highlighted links, keep only the best one (avoid double highlight) ---
+            var preActives = sidebar.querySelectorAll('a.side-link.active[href]');
+            if (preActives && preActives.length > 0) {
+                var keep = preActives[0];
+                var bestScore = -1;
+                for (var i = 0; i < preActives.length; i++) {
+                    var p;
+                    try {
+                        p = normalizePath(new URL(preActives[i].getAttribute('href'), window.location.origin).pathname);
+                    } catch (e1) {
+                        continue;
+                    }
+                    var s = scoreLink(curPath, p);
+                    if (s > bestScore) {
+                        bestScore = s;
+                        keep = preActives[i];
+                    }
+                }
+                // clear others
+                for (var j = 0; j < preActives.length; j++) {
+                    if (preActives[j] !== keep) {
+                        preActives[j].classList.remove('active');
+                        preActives[j].removeAttribute('aria-current');
+                    }
+                }
+                markActive(keep);
+                return;
+            }
+
+            // --- 3) Otherwise: best-match by path (fallback) ---
+            var best = null;
+            var bestS = -1;
+            for (var t = 0; t < allLinks.length; t++) {
+                var href = allLinks[t].getAttribute('href');
+                var path = '';
+                try {
+                    path = normalizePath(new URL(href, window.location.origin).pathname);
+                } catch (e2) {
+                    continue;
+                }
+                var sc = scoreLink(curPath, path);
+                if (sc > bestS) {
+                    bestS = sc;
+                    best = allLinks[t];
+                }
+            }
+
+            if (bestS > 0 && best) {
+                clearActive(allLinks);
+                markActive(best);
+            }
         });
     })();
 

@@ -11,9 +11,12 @@
     <div class="card-header">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
             <div>
-                <h2 class="card-title">文章与专刊 (Issues)</h2>
-                <p class="card-subtitle">Latest Issues · Special Issues · All Issues</p>
-            </div>
+                <div class="page-head">
+        <h2 class="page-title">文章与专刊 (Issues)</h2>
+        <div class="chips">
+            <span class="chip">Latest Issues · Special Issues · All Issues</span>
+        </div>
+    </div></div>
             <a style="text-decoration:none;" href="${ctx}/guide">用户指南 →</a>
         </div>
     </div>

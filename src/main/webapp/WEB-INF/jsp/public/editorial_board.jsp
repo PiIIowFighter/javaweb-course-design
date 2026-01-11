@@ -17,9 +17,12 @@
 <div class="card stack" style="margin-top: var(--space-6);">
     <div class="card-header">
         <div>
-            <h2 class="card-title">编委会成员</h2>
-            <p class="card-subtitle">展示完整名单与简介</p>
+            <div class="page-head">
+        <h2 class="page-title">编委会成员</h2>
+        <div class="chips">
+            <span class="chip">展示完整名单与简介</span>
         </div>
+    </div></div>
         <a href="${ctx}/" style="white-space:nowrap; text-decoration:none;">
             返回首页 <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>

@@ -2,8 +2,10 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.ManuscriptDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptVersionDAO;
+import edu.bjfu.onlinesm.dao.FileDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.ManuscriptVersion;
+import edu.bjfu.onlinesm.model.StoredFile;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.HtmlToPdfConverter;
 import edu.bjfu.onlinesm.util.PdfTextUtil;
@@ -24,13 +26,14 @@ import java.util.Objects;
  *  /files/preview?manuscriptId=1&type=manuscript
  *  /files/preview?manuscriptId=1&type=cover
  *
- * 注意：本模块假设文件路径为服务器本地磁盘路径。
  */
 @WebServlet(name = "ManuscriptFilePreviewServlet", urlPatterns = {"/files/preview"})
 public class ManuscriptFilePreviewServlet extends HttpServlet {
 
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
+    private final FileDAO fileDAO = new FileDAO();
+
 
     // 用于审稿人权限校验（只能查看分配给自己的稿件）
     private boolean reviewerHasAccess(int reviewerId, int manuscriptId) throws Exception {
@@ -56,6 +59,7 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
         Integer manuscriptId = parseInt(req.getParameter("manuscriptId"));
         String type = trim(req.getParameter("type"));
+        Integer fileId = parseInt(req.getParameter("fileId"));
 
         if (manuscriptId == null || type == null) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 manuscriptId 或 type 参数。");
@@ -91,6 +95,10 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看 Response Letter。");
                     return;
                 }
+                if ("attachment".equalsIgnoreCase(type)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看投稿附件。");
+                    return;
+                }
                 // 需求：审稿过程中仅允许查看脱密稿，不允许下载原稿
                 if ("original".equalsIgnoreCase(type)) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人仅允许查看脱密稿（匿名稿）。");
@@ -105,7 +113,33 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
             }
 
             String filePath = null;
-            if ("manuscript".equalsIgnoreCase(type)) {
+            String downloadName = null;
+            if ("attachment".equalsIgnoreCase(type)) {
+                if (fileId == null) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "缺少 fileId 参数。");
+                    return;
+                }
+                StoredFile sf = fileDAO.findById(fileId);
+                if (sf == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到附件记录。");
+                    return;
+                }
+                if (!Objects.equals(sf.getManuscriptId(), manuscriptId)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看该附件。");
+                    return;
+                }
+                if (!FileDAO.TYPE_COVER_ATTACHMENT.equalsIgnoreCase(sf.getFileType())) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的附件类型。");
+                    return;
+                }
+                // 默认只允许访问“当前版本”的附件（避免旧版本附件被意外暴露）
+                if (sf.getVersionId() != null && v.getVersionId() != null && !Objects.equals(sf.getVersionId(), v.getVersionId())) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "仅允许查看当前版本附件。");
+                    return;
+                }
+                filePath = sf.getFilePath();
+                downloadName = sf.getFileName();
+            } else if ("manuscript".equalsIgnoreCase(type)) {
                 // 审稿人：只能看匿名稿（不允许回退到原稿）
                 if ("REVIEWER".equals(role)) {
                     filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
@@ -127,7 +161,7 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
             } else if ("response".equalsIgnoreCase(type)) {
                 filePath = v.getResponseLetterPath();
             } else {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type + "（支持 manuscript/anonymous/original/cover/response）");
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的 type：" + type + "（支持 manuscript/anonymous/original/cover/response/attachment）");
                 return;
             }
 
@@ -169,7 +203,9 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
             boolean inline = contentType.startsWith("application/pdf") || contentType.startsWith("text/html")
                     || contentType.startsWith("image/");
-            String disposition = (inline ? "inline" : "attachment") + "; filename=\"" + file.getName() + "\"";
+            String safeName = (downloadName == null || downloadName.trim().isEmpty()) ? file.getName() : downloadName;
+            safeName = safeName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String disposition = (inline ? "inline" : "attachment") + "; filename=\"" + safeName + "\"";
             resp.setHeader("Content-Disposition", disposition);
             resp.setHeader("X-Content-Type-Options", "nosniff");
             resp.setContentLengthLong(file.length());

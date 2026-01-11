@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * 统一工作台：不再按角色分流到各自 dashboard JSP。
+ * 统一工作台
  *
  * 说明：
  * - 工作台页面展示“所有入口”，但具体显示/隐藏由 sessionScope.menuPermMap 控制；

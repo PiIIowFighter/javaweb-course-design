@@ -39,16 +39,19 @@
         </a>
     </div>
 </div>
-<div class="grid grid-2" style="margin-top: var(--space-6);">
+<div class="stack-lg" style="margin-top: var(--space-6);">
 
     <!-- 期刊编委会介绍：编委照片/简介 -->
     <div class="card stack">
         <div class="card-header">
             <div>
-                <h2 class="card-title">期刊编委会</h2>
-                <p class="card-subtitle">了解本刊编委会成员与研究方向。</p>
-            </div>
-            <a href="${ctx}/editorial-board" style="white-space:nowrap; text-decoration:none;">
+                <div class="page-head">
+        <h2 class="page-title">期刊编委会</h2>
+        <div class="chips">
+            <span class="chip">了解本刊编委会成员与研究方向。</span>
+        </div>
+    </div></div>
+            <a class="link-muted" href="${ctx}/editorial-board" style="margin-left:auto; white-space:nowrap;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
@@ -97,8 +100,8 @@
                 <h2 class="card-title">论文列表</h2>
                 <p class="card-subtitle">Latest published · Top cited · Most downloaded · Most popular</p>
             </div>
-            <a href="${ctx}/articles" style="white-space:nowrap; text-decoration:none;">
-                进入列表 <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <a class="link-muted" href="${ctx}/articles" style="margin-left:auto; white-space:nowrap;">
+                查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
 
@@ -133,6 +136,21 @@
                             </div>
                             <div class="list-meta">
                                 <c:if test="${not empty a.authorList}">作者：<c:out value="${a.authorList}"/> · </c:if>
+
+                                <c:if test="${not empty a.journalName}">
+                                    <c:out value="${a.journalName}"/>
+                                    <c:if test="${not empty a.journalIssn}">（ISSN：<c:out value="${a.journalIssn}"/>）</c:if>
+                                    ·
+                                </c:if>
+
+                                <c:if test="${a.publishYear != null}">
+                                    <c:out value="${a.publishYear}"/>年
+                                    <c:if test="${not empty a.volume}">，<c:out value="${a.volume}"/></c:if>
+                                    <c:if test="${not empty a.issue}">（<c:out value="${a.issue}"/>）</c:if>
+                                    <c:if test="${not empty a.pageRange}">：<c:out value="${a.pageRange}"/></c:if>
+                                    ·
+                                </c:if>
+
                                 <c:if test="${a.finalDecisionTime != null}">
                                     录用时间：<c:out value="${fn:substring(a.finalDecisionTime, 0, 10)}"/>
                                 </c:if>
@@ -153,8 +171,8 @@
                 <h2 class="card-title">新闻列表</h2>
                 <p class="card-subtitle">最新公告与动态。</p>
             </div>
-            <a href="${ctx}/news" style="white-space:nowrap; text-decoration:none;">
-                查看更多 <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <a class="link-muted" href="${ctx}/news" style="margin-left:auto; white-space:nowrap;">
+                查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
 
@@ -189,7 +207,7 @@
                 <h2 class="card-title">征稿通知</h2>
                 <p class="card-subtitle">Call for papers</p>
             </div>
-            <a href="${ctx}/calls" style="white-space:nowrap; text-decoration:none;">
+            <a class="link-muted" href="${ctx}/calls" style="margin-left:auto; white-space:nowrap;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>

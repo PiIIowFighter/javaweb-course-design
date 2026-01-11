@@ -4,20 +4,19 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>
-    <c:choose>
+<div class="page-head">
+        <h2 class="page-title"><c:choose>
         <c:when test="${news != null && news.newsId != null}">
             编辑新闻 / 公告
         </c:when>
         <c:otherwise>
             新增新闻 / 公告
         </c:otherwise>
-    </c:choose>
-</h2>
-
-<p>通过此表单维护期刊公告、投稿须知等内容。</p>
-
-<form id="newsForm" action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
+    </c:choose></h2>
+        <div class="chips">
+            <span class="chip">通过此表单维护期刊公告、投稿须知等内容。</span>
+        </div>
+    </div><form id="newsForm" action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
     <input type="hidden" name="id" value="${news.newsId}"/>
 
     <p>

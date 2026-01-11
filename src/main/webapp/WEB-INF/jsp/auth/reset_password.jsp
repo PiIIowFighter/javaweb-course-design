@@ -5,9 +5,12 @@
 <div class="card" style="max-width: 560px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">密码重置</h2>
-            <p class="card-subtitle">通过邮箱验证码重置账号密码。</p>
+            <div class="page-head">
+        <h2 class="page-title">密码重置</h2>
+        <div class="chips">
+            <span class="chip">通过邮箱验证码重置账号密码。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

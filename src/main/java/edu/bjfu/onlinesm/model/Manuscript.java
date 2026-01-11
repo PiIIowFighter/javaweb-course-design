@@ -36,6 +36,24 @@ public class Manuscript implements Serializable {
     private Integer citationCount;
     private Double popularityScore;
 
+    /* =========================
+       论文“可引用信息/补充信息”（Public article metadata）
+       说明：用于前台论文详情页展示；当稿件终审录用（ACCEPTED）时自动补全。
+       ========================= */
+    private String journalName;
+    private String journalIssn;
+
+    private String doi;
+    private Integer publishYear;
+    private String volume;
+    private String issue;
+    private String pageRange;
+    private String language;
+    private String articleType;
+    private String classificationNo;
+    private String cnkiUrl;
+    private LocalDateTime publishedAt;
+
     // ========== 新增兼容方法 ==========
     /**
      * 兼容方法：获取用户ID
@@ -196,6 +214,102 @@ public class Manuscript implements Serializable {
         this.popularityScore = popularityScore;
     }
 
+    public String getJournalName() {
+        return journalName;
+    }
+
+    public void setJournalName(String journalName) {
+        this.journalName = journalName;
+    }
+
+    public String getJournalIssn() {
+        return journalIssn;
+    }
+
+    public void setJournalIssn(String journalIssn) {
+        this.journalIssn = journalIssn;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+    }
+
+    public Integer getPublishYear() {
+        return publishYear;
+    }
+
+    public void setPublishYear(Integer publishYear) {
+        this.publishYear = publishYear;
+    }
+
+    public String getVolume() {
+        return volume;
+    }
+
+    public void setVolume(String volume) {
+        this.volume = volume;
+    }
+
+    public String getIssue() {
+        return issue;
+    }
+
+    public void setIssue(String issue) {
+        this.issue = issue;
+    }
+
+    public String getPageRange() {
+        return pageRange;
+    }
+
+    public void setPageRange(String pageRange) {
+        this.pageRange = pageRange;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getArticleType() {
+        return articleType;
+    }
+
+    public void setArticleType(String articleType) {
+        this.articleType = articleType;
+    }
+
+    public String getClassificationNo() {
+        return classificationNo;
+    }
+
+    public void setClassificationNo(String classificationNo) {
+        this.classificationNo = classificationNo;
+    }
+
+    public String getCnkiUrl() {
+        return cnkiUrl;
+    }
+
+    public void setCnkiUrl(String cnkiUrl) {
+        this.cnkiUrl = cnkiUrl;
+    }
+
+    public LocalDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(LocalDateTime publishedAt) {
+        this.publishedAt = publishedAt;
+    }
+
     @Override
     public String toString() {
         return "Manuscript{" +
@@ -210,6 +324,12 @@ public class Manuscript implements Serializable {
                 ", downloadCount=" + downloadCount +
                 ", citationCount=" + citationCount +
                 ", popularityScore=" + popularityScore +
+                ", journalName='" + journalName + '\'' +
+                ", doi='" + doi + '\'' +
+                ", publishYear=" + publishYear +
+                ", volume='" + volume + '\'' +
+                ", issue='" + issue + '\'' +
+                ", pageRange='" + pageRange + '\'' +
                 '}';
     }
 }

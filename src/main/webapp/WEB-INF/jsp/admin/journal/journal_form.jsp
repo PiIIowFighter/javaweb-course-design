@@ -3,18 +3,16 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>
-    <c:choose>
+<div class="page-head">
+        <h2 class="page-title"><c:choose>
         <c:when test="${journal != null && journal.journalId != null}">
             编辑期刊基本信息
         </c:when>
         <c:otherwise>
             新增期刊
         </c:otherwise>
-    </c:choose>
-</h2>
-
-<form method="post" action="${pageContext.request.contextPath}/admin/journals/basic/save" style="max-width: 900px;">
+    </c:choose></h2>
+    </div><form method="post" action="${pageContext.request.contextPath}/admin/journals/basic/save" style="max-width: 900px;">
     <input type="hidden" name="journalId" value="${journal.journalId}"/>
 
     <p>

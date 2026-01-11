@@ -63,9 +63,9 @@
     </c:otherwise>
 </c:choose>
 
-<h2><i class="fas fa-edit"></i> 提交评审意见</h2>
-
-<c:if test="${empty rid}">
+<div class="page-head">
+        <h2 class="page-title"><i class="fas fa-edit"></i> 提交评审意见</h2>
+    </div><c:if test="${empty rid}">
     <div class="alert alert-danger">
         <i class="fas fa-exclamation-circle"></i> 缺少 reviewId 参数，无法提交评审。请从"待审列表"重新进入。
     </div>

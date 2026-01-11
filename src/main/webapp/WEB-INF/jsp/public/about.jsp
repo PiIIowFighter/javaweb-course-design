@@ -36,16 +36,17 @@
                 <div class="card">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title">
-                                <c:choose>
+                            <div class="page-head">
+        <h2 class="page-title"><c:choose>
                                     <c:when test="${not empty aimsPage && not empty aimsPage.title}">
                                         <c:out value="${aimsPage.title}"/>
                                     </c:when>
                                     <c:otherwise>论文主旨与投稿范围（Aims and scope）</c:otherwise>
-                                </c:choose>
-                            </h2>
-                            <p class="card-subtitle">介绍期刊的主要研究方向与投稿内容范围。</p>
-                        </div>
+                                </c:choose></h2>
+        <div class="chips">
+            <span class="chip">介绍期刊的主要研究方向与投稿内容范围。</span>
+        </div>
+    </div></div>
                     </div>
 
                     <c:if test="${not empty pageLoadError}">

@@ -8,9 +8,12 @@
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">期刊管理</h2>
-            <p class="card-subtitle">本项目仅维护一个期刊：在本页直接编辑“基本信息”，并通过下方入口维护“关于期刊页面 / 卷期与专刊 / 征稿通知”。</p>
+            <div class="page-head">
+        <h2 class="page-title">期刊管理</h2>
+        <div class="chips">
+            <span class="chip">本项目仅维护一个期刊：在本页直接编辑“基本信息”，并通过下方入口维护“关于期刊页面 / 卷期与专刊 / 征稿通知”。</span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${empty journal || journal.journalId == null}">
@@ -83,4 +86,7 @@
 
 </div>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

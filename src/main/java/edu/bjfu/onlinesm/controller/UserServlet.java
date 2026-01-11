@@ -14,6 +14,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 用户管理控制器：
@@ -60,7 +61,7 @@ public class UserServlet extends HttpServlet {
                         users = userDAO.findAll();
                         req.setAttribute("selectedRole", "ALL");
                     }
-                    req.setAttribute("users", users);
+                    PaginationUtil.apply(req, users, "users");
                     req.setAttribute("roles", roleDAO.findAllRoleCodes());
                     req.getRequestDispatcher("/WEB-INF/jsp/admin/user/user_list.jsp").forward(req, resp);
                     break;

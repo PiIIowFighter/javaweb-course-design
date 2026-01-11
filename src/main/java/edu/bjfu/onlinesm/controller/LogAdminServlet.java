@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 系统日志查询模块控制器。
@@ -46,7 +47,7 @@ public class LogAdminServlet extends HttpServlet {
                         module.isEmpty() ? null : module,
                         from,
                         to);
-                req.setAttribute("logs", logs);
+                PaginationUtil.apply(req, logs, "logs");
                 req.setAttribute("keyword", keyword);
                 req.setAttribute("actor", actor);
                 req.setAttribute("module", module);

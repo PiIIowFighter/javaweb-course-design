@@ -9,9 +9,12 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">Writing（写作指南）</h2>
-            <p class="card-subtitle">提供写作结构、学术表达与可复现性建议，帮助作者提升稿件质量。</p>
+            <div class="page-head">
+        <h2 class="page-title">Writing（写作指南）</h2>
+        <div class="chips">
+            <span class="chip">提供写作结构、学术表达与可复现性建议，帮助作者提升稿件质量。</span>
         </div>
+    </div></div>
         <a href="${ctx}/guide" style="white-space:nowrap; text-decoration:none;">
             返回用户指南 <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>

@@ -9,8 +9,9 @@
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">稿件详情</h2>
-        </div>
+            <div class="page-head">
+        <h2 class="page-title">稿件详情</h2>
+    </div></div>
     </div>
 
     <c:choose>

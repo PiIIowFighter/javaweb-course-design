@@ -7,10 +7,12 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>与作者沟通</h2>
-<p style="color:#666;">在这里可以按稿件进入“发送消息给作者”（支持站内消息/邮件，可抄送主编）。</p>
-
-<c:if test="${empty manuscripts}">
+<div class="page-head">
+        <h2 class="page-title">与作者沟通</h2>
+        <div class="chips">
+            <span class="chip">在这里可以按稿件进入“发送消息给作者”（支持站内消息/邮件，可抄送主编）。</span>
+        </div>
+    </div><c:if test="${empty manuscripts}">
     <p>暂无可沟通的稿件。</p>
 </c:if>
 
@@ -50,4 +52,7 @@
     </table>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

@@ -5,9 +5,12 @@
 <div class="card" style="max-width: 560px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">登录</h2>
-            <p class="card-subtitle">欢迎回来。请输入账号信息进入工作台。</p>
+            <div class="page-head">
+        <h2 class="page-title">登录</h2>
+        <div class="chips">
+            <span class="chip">欢迎回来。请输入账号信息进入工作台。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

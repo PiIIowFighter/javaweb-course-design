@@ -52,19 +52,16 @@ import java.util.Objects;
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
 import org.json.JSONObject;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
- * 注意：该类已降级为“编辑相关业务处理的基类（Base Servlet）”。
- *
- * 过去该类通过 /editor/* 承载 EDITOR / EO_ADMIN / EDITOR_IN_CHIEF 三类角色的所有功能，
- * 过于臃肿且不利于维护。
- *
- * 现已拆分为 3 个面向角色的 Servlet：
+ 
+ * 拆分为 3 个面向角色的 Servlet：
  *  - EditorWorkServlet          （责任编辑 / 编辑功能）
  *  - EditorialOfficeServlet     （编辑部管理员功能）
  *  - ChiefEditorServlet         （主编功能）
  *
- * 该基类不再绑定任何 URL，请勿在 web.xml 或 @WebServlet 中映射它。
+ * 该基类不再绑定任何 URL
  */
 public abstract class EditorServlet extends HttpServlet {
 
@@ -228,7 +225,7 @@ public abstract class EditorServlet extends HttpServlet {
             throws ServletException, IOException, SQLException {
 
         List<Manuscript> list = manuscriptDAO.findByStatuses("SUBMITTED", "FORMAL_CHECK");
-        req.setAttribute("manuscripts", list);
+        PaginationUtil.apply(req, list, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_list.jsp")
                 .forward(req, resp);
     }
@@ -334,7 +331,7 @@ public abstract class EditorServlet extends HttpServlet {
             }
         }
 
-        req.setAttribute("history", history);
+        PaginationUtil.apply(req, history, "history");
         req.setAttribute("manuscriptMap", manuscriptMap);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_history.jsp").forward(req, resp);
     }
@@ -382,7 +379,7 @@ public abstract class EditorServlet extends HttpServlet {
             throws ServletException, IOException, SQLException {
 
         List<Manuscript> deskList = manuscriptDAO.findByStatuses("DESK_REVIEW_INITIAL");
-        req.setAttribute("manuscripts", deskList);
+        PaginationUtil.apply(req, deskList, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/desk_list.jsp")
                 .forward(req, resp);
     }
@@ -391,8 +388,7 @@ public abstract class EditorServlet extends HttpServlet {
             throws ServletException, IOException, SQLException {
 
         List<Manuscript> toAssignList = manuscriptDAO.findByStatuses("TO_ASSIGN");
-        req.setAttribute("manuscripts", toAssignList);
-
+        PaginationUtil.apply(req, toAssignList, "manuscripts");
         // 若当前用户是主编，则额外查询所有 EDITOR，供“指派编辑”下拉框使用
         if ("EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
             List<User> editors = userDAO.findByRoleCode("EDITOR");
@@ -441,7 +437,7 @@ public abstract class EditorServlet extends HttpServlet {
             }
         }
 
-        req.setAttribute("manuscripts", list);
+        PaginationUtil.apply(req, list, "manuscripts");
         req.setAttribute("latestAssignments", latestAssignments);
         req.setAttribute("editors", editors);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/with_editor_list.jsp")
@@ -466,8 +462,7 @@ public abstract class EditorServlet extends HttpServlet {
         req.setAttribute("underReviewList", underReviewList);
 
         // 兼容旧 JSP（若还在使用 ${manuscripts}）：
-        req.setAttribute("manuscripts", underReviewList);
-
+        PaginationUtil.apply(req, underReviewList, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/under_review_list.jsp")
                 .forward(req, resp);
     }
@@ -568,7 +563,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
         Map<Integer, EditorSuggestion> suggestionMap = editorSuggestionDAO.findByManuscriptIds(ids);
         req.setAttribute("suggestionMap", suggestionMap);
 
-        req.setAttribute("manuscripts", finalList);
+        PaginationUtil.apply(req, finalList, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/final_decision_list.jsp")
                 .forward(req, resp);
     }
@@ -818,7 +813,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
             throws ServletException, IOException, SQLException {
 
         List<Manuscript> list = manuscriptDAO.findAllForChief();
-        req.setAttribute("manuscripts", list);
+        PaginationUtil.apply(req, list, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_overview.jsp")
                 .forward(req, resp);
     }
@@ -837,7 +832,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
                 "ACCEPTED",
                 "REJECTED"
         );
-        req.setAttribute("manuscripts", list);
+        PaginationUtil.apply(req, list, "manuscripts");
         req.getRequestDispatcher("/WEB-INF/jsp/editor/chief_special.jsp")
                 .forward(req, resp);
     }
@@ -2435,7 +2430,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
             countMap.put(m.getManuscriptId(), cnt);
         }
 
-        req.setAttribute("manuscripts", list);
+        PaginationUtil.apply(req, list, "manuscripts");
         req.setAttribute("commCountMap", countMap);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/author_comm_list.jsp").forward(req, resp);
     }

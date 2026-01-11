@@ -10,9 +10,12 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">征稿通知 (Call for papers)</h2>
-            <p class="card-subtitle">Special issue / Call for papers 列表</p>
+            <div class="page-head">
+        <h2 class="page-title">征稿通知 (Call for papers)</h2>
+        <div class="chips">
+            <span class="chip">Special issue / Call for papers 列表</span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${empty calls}">

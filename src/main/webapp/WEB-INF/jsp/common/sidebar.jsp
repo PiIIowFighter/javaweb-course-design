@@ -7,6 +7,48 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="uri" value="${pageContext.request.requestURI}"/>
 
+<%--
+  侧边栏中：我的稿件二级菜单需要识别当前分组（group=incomplete/processing/revision/decision）。
+  说明：有些页面/表单可能会产生多个 group 参数（例如重复的 hidden/input），request.getParameter(...) 取“第一个”，
+  导致高亮不准。这里取“最后一个非空”的 group 作为最终值，更稳。
+--%>
+<%
+    // 1) 优先取参数 group（可能重复出现，取最后一个非空）
+    String __msGroup = null;
+    String[] __groups = request.getParameterValues("group");
+    if (__groups != null) {
+        for (int i = __groups.length - 1; i >= 0; i--) {
+            if (__groups[i] != null && !__groups[i].trim().isEmpty()) {
+                __msGroup = __groups[i].trim();
+                break;
+            }
+        }
+    }
+
+    // 2) 其次取 request attribute（Servlet 可能会 setAttribute("group")）
+    if (__msGroup == null || __msGroup.isEmpty()) {
+        Object gObj = request.getAttribute("group");
+        if (gObj != null) __msGroup = String.valueOf(gObj).trim();
+    }
+
+    // 3) 再取 session 记忆值（用于 detail/track 等页面保持高亮）
+    if (__msGroup == null || __msGroup.isEmpty()) {
+        Object gSess = session.getAttribute("__msGroup");
+        if (gSess != null) __msGroup = String.valueOf(gSess).trim();
+    }
+
+    // 4) 兜底默认值
+    if (__msGroup == null || __msGroup.isEmpty()) __msGroup = "incomplete";
+
+    __msGroup = __msGroup.toLowerCase();
+
+    // 写回：request + session（保证高亮一致 & 二级菜单保持展开）
+    request.setAttribute("__msGroup", __msGroup);
+    session.setAttribute("__msGroup", __msGroup);
+%>
+<c:set var="msGroup" value="${requestScope.__msGroup}"/>
+<c:set var="isManuscriptArea" value="${fn:contains(uri, '/manuscripts/list') or fn:contains(uri, '/manuscripts/detail') or fn:contains(uri, '/manuscripts/track') or fn:contains(uri, '/manuscripts/edit') or fn:contains(uri, '/manuscripts/resubmit')}"/>
+
 <aside class="sidebar">
     <!-- 顶部用户卡片 -->
     <div class="card mini sidebar-user">
@@ -40,9 +82,27 @@
         <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_MY_MANUSCRIPTS'] or sessionScope.menuPermMap['MENU_AUTHOR_SUBMIT']}">
             <div class="muted" style="padding: 10px 12px;">投稿 / 作者</div>
             <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_MY_MANUSCRIPTS']}">
-                <a class="side-link ${fn:contains(uri, '/manuscripts/list') ? 'active' : ''}" href="${ctx}/manuscripts/list">
-                    <i class="bi bi-folder2-open" aria-hidden="true"></i> 我的稿件
-                </a>
+                <details class="side-group" data-side-key="author-my-manuscripts" ${isManuscriptArea ? 'open' : ''}>
+                    <summary class="side-link ${isManuscriptArea ? 'active' : ''}" data-side-summary="author-my-manuscripts">
+                        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+                        我的稿件
+                        <span class="side-caret" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+                    </summary>
+                    <div class="side-subnav" aria-label="我的稿件分类">
+                        <a class="side-link side-sublink ${isManuscriptArea and msGroup == 'incomplete' ? 'active' : ''}"
+                           data-ms-group="incomplete"
+                           href="${ctx}/manuscripts/list?group=incomplete">Incomplete（草稿）</a>
+                        <a class="side-link side-sublink ${isManuscriptArea and msGroup == 'processing' ? 'active' : ''}"
+                           data-ms-group="processing"
+                           href="${ctx}/manuscripts/list?group=processing">Processing（处理中）</a>
+                        <a class="side-link side-sublink ${isManuscriptArea and msGroup == 'revision' ? 'active' : ''}"
+                           data-ms-group="revision"
+                           href="${ctx}/manuscripts/list?group=revision">Revision（待修改）</a>
+                        <a class="side-link side-sublink ${isManuscriptArea and msGroup == 'decision' ? 'active' : ''}"
+                           data-ms-group="decision"
+                           href="${ctx}/manuscripts/list?group=decision">Decision（已决策）</a>
+                    </div>
+                </details>
             </c:if>
             <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_SUBMIT']}">
                 <a class="side-link ${fn:contains(uri, '/manuscripts/submit') ? 'active' : ''}" href="${ctx}/manuscripts/submit">

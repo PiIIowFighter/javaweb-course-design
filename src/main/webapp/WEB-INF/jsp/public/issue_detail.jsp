@@ -15,14 +15,12 @@
     <div class="card stack">
         <div class="card-header">
             <div>
-                <h2 class="card-title"><c:out value="${issue.title}"/></h2>
-                <p class="card-subtitle">
-                    <c:if test="${issue.year != null}">Year：<c:out value="${issue.year}"/> · </c:if>
-                    <c:if test="${issue.volume != null}">Vol：<c:out value="${issue.volume}"/> · </c:if>
-                    <c:if test="${issue.number != null}">No：<c:out value="${issue.number}"/> · </c:if>
-                    <c:if test="${issue.publishDate != null}">Published：<c:out value="${issue.publishDate}"/></c:if>
-                </p>
-            </div>
+                <div class="page-head">
+        <h2 class="page-title"><c:out value="${issue.title}"/></h2>
+        <div class="chips">
+            <span class="chip"><c:if test="${issue.year != null}">Year：<c:out value="${issue.year}"/> · </c:if> <c:if test="${issue.volume != null}">Vol：<c:out value="${issue.volume}"/> · </c:if> <c:if test="${issue.number != null}">No：<c:out value="${issue.number}"/> · </c:if> <c:if test="${issue.publishDate != null}">Published：<c:out value="${issue.publishDate}"/></c:if></span>
+        </div>
+    </div></div>
         </div>
 
         <c:if test="${not empty issue.guestEditors}">

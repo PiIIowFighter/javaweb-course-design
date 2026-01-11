@@ -54,9 +54,9 @@ document.getElementById('rejectModal').addEventListener('click', function(e) {
 });
 </script>
 
-<h2>审稿邀请 / 稿件摘要</h2>
-
-<c:if test="${empty review || empty manuscript}">
+<div class="page-head">
+        <h2 class="page-title">审稿邀请 / 稿件摘要</h2>
+    </div><c:if test="${empty review || empty manuscript}">
     <p>未找到审稿记录或稿件信息。</p>
 </c:if>
 

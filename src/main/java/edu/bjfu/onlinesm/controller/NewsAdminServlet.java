@@ -18,6 +18,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 新闻 / 公告管理模块控制器。
@@ -70,7 +71,7 @@ public class NewsAdminServlet extends HttpServlet {
                 }
 
                 List<News> list = newsDAO.search(keyword, fromDate, toDate);
-                req.setAttribute("newsList", list);
+                PaginationUtil.apply(req, list, "newsList");
             } catch (SQLException e) {
                 throw new ServletException("查询新闻/公告列表失败", e);
             }

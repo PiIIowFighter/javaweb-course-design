@@ -4,17 +4,13 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>新增用户</h2>
-<p>
-    通过此表单可以为系统创建<strong>后台内部账号</strong>（如系统管理员、主编、编辑、编辑部管理员等）。
-    默认初始密码为 <strong>123456</strong>，请用户登录后尽快修改密码。
-</p>
-<p style="color:#666;">
-    说明：作者/审稿人属于外部用户，一般应通过“注册”功能自行创建账号（后台不提供创建入口）。
-    同时，只有<strong>超级管理员</strong>可以创建“系统管理员（SYSTEM_ADMIN）”账号。
-</p>
-
-<form action="${pageContext.request.contextPath}/admin/users/add" method="post">
+<div class="page-head">
+        <h2 class="page-title">新增用户</h2>
+        <div class="chips">
+            <span class="chip">通过此表单可以为系统创建<strong>后台内部账号</strong>（如系统管理员、主编、编辑、编辑部管理员等）。 默认初始密码为 <strong>123456</strong>，请用户登录后尽快修改密码。</span>
+            <span class="chip">作者/审稿人属于外部用户，一般应通过“注册”功能自行创建账号（后台不提供创建入口）。 同时，只有<strong>超级管理员</strong>可以创建“系统管理员（SYSTEM_ADMIN）”账号。</span>
+        </div>
+    </div><form action="${pageContext.request.contextPath}/admin/users/add" method="post">
     <div>
         <label>用户名：
             <input type="text" name="username" required/>

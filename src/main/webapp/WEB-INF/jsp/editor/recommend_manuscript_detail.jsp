@@ -4,9 +4,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>稿件详情</h2>
-
-<c:if test="${empty manuscript}">
+<div class="page-head">
+        <h2 class="page-title">稿件详情</h2>
+    </div><c:if test="${empty manuscript}">
     <p style="color:#d00;">未找到稿件记录。</p>
 </c:if>
 

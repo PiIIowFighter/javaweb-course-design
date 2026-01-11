@@ -15,13 +15,12 @@
     <div class="card stack">
         <div class="card-header">
             <div>
-                <h2 class="card-title"><c:out value="${call.title}"/></h2>
-                <p class="card-subtitle">
-                    <c:if test="${call.deadline != null}">Deadline：<c:out value="${call.deadline}"/> · </c:if>
-                    <c:if test="${call.startDate != null}">Start：<c:out value="${call.startDate}"/> · </c:if>
-                    <c:if test="${call.endDate != null}">End：<c:out value="${call.endDate}"/></c:if>
-                </p>
-            </div>
+                <div class="page-head">
+        <h2 class="page-title"><c:out value="${call.title}"/></h2>
+        <div class="chips">
+            <span class="chip"><c:if test="${call.deadline != null}">Deadline：<c:out value="${call.deadline}"/> · </c:if> <c:if test="${call.startDate != null}">Start：<c:out value="${call.startDate}"/> · </c:if> <c:if test="${call.endDate != null}">End：<c:out value="${call.endDate}"/></c:if></span>
+        </div>
+    </div></div>
         </div>
 
 	        <c:if test="${not empty call.coverImagePath}">

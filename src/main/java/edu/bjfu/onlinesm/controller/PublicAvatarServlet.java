@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
 /**
- * 公共头像访问（给首页编委会等公开页面使用）。
+ * 公共头像访问。
  *
  * 访问示例：
  *   /public/avatar?userId=123

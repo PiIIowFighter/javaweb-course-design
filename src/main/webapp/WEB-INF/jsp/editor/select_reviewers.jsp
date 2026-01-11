@@ -7,9 +7,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>为稿件选择审稿人</h2>
-
-<c:set var="backToUrl" value="${pageContext.request.requestURI}"/>
+<div class="page-head">
+        <h2 class="page-title">为稿件选择审稿人</h2>
+    </div><c:set var="backToUrl" value="${pageContext.request.requestURI}"/>
 <c:if test="${not empty pageContext.request.queryString}">
     <c:set var="backToUrl" value="${backToUrl}?${pageContext.request.queryString}"/>
 </c:if>

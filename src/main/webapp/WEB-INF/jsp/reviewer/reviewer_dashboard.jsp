@@ -5,9 +5,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">审稿人工作台</h2>
-            <p class="card-subtitle">查看分配给你的稿件，提交评审意见，并回顾历史记录。</p>
+            <div class="page-head">
+        <h2 class="page-title">审稿人工作台</h2>
+        <div class="chips">
+            <span class="chip">查看分配给你的稿件，提交评审意见，并回顾历史记录。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="grid grid-2">

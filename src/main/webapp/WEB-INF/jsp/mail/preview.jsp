@@ -6,9 +6,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>邮件预览</h2>
-
-<c:if test="${empty draft || empty draft.previews}">
+<div class="page-head">
+        <h2 class="page-title">邮件预览</h2>
+    </div><c:if test="${empty draft || empty draft.previews}">
     <p>没有可预览的邮件内容。</p>
 </c:if>
 

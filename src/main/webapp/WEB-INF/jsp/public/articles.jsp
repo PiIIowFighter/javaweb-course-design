@@ -10,9 +10,12 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">文章与专刊 (Articles & Issues)</h2>
-            <p class="card-subtitle">Latest published · Top cited · Most downloaded · Most popular</p>
+            <div class="page-head">
+        <h2 class="page-title">文章与专刊 (Articles & Issues)</h2>
+        <div class="chips">
+            <span class="chip">Latest published · Top cited · Most downloaded · Most popular</span>
         </div>
+    </div></div>
     </div>
 
     <div class="tabs">
@@ -50,14 +53,46 @@
                             </a>
                         </div>
                         <div class="list-meta">
-                            <c:if test="${not empty a.authorList}">作者：<c:out value="${a.authorList}"/> · </c:if>
-                            <c:if test="${a.finalDecisionTime != null}">录用：<c:out value="${fn:substring(a.finalDecisionTime, 0, 10)}"/></c:if>
-                        </div>
-                        <div class="list-meta">
-                            <span class="badge">Views</span> <c:out value="${a.viewCount == null ? 0 : a.viewCount}"/>
-                            <span class="badge">Downloads</span> <c:out value="${a.downloadCount == null ? 0 : a.downloadCount}"/>
-                            <span class="badge">Citations</span> <c:out value="${a.citationCount == null ? 0 : a.citationCount}"/>
-                        </div>
+    <c:if test="${not empty a.authorList}">作者：<c:out value="${a.authorList}"/> · </c:if>
+
+    <c:if test="${not empty a.journalName}">
+        <c:out value="${a.journalName}"/>
+        <c:if test="${not empty a.journalIssn}">（ISSN：<c:out value="${a.journalIssn}"/>）</c:if>
+        ·
+    </c:if>
+
+    <c:choose>
+        <c:when test="${a.publishYear != null}">
+            <c:out value="${a.publishYear}"/>年
+        </c:when>
+        <c:when test="${not empty a.publishedAt}">
+            <c:out value="${fn:substring(a.publishedAt, 0, 4)}"/>年
+        </c:when>
+        <c:otherwise>
+            <c:if test="${a.finalDecisionTime != null}">
+                <c:out value="${fn:substring(a.finalDecisionTime, 0, 4)}"/>年
+            </c:if>
+        </c:otherwise>
+    </c:choose>
+
+    <c:if test="${not empty a.volume}">，<c:out value="${a.volume}"/></c:if>
+    <c:if test="${not empty a.issue}">（<c:out value="${a.issue}"/>）</c:if>
+    <c:if test="${not empty a.pageRange}">：<c:out value="${a.pageRange}"/></c:if>
+
+    <c:choose>
+        <c:when test="${not empty a.publishedAt}">
+            · 发表：<c:out value="${fn:substring(a.publishedAt, 0, 10)}"/>
+        </c:when>
+        <c:when test="${a.finalDecisionTime != null}">
+            · 录用：<c:out value="${fn:substring(a.finalDecisionTime, 0, 10)}"/>
+        </c:when>
+    </c:choose>
+</div>
+<div class="list-meta">
+    <span class="badge">Views</span> <c:out value="${a.viewCount == null ? 0 : a.viewCount}"/>
+    <span class="badge">Downloads</span> <c:out value="${a.downloadCount == null ? 0 : a.downloadCount}"/>
+    <span class="badge">Citations</span> <c:out value="${a.citationCount == null ? 0 : a.citationCount}"/>
+</div>
                     </div>
                 </li>
             </c:forEach>

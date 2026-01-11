@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 前台 - 新闻列表与详情。
@@ -41,7 +42,7 @@ public class PublicNewsServlet extends HttpServlet {
     private void showList(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             List<News> list = newsDAO.findPublishedAll();
-            req.setAttribute("newsList", list);
+            PaginationUtil.apply(req, list, "newsList");
         } catch (SQLException e) {
             req.setAttribute("newsLoadError", e.getMessage());
         }

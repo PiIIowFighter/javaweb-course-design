@@ -8,9 +8,12 @@
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">投稿</h2>
-            <p class="card-subtitle">你可以先保存草稿（DRAFT），稍后继续编辑；也可以直接最终提交（SUBMITTED）。</p>
+            <div class="page-head">
+        <h2 class="page-title">投稿</h2>
+        <div class="chips">
+            <span class="chip">你可以先保存草稿（DRAFT），稍后继续编辑；也可以直接最终提交（SUBMITTED）。</span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${not empty error}">
@@ -204,6 +207,31 @@
                             </a>
                         </div>
                     </c:if>
+
+                    <!-- Cover Letter 附件（支持多文件，任意类型） -->
+                    <div style="margin-top: 10px;">
+                        <div class="kicker" style="margin-bottom: 6px;">Cover Letter 附件（可选）</div>
+                        <input type="file" name="coverAttachments" multiple/>
+                        <div class="help">可上传多个附件，支持任意文件类型（审稿人不可见）。</div>
+
+                        <c:if test="${not empty coverAttachments}">
+                            <div class="help" style="margin-top: 6px;">
+                                已上传附件：
+                                <ul style="margin: 6px 0 0 18px;">
+                                    <c:forEach var="f" items="${coverAttachments}">
+                                        <li>
+                                            <a target="_blank" href="${ctx}/files/preview?manuscriptId=${manuscript.manuscriptId}&type=attachment&fileId=${f.fileId}">
+                                                <i class="bi bi-paperclip"></i> <c:out value="${f.fileName}"/>
+                                            </a>
+                                            <c:if test="${not empty f.fileSize}">
+                                                <span class="muted">（${f.fileSize} bytes）</span>
+                                            </c:if>
+                                        </li>
+                                    </c:forEach>
+                                </ul>
+                            </div>
+                        </c:if>
+                    </div>
                 </div>
             </div>
         </fieldset>

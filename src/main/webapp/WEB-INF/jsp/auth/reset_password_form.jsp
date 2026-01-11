@@ -5,9 +5,12 @@
 <div class="card" style="max-width: 560px; margin: 0 auto;">
     <div class="card-header">
         <div>
-            <h2 class="card-title">设置新密码</h2>
-            <p class="card-subtitle">邮箱验证码已验证，请为账号设置一个新的登录密码。</p>
+            <div class="page-head">
+        <h2 class="page-title">设置新密码</h2>
+        <div class="chips">
+            <span class="chip">邮箱验证码已验证，请为账号设置一个新的登录密码。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="stack">

@@ -80,12 +80,23 @@ a {
 }
 a:hover { text-decoration-thickness: 2px; }
 
+a.link-muted {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px;
+    opacity: 0.9;
+}
+a.link-muted:hover {
+    color: var(--text);
+    text-decoration: underline;
+}
+
 .container {
     width: 100%;
-    max-width: 1160px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding-left: var(--space-6);
-    padding-right: var(--space-6);
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
 }
 
 /* ======================= */
@@ -263,13 +274,13 @@ a:hover { text-decoration-thickness: 2px; }
 
 .site-main {
     flex: 1 0 auto;
-    padding-top: var(--space-10);
-    padding-bottom: var(--space-10);
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-6);
 }
 
 .layout {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
     gap: var(--space-6);
     align-items: start;
 }
@@ -303,6 +314,25 @@ a:hover { text-decoration-thickness: 2px; }
     box-shadow: 0 0 0 4px var(--accent-weak);
 }
 
+/* Sidebar nested menu (My Manuscripts) */
+.side-group { margin: 0; }
+.side-group > summary { list-style: none; cursor: pointer; }
+.side-group > summary::-webkit-details-marker { display: none; }
+.side-caret { float: right; opacity: 0.7; }
+.side-group[open] .side-caret .bi { transform: rotate(180deg); display: inline-block; }
+.side-subnav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding-left: 16px;
+}
+.side-sublink {
+    padding: 8px 12px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.6);
+}
+
 .content { min-width: 0; }
 
 /* 登录后：左侧固定侧栏，右侧内容自适应 */
@@ -319,7 +349,7 @@ a:hover { text-decoration-thickness: 2px; }
     position: fixed;
     left: 0;
     top: var(--header-h);
-    width: 260px;
+    width: 240px;
     height: calc(100vh - var(--header-h));
     overflow: auto;
     padding: var(--space-6) var(--space-4);
@@ -328,14 +358,20 @@ a:hover { text-decoration-thickness: 2px; }
     z-index: 10;
 }
 .authed .content {
-    margin-left: 260px;
+    margin-left: 240px;
     min-width: 0;
 }
 .authed .content-inner {
-    max-width: 1160px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding-left: var(--space-6);
-    padding-right: var(--space-6);
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+}
+
+/* 登录后：侧边栏为 fixed，会覆盖页面底部 footer 的左侧区域。
+   给 footer 左侧留出同等宽度的内边距，避免 footer 内容被挡住。 */
+.authed .site-footer {
+    padding-left: 240px;
 }
 
 /* Auth sidebar (logged-in) */
@@ -362,12 +398,83 @@ a:hover { text-decoration-thickness: 2px; }
 .stack > * + * { margin-top: var(--space-4); }
 .stack-lg > * + * { margin-top: var(--space-6); }
 
+/* Page header (compact) */
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.page-title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+}
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.75);
+    color: rgba(11, 18, 32, 0.82);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+}
+
+.chip a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+}
+.chip a:hover { text-decoration: underline; }
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* Tiled layout helpers */
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+}
+.tiles.compact { gap: var(--space-3); }
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+.toolbar .left,
+.toolbar .right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+}
+
 .card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow-soft);
-    padding: var(--space-6);
+    padding: var(--space-5);
 }
 
 .card.mini { padding: var(--space-5); }
@@ -679,7 +786,7 @@ textarea {
     border: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.85);
     border-radius: var(--radius-sm);
-    padding: 12px 12px;
+    padding: 8px 10px;
     color: rgba(11, 18, 32, 0.92);
     outline: none;
 }
@@ -698,7 +805,7 @@ textarea:focus,
     background: rgba(255, 255, 255, 0.85);
     border-radius: var(--radius-sm);
     padding: 12px;
-    min-height: 140px;
+    min-height: 110px;
     outline: none;
 }
 
@@ -706,7 +813,7 @@ fieldset {
     margin: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: var(--space-6);
+    padding: var(--space-5);
     background: rgba(255, 255, 255, 0.55);
 }
 legend {
@@ -717,10 +824,10 @@ legend {
 
 .form-row {
     display: grid;
-    grid-template-columns: 160px 1fr;
+    grid-template-columns: 120px 1fr;
     gap: var(--space-3);
     align-items: start;
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
 }
 .form-row:first-child { margin-top: 0; }
 .form-row > .help { grid-column: 2; color: var(--muted); font-size: 13px; }
@@ -745,7 +852,7 @@ table {
 }
 table[border] { border: 1px solid var(--border); }
 th, td {
-    padding: 12px 14px;
+    padding: 10px 12px;
     border: 0;
     border-bottom: 1px solid rgba(11, 18, 32, 0.08);
     vertical-align: top;
@@ -867,6 +974,7 @@ tbody tr:hover td {
     .authed .sidebar { position: static; width: auto; height: auto; overflow: visible; padding: 0; border-right: 0; }
     .authed .content { margin-left: 0; }
     .authed .site-main > .container { padding-left: var(--space-6); padding-right: var(--space-6); }
+    .authed .site-footer { padding-left: 0; }
 }
 
 @media (max-width: 720px) {

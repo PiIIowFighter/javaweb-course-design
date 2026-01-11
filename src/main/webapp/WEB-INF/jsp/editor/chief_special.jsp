@@ -4,19 +4,12 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>主编特殊权限</h2>
-<p>
-    本页面提供主编的两项特殊操作：
-    <strong>撤销终审决定（Rescind Decision）</strong> 与 <strong>撤稿（Retract）</strong>。
-    <br/>
-    撤销终审决定：仅对已做出最终决定的稿件（ACCEPTED/REJECTED/REVISION）有效，将状态回退到 FINAL_DECISION_PENDING。
-    <br/>
-    撤稿：将稿件标记为撤稿并归档（Status=ARCHIVED）。
-    <br/>
-    注：如需查看审稿流程与附件，请进入稿件详情页。
-</p>
-
-<c:if test="${empty manuscripts}">
+<div class="page-head">
+        <h2 class="page-title">主编特殊权限</h2>
+        <div class="chips">
+            <span class="chip">本页面提供主编的两项特殊操作： <strong>撤销终审决定（Rescind Decision）</strong> 与 <strong>撤稿（Retract）</strong>。 <br/> 撤销终审决定：仅对已做出最终决定的稿件（ACCEPTED/REJECTED/REVISION）有效，将状态回退到 FINAL_DECISION_PENDING。 <br/> 撤稿：将稿件标记为撤稿并归档（Status=ARCHIVED）。 <br/> 注：如需查看审稿流程与附件，请进入稿件详情页。</span>
+        </div>
+    </div><c:if test="${empty manuscripts}">
     <p>当前没有可用于“特殊权限”操作的稿件。</p>
 </c:if>
 

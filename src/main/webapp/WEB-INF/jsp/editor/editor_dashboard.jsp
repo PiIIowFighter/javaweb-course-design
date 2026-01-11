@@ -7,9 +7,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">编辑部工作台</h2>
-            <p class="card-subtitle">在一个视图中完成形式审查、案头审查、外审推进与终审决策。</p>
+            <div class="page-head">
+        <h2 class="page-title">编辑部工作台</h2>
+        <div class="chips">
+            <span class="chip">在一个视图中完成形式审查、案头审查、外审推进与终审决策。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="grid grid-2">

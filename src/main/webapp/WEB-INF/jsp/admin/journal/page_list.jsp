@@ -8,9 +8,12 @@
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">关于期刊页面</h2>
-            <p class="card-subtitle">维护前台四个页面的内容：Publish / Guide / Aims / Policies。</p>
+            <div class="page-head">
+        <h2 class="page-title">关于期刊页面</h2>
+        <div class="chips">
+            <span class="chip">维护前台四个页面的内容：Publish / Guide / Aims / Policies。</span>
         </div>
+    </div></div>
     </div>
 
     <p>
@@ -128,4 +131,7 @@
     </p>
 </div>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

@@ -9,19 +9,15 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">
-                <c:choose>
+            <div class="page-head">
+        <h2 class="page-title"><c:choose>
                     <c:when test="${not empty page && not empty page.title}"><c:out value="${page.title}"/></c:when>
                     <c:otherwise>论文发表 (Publish)</c:otherwise>
-                </c:choose>
-            </h2>
-            <p class="card-subtitle">
-                <c:choose>
-                    <c:when test="${not empty page && not empty page.title}">了解本刊投稿与发表流程、版权与开放获取政策等信息。</c:when>
-                    <c:otherwise>期刊投稿与发表流程简介</c:otherwise>
-                </c:choose>
-            </p>
+                </c:choose></h2>
+        <div class="chips">
+            <span class="chip"><c:choose> <c:when test="${not empty page && not empty page.title}">了解本刊投稿与发表流程、版权与开放获取政策等信息。</c:when> <c:otherwise>期刊投稿与发表流程简介</c:otherwise> </c:choose></span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${not empty pageLoadError}">

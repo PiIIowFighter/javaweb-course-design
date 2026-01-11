@@ -7,9 +7,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>从审稿人库中选择</h2>
-
-<c:if test="${not empty backToUrl}">
+<div class="page-head">
+        <h2 class="page-title">从审稿人库中选择</h2>
+    </div><c:if test="${not empty backToUrl}">
     <p style="margin-top: var(--space-3);">
         <a class="btn btn-quiet" href="${backToUrl}">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>

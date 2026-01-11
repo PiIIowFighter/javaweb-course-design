@@ -9,16 +9,17 @@
 <div class="card stack">
     <div class="card-header">
         <div>
-            <h2 class="card-title">
-                <c:choose>
+            <div class="page-head">
+        <h2 class="page-title"><c:choose>
                     <c:when test="${not empty page && not empty page.title}">
                         <c:out value="${page.title}"/>
                     </c:when>
                     <c:otherwise>用户指南 (Guide for authors)</c:otherwise>
-                </c:choose>
-            </h2>
-            <p class="card-subtitle">为用户提供期刊介绍、投稿指南与写作/格式要求入口</p>
+                </c:choose></h2>
+        <div class="chips">
+            <span class="chip">为用户提供期刊介绍、投稿指南与写作/格式要求入口</span>
         </div>
+    </div></div>
     </div>
 
     <div class="actions">

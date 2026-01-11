@@ -10,13 +10,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title"><c:out value="${news.title}"/></h2>
-            <p class="card-subtitle">
-                <c:if test="${news.publishedAt != null}">
-                    <c:out value="${fn:substring(news.publishedAt, 0, 10)}"/>
-                </c:if>
-            </p>
+            <div class="page-head">
+        <h2 class="page-title"><c:out value="${news.title}"/></h2>
+        <div class="chips">
+            <span class="chip"><c:if test="${news.publishedAt != null}"> <c:out value="${fn:substring(news.publishedAt, 0, 10)}"/> </c:if></span>
         </div>
+    </div></div>
         <div>
             <a class="btn" style="text-decoration:none;" href="${ctx}/news/list">
                 <i class="bi bi-arrow-left"></i> 返回列表

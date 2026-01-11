@@ -16,9 +16,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
- * 超级管理员：期刊管理（按板块分组管理 Journals / JournalPages / Issues / CallForPapers）。
+ * 
  *
  * URL 设计：
  *  - /admin/journals/list
@@ -321,7 +322,7 @@ public class JournalAdminServlet extends HttpServlet {
         List<Issue> issues = issueDAO.listAllByJournal(journalId);
 
         req.setAttribute("journal", journal);
-        req.setAttribute("issues", issues);
+        PaginationUtil.apply(req, issues, "issues");
         req.getRequestDispatcher("/WEB-INF/jsp/admin/journal/issue_list.jsp").forward(req, resp);
     }
 
@@ -459,7 +460,7 @@ public class JournalAdminServlet extends HttpServlet {
         List<CallForPaper> calls = callDAO.listAllByJournal(journalId);
 
         req.setAttribute("journal", journal);
-        req.setAttribute("calls", calls);
+        PaginationUtil.apply(req, calls, "calls");
         req.getRequestDispatcher("/WEB-INF/jsp/admin/journal/call_list.jsp").forward(req, resp);
     }
 

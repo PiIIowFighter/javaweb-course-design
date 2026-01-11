@@ -5,9 +5,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">作者工作台</h2>
-            <p class="card-subtitle">管理稿件、保存草稿、提交投稿，并跟踪处理进度。</p>
+            <div class="page-head">
+        <h2 class="page-title">作者工作台</h2>
+        <div class="chips">
+            <span class="chip">管理稿件、保存草稿、提交投稿，并跟踪处理进度。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="grid grid-2">

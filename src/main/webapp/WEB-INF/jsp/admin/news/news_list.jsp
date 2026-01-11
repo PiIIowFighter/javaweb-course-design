@@ -4,11 +4,12 @@
 
 <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
 
-<h2>新闻 / 公告管理</h2>
-<p>展示站点公告列表，并支持新增、编辑和删除操作。</p>
-
-
-<form method="get" action="${pageContext.request.contextPath}/admin/news/list" style="margin: 12px 0;">
+<div class="page-head">
+        <h2 class="page-title">新闻 / 公告管理</h2>
+        <div class="chips">
+            <span class="chip">展示站点公告列表，并支持新增、编辑和删除操作。</span>
+        </div>
+    </div><form method="get" action="${pageContext.request.contextPath}/admin/news/list" style="margin: 12px 0;">
     <label>关键词：
         <input type="text" name="keyword" value="${param.keyword}" style="width: 220px;"/>
     </label>
@@ -85,4 +86,7 @@
     <button type="button" onclick="history.back()">返回上一页</button>
 </p>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />

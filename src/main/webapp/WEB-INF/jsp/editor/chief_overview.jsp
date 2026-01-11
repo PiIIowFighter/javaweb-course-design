@@ -10,11 +10,12 @@
 <div class="card stack">
     <div class="card-header" style="margin-bottom: 12px;">
         <div style="min-width: 0;">
-            <h2 class="card-title">主编全览</h2>
-            <p class="card-subtitle" style="margin-top: 6px;">
-                查看系统内全部稿件的当前状态。点击“查看详情”进入稿件详情页，查看<strong>审稿流程 / 评审记录 / 版本与附件</strong>。
-            </p>
+            <div class="page-head">
+        <h2 class="page-title">主编全览</h2>
+        <div class="chips">
+            <span class="chip">查看系统内全部稿件的当前状态。点击“查看详情”进入稿件详情页，查看<strong>审稿流程 / 评审记录 / 版本与附件</strong>。</span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${not empty manuscripts}">

@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import edu.bjfu.onlinesm.util.PaginationUtil;
 
 /**
  * 编辑委员会管理模块控制器：维护 dbo.EditorialBoard。
@@ -94,11 +95,10 @@ public class EditorialBoardServlet extends HttpServlet {
 
         req.setAttribute("primaryJournal", primary);
         req.setAttribute("selectedJournalId", selectedJournalId);
-        if (selectedJournalId == null) {
-            req.setAttribute("members", java.util.Collections.emptyList());
-        } else {
-            req.setAttribute("members", editorialBoardDAO.findByJournalId(selectedJournalId));
-        }
+        List<EditorialBoardMember> members = (selectedJournalId == null)
+                ? java.util.Collections.emptyList()
+                : editorialBoardDAO.findByJournalId(selectedJournalId);
+        PaginationUtil.apply(req, members, "members");
         req.getRequestDispatcher("/WEB-INF/jsp/admin/editorial/editorial_board_list.jsp").forward(req, resp);
     }
 

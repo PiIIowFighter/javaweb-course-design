@@ -53,9 +53,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">审查历史</h2>
-            <p class="card-subtitle">展示你历史提交的形式审查记录（最新在前）。</p>
+            <div class="page-head">
+        <h2 class="page-title">审查历史</h2>
+        <div class="chips">
+            <span class="chip">展示你历史提交的形式审查记录（最新在前）。</span>
         </div>
+    </div></div>
     </div>
 
     <c:if test="${empty history}">
@@ -128,4 +131,7 @@
     </c:if>
 </div>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

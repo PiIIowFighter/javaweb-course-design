@@ -6,12 +6,20 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
+<%-- 防御：当用户直接访问 /manuscripts/list 且未携带 group 参数时，默认落在 processing --%>
+<c:if test="${empty group}">
+    <c:set var="group" value="processing"/>
+</c:if>
+
 <div class="card stack-lg">
     <div class="card-header">
         <div>
-            <h2 class="card-title">我的稿件</h2>
-            <p class="card-subtitle">按不同处理状态分类展示投稿记录，便于跟踪稿件在编辑部与审稿流程中的进展。</p>
+            <div class="page-head">
+        <h2 class="page-title">我的稿件</h2>
+        <div class="chips">
+            <span class="chip">按不同处理状态分类展示投稿记录，便于跟踪稿件在编辑部与审稿流程中的进展。</span>
         </div>
+    </div></div>
         <div class="actions">
             <a class="btn-primary" href="${ctx}/manuscripts/submit">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -20,25 +28,7 @@
         </div>
     </div>
 
-    <!-- 顶部分组 Tab：对应任务书中的几类列表 -->
-    <div class="tabs" aria-label="稿件分类视图">
-        <a class="tab ${group == 'incomplete' ? 'is-active' : ''}" href="${ctx}/manuscripts/list?group=incomplete">
-            <i class="bi bi-pencil-square" aria-hidden="true"></i>
-            Incomplete（草稿）<span>(<c:out value="${countIncomplete}"/>)</span>
-        </a>
-        <a class="tab ${group == 'processing' ? 'is-active' : ''}" href="${ctx}/manuscripts/list?group=processing">
-            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-            Processing（处理中）<span>(<c:out value="${countProcessing}"/>)</span>
-        </a>
-        <a class="tab ${group == 'revision' ? 'is-active' : ''}" href="${ctx}/manuscripts/list?group=revision">
-            <i class="bi bi-wrench-adjustable" aria-hidden="true"></i>
-            Revision（待修改）<span>(<c:out value="${countRevision}"/>)</span>
-        </a>
-        <a class="tab ${group == 'decision' ? 'is-active' : ''}" href="${ctx}/manuscripts/list?group=decision">
-            <i class="bi bi-check2-circle" aria-hidden="true"></i>
-            Decision（已决策）<span>(<c:out value="${countDecision}"/>)</span>
-        </a>
-    </div>
+    <%-- 顶部分组 Tab 已移除：分组入口改为侧边栏二级菜单 --%>
 
     <!-- 筛选区域：状态 + 日期范围 -->
     <form method="get" action="${ctx}/manuscripts/list" class="card">
@@ -93,39 +83,16 @@
                     <i class="bi bi-funnel" aria-hidden="true"></i>
                     筛选
                 </button>
-                <a class="btn-quiet" href="${ctx}/manuscripts/list" style="text-decoration:none;">重置</a>
+                <a class="btn-quiet" href="${ctx}/manuscripts/list?group=${group}" style="text-decoration:none;">重置</a>
             </div>
         </div>
     </form>
 
     <div class="toolbar">
-        <small class="grow">
-            共 <c:out value="${totalCount}"/> 条记录，
-            <c:choose>
-                <c:when test="${pageCount > 0}">
-                    当前第 <c:out value="${page}"/> / <c:out value="${pageCount}"/> 页
-                </c:when>
-                <c:otherwise>
-                    当前第 0 / 0 页
-                </c:otherwise>
-            </c:choose>
-        </small>
+        <span class="grow"></span>
         <a href="${ctx}/manuscripts/exportCsv?group=${group}&status=${statusFilter}&fromDate=${fromDate}&toDate=${toDate}">
             <i class="bi bi-download" aria-hidden="true"></i> 导出 CSV
         </a>
-    </div>
-
-    <div class="actions">
-        <c:if test="${page > 1}">
-            <a class="btn-quiet" href="${ctx}/manuscripts/list?group=${group}&status=${statusFilter}&fromDate=${fromDate}&toDate=${toDate}&sort=${sort}&dir=${dir}&page=${page-1}" style="text-decoration:none;">
-                <i class="bi bi-arrow-left" aria-hidden="true"></i> 上一页
-            </a>
-        </c:if>
-        <c:if test="${page < pageCount}">
-            <a class="btn-quiet" href="${ctx}/manuscripts/list?group=${group}&status=${statusFilter}&fromDate=${fromDate}&toDate=${toDate}&sort=${sort}&dir=${dir}&page=${page+1}" style="text-decoration:none;">
-                下一页 <i class="bi bi-arrow-right" aria-hidden="true"></i>
-            </a>
-        </c:if>
     </div>
 
 <c:if test="${empty manuscripts}">
@@ -168,13 +135,13 @@
                     </c:choose>
                 </td>
                 <td>
-                    <a href="${ctx}/manuscripts/detail?id=${m.manuscriptId}"><i class="bi bi-eye" aria-hidden="true"></i> 查看详情</a>
-                    <a style="margin-left:6px;" href="${ctx}/manuscripts/track?id=${m.manuscriptId}"><i class="bi bi-clock-history" aria-hidden="true"></i> 追踪状态</a>
+                    <a href="${ctx}/manuscripts/detail?id=${m.manuscriptId}&group=${group}"><i class="bi bi-eye" aria-hidden="true"></i> 查看详情</a>
+                    <a style="margin-left:6px;" href="${ctx}/manuscripts/track?id=${m.manuscriptId}&group=${group}"><i class="bi bi-clock-history" aria-hidden="true"></i> 追踪状态</a>
                     <c:if test="${m.currentStatus == 'DRAFT'}">
-                        <a style="margin-left:6px;" href="${ctx}/manuscripts/edit?id=${m.manuscriptId}"><i class="bi bi-pencil" aria-hidden="true"></i> 继续编辑</a>
+                        <a style="margin-left:6px;" href="${ctx}/manuscripts/edit?id=${m.manuscriptId}&group=${group}"><i class="bi bi-pencil" aria-hidden="true"></i> 继续编辑</a>
                     </c:if>
                     <c:if test="${m.currentStatus == 'RETURNED' or m.currentStatus == 'REVISION'}">
-                        <a style="margin-left:6px;" href="${ctx}/manuscripts/resubmitEdit?id=${m.manuscriptId}"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 进入修改</a>
+                        <a style="margin-left:6px;" href="${ctx}/manuscripts/resubmitEdit?id=${m.manuscriptId}&group=${group}"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> 进入修改</a>
                     </c:if>
                 </td>
             </tr>
@@ -183,6 +150,10 @@
 </table>
 </c:if>
 
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
+
 </div>
+
+
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>

@@ -7,9 +7,9 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<h2>审稿意见详情</h2>
-
-<c:if test="${empty review}">
+<div class="page-head">
+        <h2 class="page-title">审稿意见详情</h2>
+    </div><c:if test="${empty review}">
     <p style="color:#d00;">未找到审稿记录。</p>
 </c:if>
 

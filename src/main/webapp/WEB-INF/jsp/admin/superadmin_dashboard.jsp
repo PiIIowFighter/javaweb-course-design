@@ -8,11 +8,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">超级管理员工作台</h2>
-            <p class="card-subtitle">
-                最高权限入口：统一管理用户、权限、期刊、系统状态与审计日志。
-            </p>
+            <div class="page-head">
+        <h2 class="page-title">超级管理员工作台</h2>
+        <div class="chips">
+            <span class="chip">最高权限入口：统一管理用户、权限、期刊、系统状态与审计日志。</span>
         </div>
+    </div></div>
     </div>
 
     <div class="grid grid-2">

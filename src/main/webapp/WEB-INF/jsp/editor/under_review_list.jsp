@@ -4,14 +4,12 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-<h2>外审阶段稿件列表</h2>
-
-<p>
-    此页面仅展示 <strong>UNDER_REVIEW</strong>（外审进行中）的稿件。
-    已完成外审并进入 <strong>EDITOR_RECOMMENDATION</strong> 的稿件请到“提出建议”模块查看。
-</p>
-
-<h3>外审进行中（UNDER_REVIEW）</h3>
+<div class="page-head">
+        <h2 class="page-title">外审阶段稿件列表</h2>
+        <div class="chips">
+            <span class="chip">此页面仅展示 <strong>UNDER_REVIEW</strong>（外审进行中）的稿件。 已完成外审并进入 <strong>EDITOR_RECOMMENDATION</strong> 的稿件请到“提出建议”模块查看。</span>
+        </div>
+    </div><h3>外审进行中（UNDER_REVIEW）</h3>
 
 <p style="margin:8px 0;">
     <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/review/monitor">进入全局催审/逾期监控</a>
@@ -56,4 +54,7 @@
     </table>
 </c:if>
 
+
+
+<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
