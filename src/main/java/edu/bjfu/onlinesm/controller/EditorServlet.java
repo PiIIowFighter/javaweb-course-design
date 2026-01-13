@@ -966,7 +966,10 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
         req.setAttribute("msg", req.getParameter("msg"));
         req.setAttribute("error", req.getParameter("error"));
 
-        req.setAttribute("reviewers", reviewers);
+        // 分页展示（避免审稿人数量过多页面过长）
+        PaginationUtil.apply(req, reviewers, "reviewers");
+
+        
         req.setAttribute("reviewerKeyword", reviewerKeyword);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/reviewer_pool.jsp")
                 .forward(req, resp);
@@ -2396,6 +2399,8 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         String reviewerKeyword = req.getParameter("reviewerKeyword");
         Integer minCompleted = null;
         Integer minAvgScore = null;
+        boolean onlyMatch = false;
+
         try {
             String mc = req.getParameter("minCompleted");
             if (mc != null && !mc.trim().isEmpty()) minCompleted = Integer.parseInt(mc.trim());
@@ -2405,8 +2410,31 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
             if (mas != null && !mas.trim().isEmpty()) minAvgScore = Integer.parseInt(mas.trim());
         } catch (Exception ignore) {}
 
+        // 是否仅显示“领域匹配”的审稿人（匹配度 > 0）
+        String onlyMatchParam = req.getParameter("onlyMatch");
+        if (onlyMatchParam != null) {
+            String v = onlyMatchParam.trim();
+            onlyMatch = "1".equals(v) || "true".equalsIgnoreCase(v) || "on".equalsIgnoreCase(v);
+        }
+
         // 审稿人池（带降级策略：UserDAO.searchReviewerPool 内部已处理）
         List<User> reviewers = userDAO.searchReviewerPool(reviewerKeyword, minCompleted, minAvgScore, 200);
+
+        // ✅ 基于稿件研究领域/关键词与审稿人研究方向进行自动匹配，并优先展示更匹配的审稿人
+        Map<Integer, Integer> reviewerMatchScore = new HashMap<>();
+        reviewers = rankReviewersByResearchArea(reviewers, m, reviewerMatchScore);
+
+        // “仅显示匹配”：过滤掉匹配度=0 的审稿人
+        if (onlyMatch && reviewers != null && !reviewers.isEmpty()) {
+            List<User> filtered = new ArrayList<>();
+            for (User u : reviewers) {
+                if (u == null || u.getUserId() == null) continue;
+                int sc = reviewerMatchScore.getOrDefault(u.getUserId(), 0);
+                if (sc > 0) filtered.add(u);
+            }
+            reviewers = filtered;
+        }
+
 
         // 已经存在审稿记录的审稿人（用于禁用重复邀请）
         // - DECLINED：显示“已拒绝”，且勾选框置灰
@@ -2432,6 +2460,10 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
         req.setAttribute("manuscript", m);
         req.setAttribute("backToUrl", backToUrl);
+        
+        req.setAttribute("reviewerMatchScore", reviewerMatchScore);
+        req.setAttribute("onlyMatch", onlyMatch);
+        
         req.setAttribute("reviewers", reviewers);
         req.setAttribute("assignedReviewerIds", assignedReviewerIds);
         req.setAttribute("declinedReviewerIds", declinedReviewerIds);
@@ -2878,12 +2910,13 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
         String msArea = manuscript.getSubjectArea();
         String msKeywords = manuscript.getKeywords();
-        Set<String> msTokens = tokenizeKeywords((msArea == null ? "" : msArea) + " " + (msKeywords == null ? "" : msKeywords));
+        String msText = ((msArea == null ? "" : msArea) + " " + (msKeywords == null ? "" : msKeywords)).trim();
+        Set<String> msTokens = tokenizeKeywords(msText);
 
         List<User> copy = new ArrayList<>(editors);
         copy.sort((a, b) -> {
-            int sa = editorMatchScore(a, msArea, msTokens);
-            int sb = editorMatchScore(b, msArea, msTokens);
+            int sa = editorMatchScore(a, msText, msTokens);
+            int sb = editorMatchScore(b, msText, msTokens);
             if (sa != sb) return Integer.compare(sb, sa); // 降序
             boolean ha = a != null && a.getResearchArea() != null && !a.getResearchArea().trim().isEmpty();
             boolean hb = b != null && b.getResearchArea() != null && !b.getResearchArea().trim().isEmpty();
@@ -2923,11 +2956,70 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
         return score;
     }
 
+
+    // =========================
+    // 审稿邀请：按领域/关键词匹配的推荐排序
+    // =========================
+    /**
+     * 根据稿件的 SubjectArea/Keywords 与审稿人的 ResearchArea 计算匹配度，并按匹配度优先排序。
+     *
+     * @param reviewers  审稿人列表
+     * @param manuscript 当前稿件
+     * @param scoreOut   输出每个 reviewerId 的匹配度（用于 JSP 展示），可为 null
+     */
+    private List<User> rankReviewersByResearchArea(List<User> reviewers, Manuscript manuscript, Map<Integer, Integer> scoreOut) {
+        if (reviewers == null) return Collections.emptyList();
+        if (manuscript == null) return new ArrayList<>(reviewers);
+
+        String msArea = manuscript.getSubjectArea();
+        String msKeywords = manuscript.getKeywords();
+        String msText = ((msArea == null ? "" : msArea) + " " + (msKeywords == null ? "" : msKeywords)).trim();
+        Set<String> msTokens = tokenizeKeywords(msText);
+
+        List<User> copy = new ArrayList<>(reviewers);
+
+        if (scoreOut != null) {
+            scoreOut.clear();
+            for (User u : copy) {
+                if (u == null || u.getUserId() == null) continue;
+                int sc = editorMatchScore(u, msText, msTokens); // 复用编辑匹配算法：token 交集 + 子串加权（含 SubjectArea+Keywords）
+                scoreOut.put(u.getUserId(), sc);
+            }
+        }
+
+        copy.sort((a, b) -> {
+            int sa = editorMatchScore(a, msText, msTokens);
+            int sb = editorMatchScore(b, msText, msTokens);
+            if (sa != sb) return Integer.compare(sb, sa); // 匹配度降序
+
+            // 同匹配度下：优先审稿经验与质量（完成数、平均分）
+            int ca = (a == null || a.getCompletedReviewCount() == null) ? 0 : a.getCompletedReviewCount();
+            int cb = (b == null || b.getCompletedReviewCount() == null) ? 0 : b.getCompletedReviewCount();
+            if (ca != cb) return Integer.compare(cb, ca);
+
+            double aa = (a == null || a.getAvgReviewScore() == null) ? 0.0 : a.getAvgReviewScore();
+            double ab = (b == null || b.getAvgReviewScore() == null) ? 0.0 : b.getAvgReviewScore();
+            if (Double.compare(aa, ab) != 0) return Double.compare(ab, aa);
+
+            boolean ha = a != null && a.getResearchArea() != null && !a.getResearchArea().trim().isEmpty();
+            boolean hb = b != null && b.getResearchArea() != null && !b.getResearchArea().trim().isEmpty();
+            if (ha != hb) return hb ? 1 : -1;
+
+            String ua = a == null ? "" : String.valueOf(a.getUsername());
+            String ub = b == null ? "" : String.valueOf(b.getUsername());
+            return ua.compareToIgnoreCase(ub);
+        });
+
+        return copy;
+    }
+
     private Set<String> tokenizeKeywords(String s) {
         if (s == null) return Collections.emptySet();
         String normalized = s.toLowerCase()
                 .replaceAll("[\u3000\t\r\n]+", " ")
                 .replaceAll("[，、；;|/\\\\]+", " ")   // 注意这里是 /\\\\
+                .replaceAll("[()（）\\[\\]{}<>《》“”\\\"'`]+", " ")
+                .replaceAll("[:：·•—–\\-_=+]+", " ")
                 .replaceAll("[,]+", " ")
                 .replaceAll("\\s+", " ")
                 .trim();

@@ -64,7 +64,7 @@
 
                 <label style="display:flex; flex-direction:column; gap:6px;">
                     <span style="color: var(--muted);">最低完成审稿数</span>
-                    <input type="number" name="minCompleted" min="0" value="${fn:escapeXml(param.minCompleted)}" style="width: 160px;"/>
+                    <input type="number" name="minCompleted" min="0" step="1" value="${fn:escapeXml(param.minCompleted)}" style="width: 160px;"/>
                 </label>
 
                 <label style="display:flex; flex-direction:column; gap:6px;">
@@ -72,7 +72,14 @@
                     <input type="number" name="minAvgScore" min="0" max="10" step="1" value="${fn:escapeXml(param.minAvgScore)}" style="width: 160px;"/>
                 </label>
 
-                <div class="stack" style="flex-direction: row; gap: 10px; align-items:flex-end;">
+                
+                <label style="display:flex; align-items:center; gap:8px; margin-top: 22px;">
+                    <input type="checkbox" name="onlyMatch" value="1"
+                           <c:if test="${param.onlyMatch == '1' || param.onlyMatch == 'on' || param.onlyMatch == 'true'}">checked="checked"</c:if> />
+                    <span style="color: var(--muted);">仅显示领域匹配</span>
+                </label>
+
+<div class="stack" style="flex-direction: row; gap: 10px; align-items:flex-end;">
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-search" aria-hidden="true"></i>
                         搜索
@@ -118,6 +125,7 @@
                         <th>用户名</th>
                         <th>单位/机构</th>
                         <th>研究方向</th>
+                        <th style="width:80px;">匹配度</th>
                         <th style="width:120px;">完成审稿数</th>
                         <th style="width:120px;">平均分</th>
                         <th style="width:80px;">选择</th>
@@ -130,6 +138,17 @@
                             <td><c:out value="${u.username}"/></td>
                             <td><c:out value="${u.affiliation}"/></td>
                             <td><c:out value="${u.researchArea}"/></td>
+                            <td style="text-align:center;">
+                                <c:choose>
+                                    <c:when test="${empty reviewerMatchScore || empty reviewerMatchScore[u.userId]}">0</c:when>
+                                    <c:otherwise>
+                                        <c:out value="${reviewerMatchScore[u.userId]}"/>
+                                        <c:if test="${reviewerMatchScore[u.userId] >= 2}">
+                                            <span class="chip" style="margin-left:6px;">推荐</span>
+                                        </c:if>
+                                    </c:otherwise>
+                                </c:choose>
+                            </td>
                             <td style="text-align:center;">
                                 <c:out value="${empty u.completedReviewCount ? 0 : u.completedReviewCount}"/>
                             </td>
@@ -155,6 +174,8 @@
                     </c:forEach>
                     </tbody>
                 </table>
+
+        <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 
                 <div class="stack" style="flex-direction: row; justify-content: space-between; align-items:center; gap: 10px; margin-top: var(--space-4); flex-wrap: wrap;">
                     <label style="display:flex; align-items:center; gap:8px;">
