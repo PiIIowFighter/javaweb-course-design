@@ -61,93 +61,113 @@ public final class MailTemplates {
 
     public static MailMessage submissionConfirmation(MailConfig cfg, User author, Manuscript m, String manuscriptCode) {
         String code = manuscriptCodeOrId(manuscriptCode, m);
-        String subject = "【投稿系统】投稿已受理 - " + code;
+        String subject = "【投稿系统】稿件提交成功（已受理）- " + code;
 
         String detailUrl = link(cfg.baseUrl(), "/manuscripts/detail?id=" + m.getManuscriptId());
 
         String body = ""
                 + "<p>尊敬的 " + person(author) + "：</p>"
-                + "<p>您好！您的稿件已通过系统提交并成功受理，信息如下：</p>"
+                + "<p>您好！感谢您使用本投稿系统。您提交的稿件已提交成功并已受理，相关信息如下：</p>"
                 + section("稿件信息",
-                "<ul style=\"margin:0;padding-left:18px;\">" +
-                        "<li><b>稿件编号：</b>" + code + "</li>" +
-                        "<li><b>稿件标题：</b>" + manuscriptTitle(m) + "</li>" +
-                        "</ul>")
-                + (detailUrl.isEmpty() ? "" : section("查看稿件", "<a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a>"))
-                + "<p>后续流程进展将通过系统站内消息及邮件通知您，请留意。</p>";
+                "<ul style=\"margin:0;padding-left:18px;\">"
+                        + "<li><b>稿件编号：</b>" + h(code) + "</li>"
+                        + "<li><b>稿件标题：</b>" + h(manuscriptTitle(m)) + "</li>"
+                        + "</ul>")
+                + (detailUrl.isEmpty()
+                    ? ""
+                    : section("稿件详情",
+                        "<p style=\"margin:0;\">您可通过以下链接查看稿件详情与处理进度：</p>"
+                        + "<p style=\"margin:6px 0 0 0;\"><a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a></p>"
+                  ))
+                + "<p>后续审稿流程的进展将通过系统站内消息及邮件方式通知您，请及时关注。</p>"
+                + "<p style=\"color:#666; font-size:12px;\">（本邮件由系统自动发送，请勿直接回复。如需协助，请通过系统内“帮助/反馈”与我们联系。）</p>";
 
         return new MailMessage().subject(subject).htmlBody(wrap(body));
     }
 
-    public static MailMessage unsubmitReturn(MailConfig cfg, User author, Manuscript m, String manuscriptCode, String issues, String guideUrl) {
-        String code = manuscriptCodeOrId(manuscriptCode, m);
-        String subject = "【投稿系统】形式审查退回修改 - " + code;
 
-        String detailUrl = link(cfg.baseUrl(), "/manuscripts/detail?id=" + m.getManuscriptId());
+    public static MailMessage unsubmitReturn(MailConfig cfg, User author, Manuscript m,
+            String manuscriptCode, String issues, String guideUrl) {
+		String code = manuscriptCodeOrId(manuscriptCode, m);
+		String subject = "【投稿系统】形式审查退回（请修改后重新提交）- " + code;
+		
+		String detailUrl = link(cfg.baseUrl(), "/manuscripts/detail?id=" + m.getManuscriptId());
+		
+		String issuesHtml;
+		if (issues != null && !issues.trim().isEmpty()) {
+		String[] list = issues.split("[；;\n\r]+");
+		StringBuilder sb = new StringBuilder();
+		sb.append("<ul style=\"margin:0;padding-left:18px;\">");
+		for (String it : list) {
+		if (it == null) continue;
+		String t = it.trim();
+		if (t.isEmpty()) continue;
+		sb.append("<li>").append(h(t)).append("</li>");
+		}
+		sb.append("</ul>");
+		issuesHtml = sb.toString();
+		} else {
+		issuesHtml = "<p style=\"margin:0;\">编辑部未填写具体问题说明。为确保修改准确，请登录系统查看退回原因及补充材料要求。</p>";
+		}
+		
+		// 可选：指南链接段
+		String guideSection = "";
+		if (guideUrl != null && !guideUrl.trim().isEmpty()) {
+		String g = guideUrl.trim();
+		guideSection = section("参考指南",
+		"<p style=\"margin:0;\">请参考以下指南完成格式与材料修订：</p>"
+		+ "<p style=\"margin:6px 0 0 0;\"><a href=\"" + h(g) + "\">" + h(g) + "</a></p>");
+		}
+		
+		String body = ""
+		+ "<p>尊敬的 " + person(author) + "：</p>"
+		+ "<p>您好！您提交的稿件在形式审查环节未通过，现予以退回修改。请您根据以下问题及要求完成修订后，登录系统重新提交。</p>"
+		+ section("稿件信息",
+		"<ul style=\"margin:0;padding-left:18px;\">"
+		+ "<li><b>稿件编号：</b>" + h(code) + "</li>"
+		+ "<li><b>稿件标题：</b>" + h(manuscriptTitle(m)) + "</li>"
+		+ "</ul>")
+		+ section("需修改/补充事项", issuesHtml)
+		+ guideSection
+		+ (detailUrl.isEmpty() ? "" : section("查看稿件与修改入口",
+		"<p style=\"margin:0;\">您可通过以下链接查看退回详情并进行修改提交：</p>"
+		+ "<p style=\"margin:6px 0 0 0;\"><a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a></p>"))
+		+ "<p>为避免影响稿件处理进度，建议您尽快完成修改并重新提交。感谢您的理解与配合！</p>"
+		+ "<p style=\"color:#666; font-size:12px;\">（本邮件由系统自动发送，请勿直接回复。如需协助，请通过系统内“帮助/反馈”与编辑部取得联系。）</p>";
+		
+		return new MailMessage().subject(subject).htmlBody(wrap(body));
+}
 
-        String issuesHtml;
-        if (issues != null && !issues.trim().isEmpty()) {
-            String[] list = issues.split("[；;\n\r]+");
-            StringBuilder sb = new StringBuilder();
-            sb.append("<ul style=\"margin:0;padding-left:18px;\">");
-            for (String it : list) {
-                if (it == null) continue;
-                String t = it.trim();
-                if (t.isEmpty()) continue;
-                sb.append("<li>").append(h(t)).append("</li>");
-            }
-            sb.append("</ul>");
-            issuesHtml = sb.toString();
-        } else {
-            issuesHtml = "<p style=\"margin:0;\">编辑部未填写具体问题，请登录系统查看退回原因或补充材料要求。</p>";
-        }
-
-        String guideHtml = "";
-        if (guideUrl != null && !guideUrl.trim().isEmpty()) {
-            guideHtml = "<p style=\"margin:0;\">格式指南：<a href=\"" + h(guideUrl.trim()) + "\">点击查看</a></p>";
-        }
-
-        String body = ""
-                + "<p>尊敬的 " + person(author) + "：</p>"
-                + "<p>您好！您的稿件未通过形式审查，现已退回修改。请根据下列问题逐项完善后在系统中重新提交。</p>"
-                + section("稿件信息",
-                "<ul style=\"margin:0;padding-left:18px;\">" +
-                        "<li><b>稿件编号：</b>" + code + "</li>" +
-                        "<li><b>稿件标题：</b>" + manuscriptTitle(m) + "</li>" +
-                        "</ul>")
-                + section("退回原因/问题列表", issuesHtml)
-                + (guideHtml.isEmpty() ? "" : section("参考资料", guideHtml))
-                + (detailUrl.isEmpty() ? "" : section("进入系统处理", "<a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a>"))
-                + "<p>感谢您的理解与配合。</p>";
-
-        return new MailMessage().subject(subject).htmlBody(wrap(body));
-    }
 
     /** 案头退稿通知（含退稿理由）。 */
-    public static MailMessage deskRejectToAuthor(MailConfig cfg, User author, Manuscript m, String manuscriptCode, String rejectReason) {
-        String code = manuscriptCodeOrId(manuscriptCode, m);
-        String subject = "【投稿系统】案头退稿通知 - " + code;
-
-        String detailUrl = link(cfg.baseUrl(), "/manuscripts/detail?id=" + m.getManuscriptId());
-
-        String reasonHtml = (rejectReason == null || rejectReason.trim().isEmpty())
-                ? "<p style=\"margin:0;\">（未填写具体退稿理由）</p>"
-                : "<p style=\"margin:0;white-space:pre-wrap;\">" + h(rejectReason.trim()) + "</p>";
-
-        String body = ""
-                + "<p>尊敬的 " + person(author) + "：</p>"
-                + "<p>您好！经编辑部主编案头初审，您的稿件未能进入外审流程，现做退稿处理。</p>"
-                + section("稿件信息",
-                "<ul style=\"margin:0;padding-left:18px;\">" +
-                        "<li><b>稿件编号：</b>" + code + "</li>" +
-                        "<li><b>稿件标题：</b>" + manuscriptTitle(m) + "</li>" +
-                        "</ul>")
-                + section("退稿理由", reasonHtml)
-                + (detailUrl.isEmpty() ? "" : section("查看详情", "<a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a>"))
-                + "<p>感谢您对本刊的关注与支持，欢迎后续继续投稿。</p>";
-
-        return new MailMessage().subject(subject).htmlBody(wrap(body));
+    public static MailMessage deskRejectToAuthor(MailConfig cfg, User author, Manuscript m,
+            String manuscriptCode, String rejectReason) {
+		String code = manuscriptCodeOrId(manuscriptCode, m);
+		String subject = "【投稿系统】案头审查结果通知（退稿）- " + code;
+		
+		String detailUrl = link(cfg.baseUrl(), "/manuscripts/detail?id=" + m.getManuscriptId());
+		
+		String reasonHtml = (rejectReason == null || rejectReason.trim().isEmpty())
+		? "<p style=\"margin:0;\">（编辑部未填写具体退稿说明，请以系统内显示为准。）</p>"
+		: "<p style=\"margin:0;white-space:pre-wrap;\">" + h(rejectReason.trim()) + "</p>";
+		
+		String body = ""
+		+ "<p>尊敬的 " + person(author) + "：</p>"
+		+ "<p>您好！感谢您向本刊投稿。经编辑部主编案头审查，您的稿件未能进入外审流程，现作退稿处理，特此通知。</p>"
+		+ section("稿件信息",
+		"<ul style=\"margin:0;padding-left:18px;\">"
+		+ "<li><b>稿件编号：</b>" + h(code) + "</li>"
+		+ "<li><b>稿件标题：</b>" + h(manuscriptTitle(m)) + "</li>"
+		+ "</ul>")
+		+ section("退稿说明", reasonHtml)
+		+ (detailUrl.isEmpty() ? "" : section("查看详情",
+		"<p style=\"margin:0;\"><a href=\"" + h(detailUrl) + "\">" + h(detailUrl) + "</a></p>"))
+		+ "<p>感谢您对本刊的关注与支持，欢迎您在修改完善后再次投稿。</p>"
+		+ "<p style=\"color:#666; font-size:12px;\">（本邮件由系统自动发送，请勿直接回复。如需协助，请通过系统内“帮助/反馈”与编辑部取得联系。）</p>";
+		
+		return new MailMessage().subject(subject).htmlBody(wrap(body));
     }
+
 
     public static MailMessage reviewerInvitation(MailConfig cfg, User reviewer, Manuscript m, int reviewId, LocalDateTime dueAt) {
         String subject = "【投稿系统】审稿邀请 - 稿件 #" + m.getManuscriptId();

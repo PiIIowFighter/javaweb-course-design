@@ -5,97 +5,55 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <div class="page-head">
-        <h2 class="page-title">待分配审稿人稿件列表（TO_ASSIGN）</h2>
-        <div class="chips">
-            <span class="chip">此页面展示已经通过案头处理、等待主编/编辑分配外审专家的稿件（状态：TO_ASSIGN）。</span>
-        </div>
-    </div><c:if test="${empty manuscripts}">
+    <h2 class="page-title">待分配审稿人稿件列表（TO_ASSIGN）</h2>
+    <div class="chips">
+        <span class="chip">此页面展示已经通过案头处理、等待主编/编辑分配外审专家的稿件（状态：TO_ASSIGN）。</span>
+    </div>
+</div>
+
+<c:if test="${empty manuscripts}">
     <p>当前没有等待分配审稿人的稿件。</p>
 </c:if>
+
 <c:if test="${not empty manuscripts}">
-<table border="1" cellpadding="4" cellspacing="0">
-    <thead>
-    <tr>
-        <th>稿件编号</th>
-        <th>标题</th>
-        <th>当前状态</th>
-        <th>提交时间</th>
-        <th>操作</th>
-    </tr>
-    </thead>
-    <tbody>
-    <c:forEach items="${manuscripts}" var="m">
+    <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
         <tr>
-            <td><c:out value="${m.manuscriptId}"/></td>
-            <td><c:out value="${m.title}"/></td>
-            <td><c:out value="${m.currentStatus}"/></td>
-            <td>
-                <c:choose>
-                    <c:when test="${m.submitTime != null}">
-                        <c:out value="${m.submitTime}"/>
-                    </c:when>
-                    <c:otherwise>--</c:otherwise>
-                </c:choose>
-            </td>
-            <td>
-                <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
-                    <div style="margin-bottom:6px;">
-                        <a class="btn" href="${pageContext.request.contextPath}/editor/toAssign/pickEditor?manuscriptId=${m.manuscriptId}">高级筛选指派</a>
-                    </div>
-                    <form method="post" action="${pageContext.request.contextPath}/editor/toAssign" style="display:inline">
-                        <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                        <select name="editorId">
-                            <c:set var="recoList" value="${recommendedEditorsMap[m.manuscriptId]}"/>
-                            <c:choose>
-                                <c:when test="${not empty recoList}">
-                                    <c:forEach items="${recoList}" var="e">
-                                        <option value="${e.userId}">
-                                            <c:out value="${e.fullName}"/>（<c:out value="${e.username}"/>）
-                                            <c:choose>
-                                                <c:when test="${not empty e.researchArea}">
-                                                    - 研究方向：<c:out value="${e.researchArea}"/>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    - 研究方向：未填写
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </option>
-                                    </c:forEach>
-                                </c:when>
-                                <c:otherwise>
-                                    <c:forEach items="${editorList}" var="e">
-                                        <option value="${e.userId}">
-                                            <c:out value="${e.fullName}"/>（<c:out value="${e.username}"/>）
-                                            <c:choose>
-                                                <c:when test="${not empty e.researchArea}">
-                                                    - 研究方向：<c:out value="${e.researchArea}"/>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    - 研究方向：未填写
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </option>
-                                    </c:forEach>
-                                </c:otherwise>
-                            </c:choose>
-                        </select>
-                        <br/>
-    					<textarea name="chiefComment" rows="2" cols="40"
-             				 placeholder="写给该编辑的指示/注意事项，仅编辑可见"></textarea>
-                        
-                        <button type="submit" name="op" value="assign">
-                            指派责任编辑
-                        </button>
-                    </form>
-                </c:if>
-            </td>
+            <th>稿件编号</th>
+            <th>标题</th>
+            <th>当前状态</th>
+            <th>提交时间</th>
+            <th>操作</th>
         </tr>
-    </c:forEach>
-    </tbody>
-</table>
+        </thead>
+
+        <tbody>
+        <c:forEach items="${manuscripts}" var="m">
+            <tr>
+                <td><c:out value="${m.manuscriptId}"/></td>
+                <td><c:out value="${m.title}"/></td>
+                <td><c:out value="${m.currentStatus}"/></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${m.submitTime != null}">
+                            <c:out value="${m.submitTime}"/>
+                        </c:when>
+                        <c:otherwise>--</c:otherwise>
+                    </c:choose>
+                </td>
+                <td>
+                    <c:if test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
+                        <a class="btn"
+                           href="${pageContext.request.contextPath}/editor/toAssign/pickEditor?manuscriptId=${m.manuscriptId}">
+                            指派编辑
+                        </a>
+                    </c:if>
+                </td>
+            </tr>
+        </c:forEach>
+        </tbody>
+    </table>
 </c:if>
-
-
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
