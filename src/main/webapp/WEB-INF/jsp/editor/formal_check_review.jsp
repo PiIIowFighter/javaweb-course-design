@@ -87,7 +87,7 @@
 	                </td>
             </tr>
             <tr>
-                <td>正文字数是否符合（自动）</td>
+                <td>PDF页数是否符合（自动）</td>
                 <td>
                     <select name="bodyWordCountValid" id="bodyWordCountValid">
                         <option value="" ${empty formalCheckResult.bodyWordCountValid ? 'selected' : ''}>未检查</option>
@@ -96,9 +96,9 @@
                     </select>
                 </td>
                 <td class="muted">
-                    正文字数（从作者上传 PDF 中提取）：
-                    <b><span id="bodyCountText">${empty bodyCount ? 0 : bodyCount}</span></b>
-                    <span class="muted">（要求 3000 - 8000）</span>
+                    PDF页数（从作者上传 PDF 统计）：
+                    <b><span id="bodyCountText">${empty pdfPageCount ? (empty bodyCount ? 0 : bodyCount) : pdfPageCount}</span></b>
+                    <span class="muted">（要求 8 - 10 页）</span>
                 </td>
             </tr>
             <tr>
@@ -173,10 +173,20 @@
         <h3 style="margin-top: var(--space-5);">反馈意见</h3>
         <textarea name="feedback" id="feedback" rows="6" placeholder="若不通过，请写清楚需要作者修改的格式问题；若留空，系统会根据勾选项自动生成。">${empty formalCheckResult.feedback ? '' : formalCheckResult.feedback}</textarea>
 
-        <div class="toolbar" style="margin-top: var(--space-4); gap: 10px;">
-            <button class="btn btn-primary" type="button" id="btnSubmitPass">提交（通过，送主编案头）</button>
-            <button class="btn btn-quiet" type="button" id="btnSubmitFail">提交（不通过，退回作者修改）</button>
-        </div>
+        <h3 style="margin-top: var(--space-5);">审查结果</h3>
+<div class="form-row" style="max-width: 520px;">
+    <label for="checkResult"><strong>审查结果：</strong></label>
+    <select name="checkResult" id="checkResult" required>
+        <option value="">请选择</option>
+        <option value="PASS" ${formalCheckResult.checkResult == 'PASS' ? 'selected' : ''}>通过（送主编案头）</option>
+        <option value="FAIL" ${formalCheckResult.checkResult == 'FAIL' ? 'selected' : ''}>不通过（退回作者修改）</option>
+    </select>
+    <small class="muted">最终提交以此处选择为准（不会再被检查项自动覆盖）。</small>
+</div>
+
+<div class="toolbar" style="margin-top: var(--space-4); gap: 10px;">
+    <button class="btn btn-primary" type="button" id="btnSubmit">提交</button>
+</div>
     </form>
 </c:if>
 
@@ -194,13 +204,21 @@
     }
 
     async function postForm(url, dataObj){
-        const fd = new FormData();
+        // ⚠️ 不能用 FormData 直接 POST（multipart/form-data），否则普通 Servlet 的 getParameter 取不到 op/manuscriptId
+        // 这里改为 application/x-www-form-urlencoded
+        const params = new URLSearchParams();
         Object.keys(dataObj || {}).forEach(k => {
-            if(dataObj[k] !== undefined && dataObj[k] !== null) fd.append(k, dataObj[k]);
+            const v = dataObj[k];
+            if (v !== undefined && v !== null) params.append(k, String(v));
         });
-        const res = await fetch(url, { method: 'POST', body: fd });
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: params.toString()
+        });
         const txt = await res.text();
-        try { return JSON.parse(txt); } catch(e) { return { success: false, message: txt || ('HTTP ' + res.status) }; }
+        try { return JSON.parse(txt); }
+        catch(e) { return { success: false, message: txt || ('HTTP ' + res.status) }; }
     }
 
     function setSelect(id, valueStr){
@@ -255,20 +273,30 @@
         }
     });
 
-    async function submitResult(result){
+    async function submitResult(){
         const form = document.getElementById('formalCheckForm');
         if(!form) return;
-        const fd = new FormData(form);
-        fd.append('op', 'submit');
-        fd.append('checkResult', result);
-        // 让后端返回 JSON（避免后端对普通 form 走 302 跳转导致这里解析失败）
-        fd.append('ajax', '1');
 
-        showMsg('正在提交...', true);
-        const res = await fetch(ctx + '/editor/formalCheck', { method:'POST', body: fd });
+        const params = new URLSearchParams();
+        // 用 FormData 读取表单字段，但最终以 x-www-form-urlencoded 发送，保证后端 getParameter 可用
+        new FormData(form).forEach((v, k) => {
+            if (v !== undefined && v !== null) params.append(k, String(v));
+        });
+
+        params.append('op', 'submit');
+        // checkResult 来自表单下拉选择（name=checkResult）
+        // 让后端返回 JSON（避免后端对普通 form 走 302 跳转导致这里解析失败）
+        params.append('ajax', '1');
+
+        const res = await fetch(ctx + '/editor/formalCheck', {
+            method:'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: params.toString()
+        });
+
         const txt = await res.text();
         let json;
-        try { json = JSON.parse(txt); } catch(e) { json = { success:false, message: txt || '提交失败' }; }
+        try { json = JSON.parse(txt); } catch(e) { json = { success:false, message: txt || ('HTTP ' + res.status) }; }
 
         if(json.success){
             showMsg(json.message || '提交成功。', true);
@@ -279,8 +307,7 @@
         }
     }
 
-    document.getElementById('btnSubmitPass')?.addEventListener('click', ()=>submitResult('PASS'));
-    document.getElementById('btnSubmitFail')?.addEventListener('click', ()=>submitResult('FAIL'));
+    document.getElementById('btnSubmit')?.addEventListener('click', ()=>submitResult());
 })();
 </script>
 

@@ -37,15 +37,12 @@
                     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN'}">
                         <c:choose>
                             <c:when test="${m.currentStatus == 'SUBMITTED'}">
-                                <!-- 一开始仅保留“点击开始审查”按钮；点击后由后端更新状态并跳转到稿件详情页 -->
-                                <form method="post" action="${ctx}/editor/formalCheck" style="display:inline">
-                                    <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
-                                    <button class="btn btn-primary" type="submit" name="op" value="start">点击开始审查</button>
-                                </form>
+                                <!-- 直接进入审查页：无需“开始审查”二次点击 -->
+                                <a class="btn btn-primary" href="${ctx}/editor/formalCheck/review?manuscriptId=${m.manuscriptId}">进入审查</a>
                             </c:when>
                             <c:when test="${m.currentStatus == 'FORMAL_CHECK'}">
                                 <!-- 审查进行中：直接进入稿件详情页继续审查 -->
-                                <a class="btn btn-primary" href="${ctx}/manuscripts/detail?id=${m.manuscriptId}">进入审查</a>
+                                <a class="btn btn-primary" href="${ctx}/editor/formalCheck/review?manuscriptId=${m.manuscriptId}">进入审查</a>
                             </c:when>
                             <c:otherwise>
                                 --

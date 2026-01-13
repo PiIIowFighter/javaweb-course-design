@@ -477,6 +477,7 @@ public class ManuscriptServlet extends HttpServlet {
         // ===== 形式审查页右侧“当前字数”展示 =====
         // 需求变更：编辑部管理员（EO_ADMIN）的形式审查正文字数仅统计稿件 PDF，不再统计 Cover Letter。
         int bodyCount = 0;
+        int pdfPageCount = 0;
         int abstractCount = 0;
         try {
             ManuscriptVersion currentVer = versionDAO.findCurrentByManuscriptId(manuscriptId);
@@ -505,8 +506,10 @@ public class ManuscriptServlet extends HttpServlet {
                     pdfPath = currentVer.getFileAnonymousPath();
                 }
                 if (pdfPath != null) {
-                    bodyText = FileTextUtil.extractText(new File(pdfPath));
+                    File pdfFile = new File(pdfPath);
+                    bodyText = FileTextUtil.extractText(pdfFile);
                     bodyCount = formalCheckService.computeBodyCount(bodyText);
+                    pdfPageCount = PdfTextUtil.extractPageCount(pdfFile);
                 }
             }
         } catch (Exception ignore) {
@@ -517,6 +520,7 @@ public class ManuscriptServlet extends HttpServlet {
         } catch (Exception ignore) {
             abstractCount = 0;
         }
+        req.setAttribute("pdfPageCount", pdfPageCount);
         req.setAttribute("bodyCount", bodyCount);
         req.setAttribute("abstractCount", abstractCount);
 

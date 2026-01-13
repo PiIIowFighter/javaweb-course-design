@@ -76,11 +76,7 @@
                         <div class="kicker">资助信息</div>
                         <div><c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/></div>
                     </div>
-                    <div>
-                        <div class="kicker">语言</div>
-                        <div><c:out value="${empty manuscript.language ? '—' : manuscript.language}"/></div>
-                    </div>
-                </div>
+</div>
 
                 <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
                 <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
@@ -218,39 +214,6 @@
             </div>
         </div>
 
-        <!-- 完整字段（除期刊ID） -->
-        <div class="card">
-            <div class="card-header"><div class="card-title">完整字段（除期刊ID）</div></div>
-            <div class="card-content">
-                <div class="grid grid-3">
-                    <div><div class="kicker">投稿人ID</div><div><c:out value="${empty manuscript.submitterId ? '—' : manuscript.submitterId}"/></div></div>
-                    <div><div class="kicker">责任编辑ID</div><div><c:out value="${empty manuscript.editorId ? '—' : manuscript.editorId}"/></div></div>
-                    <div><div class="kicker">作者列表</div><div><c:out value="${empty manuscript.authorList ? '—' : manuscript.authorList}"/></div></div>
-
-                    <div><div class="kicker">DOI</div><div><c:out value="${empty manuscript.doi ? '—' : manuscript.doi}"/></div></div>
-                    <div><div class="kicker">文章类型</div><div><c:out value="${empty manuscript.articleType ? '—' : manuscript.articleType}"/></div></div>
-                    <div><div class="kicker">分类号</div><div><c:out value="${empty manuscript.classificationNo ? '—' : manuscript.classificationNo}"/></div></div>
-
-                    <div><div class="kicker">CNKI URL</div><div><c:out value="${empty manuscript.cnkiUrl ? '—' : manuscript.cnkiUrl}"/></div></div>
-                    <div><div class="kicker">出版时间</div><div><c:out value="${empty manuscript.publishedAt ? '—' : manuscript.publishedAt}"/></div></div>
-                    <div><div class="kicker">卷/期</div><div><c:out value="${empty manuscript.volume ? '—' : manuscript.volume}"/> / <c:out value="${empty manuscript.issue ? '—' : manuscript.issue}"/></div></div>
-
-                    <div><div class="kicker">页码范围</div><div><c:out value="${empty manuscript.pageRange ? '—' : manuscript.pageRange}"/></div></div>
-                    <div><div class="kicker">出版年份</div><div><c:out value="${empty manuscript.publishYear ? '—' : manuscript.publishYear}"/></div></div>
-                    <div><div class="kicker">ISSN</div><div><c:out value="${empty manuscript.journalIssn ? '—' : manuscript.journalIssn}"/></div></div>
-
-                    <div><div class="kicker">浏览量</div><div><c:out value="${empty manuscript.viewCount ? '—' : manuscript.viewCount}"/></div></div>
-                    <div><div class="kicker">下载量</div><div><c:out value="${empty manuscript.downloadCount ? '—' : manuscript.downloadCount}"/></div></div>
-                    <div><div class="kicker">被引量</div><div><c:out value="${empty manuscript.citationCount ? '—' : manuscript.citationCount}"/></div></div>
-
-                    <div><div class="kicker">热度分</div><div><c:out value="${empty manuscript.popularityScore ? '—' : manuscript.popularityScore}"/></div></div>
-                    <div><div class="kicker">期刊名称(元数据)</div><div><c:out value="${empty manuscript.journalName ? '—' : manuscript.journalName}"/></div></div>
-                    <div><div class="kicker">当前状态</div><div><c:out value="${empty manuscript.currentStatus ? '—' : manuscript.currentStatus}"/></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 形式审查界面 -->
     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN' and (manuscript.currentStatus == 'SUBMITTED' or manuscript.currentStatus == 'FORMAL_CHECK')}">
         <h3 style="margin-top:14px;">形式审查</h3>
@@ -277,7 +240,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>作者信息（机构邮箱）</td>
+                        <td>作者信息（邮箱格式审查）</td>
                         <td style="text-align:center; color:#666;">系统自动检查</td>
                         <td>
                             <select name="authorInfoValid">
@@ -297,12 +260,12 @@
                                 <option value="false">不符合标准</option>
                             </select>
                             <div style="margin-top:4px; color:#666;">
-                                当前字数：<b><span id="abstractCountText">${empty abstractCount ? 0 : abstractCount}</span></b>
+                                当前页数：<b><span id="abstractCountText">${empty abstractCount ? 0 : abstractCount}</span></b>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td>正文字数（3000-8000字）</td>
+                        <td>PDF页数（8-10页）</td>
                         <td style="text-align:center; color:#666;">系统自动检查</td>
                         <td>
                             <select name="bodyWordCountValid">
@@ -311,7 +274,7 @@
                                 <option value="false">不符合标准</option>
                             </select>
                             <div style="margin-top:4px; color:#666;">
-                                当前字数：<b><span id="bodyCountText">${empty bodyCount ? 0 : bodyCount}</span></b>
+                                当前页数：<b><span id="bodyCountText">${empty pdfPageCount ? (empty bodyCount ? 0 : bodyCount) : pdfPageCount}</span></b>
                             </div>
                         </td>
                     </tr>

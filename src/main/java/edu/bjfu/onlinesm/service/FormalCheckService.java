@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  *
  * 调整说明（v2026-01）：
  * 1) 作者信息：仅校验作者邮箱格式（不再要求机构邮箱）。
- * 2) 正文字数：以从 PDF 提取的文本为准，按“字数”统计（中文字符 + 英文单词），范围 3000-8000。
+ * 2) 正文页数：以 PDF 页数为准，范围 8-10 页。
  * 3) 查重：由 PlagiarismCheckService 模拟（<20%），并可生成 PDF 报告链接。
  */
 public class FormalCheckService {
@@ -25,9 +25,9 @@ public class FormalCheckService {
     private static final int MIN_ABSTRACT_WORDS = 150;
     private static final int MAX_ABSTRACT_WORDS = 700;
 
-    // 正文字数要求：3000-8000（按字数：中文字符 + 英文单词）
-    private static final int MIN_BODY_COUNT = 3000;
-    private static final int MAX_BODY_COUNT = 8000;
+    // PDF 页数要求：8-10 页
+    private static final int MIN_PDF_PAGES = 8;
+    private static final int MAX_PDF_PAGES = 10;
 
     private static final int MIN_KEYWORDS = 3;
     private static final int MAX_KEYWORDS = 6;
@@ -48,8 +48,15 @@ public class FormalCheckService {
      * @param bodyText   正文文本（建议传入从 PDF 提取的文本）
      */
     public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText) {
-        return performAutomaticChecks(manuscript, bodyText, null);
+        return performAutomaticChecks(manuscript, bodyText, null, null);
     }
+
+/**
+ * 自动形式审查（不含查重）- 兼容旧调用：未提供 PDF 页数时，正文页数检查返回 null（待人工确认）。
+ */
+public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText, java.util.List<ManuscriptAuthor> authors) {
+    return performAutomaticChecks(manuscript, bodyText, authors, null);
+}
 
     /**
      * 自动形式审查（不含查重）
@@ -57,13 +64,13 @@ public class FormalCheckService {
      * @param bodyText   正文文本（建议传入从 PDF 提取的文本）
      * @param authors    详细作者信息（dbo.ManuscriptAuthors）。若传入，则以 authors 为准校验邮箱。
      */
-    public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText, java.util.List<ManuscriptAuthor> authors) {
+    public FormalCheckResult performAutomaticChecks(Manuscript manuscript, String bodyText, java.util.List<ManuscriptAuthor> authors, Integer pdfPageCount) {
         FormalCheckResult result = new FormalCheckResult();
 
         result.setManuscriptId(manuscript.getManuscriptId());
         result.setAuthorInfoValid(checkAuthorEmailFormat(manuscript.getAuthorList(), authors));
         result.setAbstractWordCountValid(checkAbstractWordCount(manuscript.getAbstractText()));
-        result.setBodyWordCountValid(checkBodyCount(bodyText));
+        result.setBodyWordCountValid(checkPdfPageCount(pdfPageCount));
         result.setKeywordsValid(checkKeywords(manuscript.getKeywords()));
 
         // 其它格式项默认不自动判定（保持为 null，页面可人工选择）
@@ -78,7 +85,7 @@ public class FormalCheckService {
      * 自动形式审查（含查重模拟）
      */
     public FormalCheckResult performAutomaticChecksWithPlagiarism(Manuscript manuscript, String bodyText) {
-        FormalCheckResult result = performAutomaticChecks(manuscript, bodyText, null);
+        FormalCheckResult result = performAutomaticChecks(manuscript, bodyText, null, null);
 
         PlagiarismCheckService.PlagiarismReport report = plagiarismCheckService.checkPlagiarism(
                 manuscript.getManuscriptId(),
@@ -179,18 +186,14 @@ public class FormalCheckService {
     }
 
     /**
-     * 正文字数（字数）检查：中文字符数 + 英文单词数。
-     * 注意：这里期望传入从 PDF 提取的文本；若提取失败导致为空，则直接判定不通过。
+     * PDF 页数检查：正文 PDF 页数需在 8-10 页之间。
+     * - pdfPageCount 为 null：返回 null（表示未检查/无法获取）
+     * - pdfPageCount <= 0：返回 false（表示获取失败或文件异常）
      */
-    private boolean checkBodyCount(String bodyText) {
-        if (bodyText == null || bodyText.trim().isEmpty()) {
-            return false;
-        }
-
-        String cleaned = bodyText.replaceAll("<[^>]+>", " ").trim();
-        int count = countCjkChars(cleaned) + countEnglishWordsExcludingCjk(cleaned);
-
-        return count >= MIN_BODY_COUNT && count <= MAX_BODY_COUNT;
+    private Boolean checkPdfPageCount(Integer pdfPageCount) {
+        if (pdfPageCount == null) return null;
+        if (pdfPageCount <= 0) return false;
+        return pdfPageCount >= MIN_PDF_PAGES && pdfPageCount <= MAX_PDF_PAGES;
     }
 
     private boolean checkKeywords(String keywords) {
@@ -293,8 +296,8 @@ public class FormalCheckService {
                     .append("-").append(MAX_ABSTRACT_WORDS).append("之间）；");
         }
         if (Boolean.FALSE.equals(result.getBodyWordCountValid())) {
-            feedback.append("正文字数不符合标准（应在").append(MIN_BODY_COUNT)
-                    .append("-").append(MAX_BODY_COUNT).append("之间）；");
+            feedback.append("PDF页数不符合标准（应在").append(MIN_PDF_PAGES)
+                    .append("-").append(MAX_PDF_PAGES).append("之间）；");
         }
         if (Boolean.FALSE.equals(result.getKeywordsValid())) {
             feedback.append("关键词数量不符合标准（应在").append(MIN_KEYWORDS)

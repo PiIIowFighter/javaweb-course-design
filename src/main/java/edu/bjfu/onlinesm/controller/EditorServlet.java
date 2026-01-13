@@ -270,30 +270,29 @@ public abstract class EditorServlet extends HttpServlet {
 
         // 旁边显示“字数”
         // 需求变更：编辑部管理员（形式审查）的正文字数仅统计稿件 PDF，不再统计 Cover Letter。
-        int bodyCount = 0;
-        try {
-            ManuscriptVersion currentVer = versionDAO.findCurrentByManuscriptId(manuscriptId);
+        
+// 旁边显示“PDF 页数”（8-10 页）
+int pdfPageCount = 0;
+try {
+    ManuscriptVersion currentVer = versionDAO.findCurrentByManuscriptId(manuscriptId);
 
-            String bodyText = "";
-
-            // 仅从 manuscript PDF 统计（与 /files/preview?type=manuscript 一致：优先原稿，否则匿名稿）
-            if (currentVer != null) {
-                String pdfPath = null;
-                if (currentVer.getFileOriginalPath() != null && !currentVer.getFileOriginalPath().trim().isEmpty()) {
-                    pdfPath = currentVer.getFileOriginalPath();
-                } else if (currentVer.getFileAnonymousPath() != null && !currentVer.getFileAnonymousPath().trim().isEmpty()) {
-                    pdfPath = currentVer.getFileAnonymousPath();
-                }
-                if (pdfPath != null) {
-                    bodyText = FileTextUtil.extractText(new File(pdfPath));
-                    bodyCount = formalCheckService.computeBodyCount(bodyText);
-                }
-            }
-        } catch (Exception ignore) {
-            bodyCount = 0;
+    // 与 /files/preview?type=manuscript 一致：优先原稿，否则匿名稿
+    if (currentVer != null) {
+        String pdfPath = null;
+        if (currentVer.getFileOriginalPath() != null && !currentVer.getFileOriginalPath().trim().isEmpty()) {
+            pdfPath = currentVer.getFileOriginalPath();
+        } else if (currentVer.getFileAnonymousPath() != null && !currentVer.getFileAnonymousPath().trim().isEmpty()) {
+            pdfPath = currentVer.getFileAnonymousPath();
         }
+        if (pdfPath != null) {
+            pdfPageCount = PdfTextUtil.extractPageCount(new File(pdfPath));
+        }
+    }
+} catch (Exception ignore) {
+    pdfPageCount = 0;
+}
 
-        // 摘要字数：直接从摘要文本统计（中文字符 + 英文单词）
+// 摘要字数：直接从摘要文本统计（中文字符 + 英文单词）
         int abstractCount = 0;
         try {
             abstractCount = formalCheckService.computeAbstractCount(manuscript.getAbstractText());
@@ -303,7 +302,8 @@ public abstract class EditorServlet extends HttpServlet {
 
         req.setAttribute("manuscript", manuscript);
         req.setAttribute("formalCheckResult", latest);
-        req.setAttribute("bodyCount", bodyCount);
+        req.setAttribute("pdfPageCount", pdfPageCount);
+        req.setAttribute("bodyCount", pdfPageCount); // 兼容旧 JSP 变量名
         req.setAttribute("abstractCount", abstractCount);
         req.getRequestDispatcher("/WEB-INF/jsp/editor/formal_check_review.jsp").forward(req, resp);
     }
@@ -1776,6 +1776,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
 
             ManuscriptVersion currentVer = versionDAO.findCurrentByManuscriptId(manuscriptId);
             String bodyText = "";
+            int pdfPageCount = 0;
 
             if (!eoAdminOnlyPdf) {
                 // 1) Cover Letter
@@ -1796,7 +1797,9 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
                     pdfPath = currentVer.getFileAnonymousPath();
                 }
                 if (pdfPath != null) {
-                    bodyText = FileTextUtil.extractText(new File(pdfPath));
+                    File pdfFile = new File(pdfPath);
+                    bodyText = FileTextUtil.extractText(pdfFile);
+                    pdfPageCount = PdfTextUtil.extractPageCount(pdfFile);
                 }
             }
 
@@ -1808,8 +1811,8 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
                 authors = null;
             }
 
-            FormalCheckResult result = formalCheckService.performAutomaticChecks(manuscript, bodyText, authors);
-            int bodyCount = formalCheckService.computeBodyCount(bodyText);
+            FormalCheckResult result = formalCheckService.performAutomaticChecks(manuscript, bodyText, authors, pdfPageCount);
+            int bodyCount = pdfPageCount;
             int abstractCount = formalCheckService.computeAbstractCount(manuscript.getAbstractText());
 
             
@@ -1819,6 +1822,7 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
             jsonResponse.put("bodyWordCountValid", result.getBodyWordCountValid() != null ? result.getBodyWordCountValid().toString() : "");
             jsonResponse.put("keywordsValid", result.getKeywordsValid() != null ? result.getKeywordsValid().toString() : "");
             jsonResponse.put("bodyCount", bodyCount);
+            jsonResponse.put("pdfPageCount", pdfPageCount);
             jsonResponse.put("abstractCount", abstractCount);
             String bodyOk = Boolean.TRUE.equals(result.getBodyWordCountValid()) ? "通过" : (Boolean.FALSE.equals(result.getBodyWordCountValid()) ? "不通过" : "未检查");
             jsonResponse.put("message", "自动检查完成：正文字数 " + bodyCount + "（3000-8000，" + bodyOk + "），摘要字数 " + abstractCount + "");
@@ -1948,36 +1952,28 @@ protected void handleInviteExternalReviewerPost(HttpServletRequest req,
                 result.setReferenceFormatValid(Boolean.valueOf(referenceFormatValidStr));
             }
 
-            String checkResult = req.getParameter("checkResult");
+            
+String checkResult = req.getParameter("checkResult");
+if (checkResult != null) checkResult = checkResult.trim().toUpperCase();
 
-            boolean hasInvalid = false;
-            if (result.getAuthorInfoValid() != null && !result.getAuthorInfoValid()) {
-                hasInvalid = true;
-            }
-            if (result.getAbstractWordCountValid() != null && !result.getAbstractWordCountValid()) {
-                hasInvalid = true;
-            }
-            if (result.getBodyWordCountValid() != null && !result.getBodyWordCountValid()) {
-                hasInvalid = true;
-            }
-            if (result.getKeywordsValid() != null && !result.getKeywordsValid()) {
-                hasInvalid = true;
-            }
-            if (result.getFootnoteNumberingValid() != null && !result.getFootnoteNumberingValid()) {
-                hasInvalid = true;
-            }
-            if (result.getFigureTableFormatValid() != null && !result.getFigureTableFormatValid()) {
-                hasInvalid = true;
-            }
-            if (result.getReferenceFormatValid() != null && !result.getReferenceFormatValid()) {
-                hasInvalid = true;
-            }
+boolean hasInvalid = false;
+if (result.getAuthorInfoValid() != null && !result.getAuthorInfoValid()) hasInvalid = true;
+if (result.getAbstractWordCountValid() != null && !result.getAbstractWordCountValid()) hasInvalid = true;
+if (result.getBodyWordCountValid() != null && !result.getBodyWordCountValid()) hasInvalid = true;
+if (result.getKeywordsValid() != null && !result.getKeywordsValid()) hasInvalid = true;
+if (result.getFootnoteNumberingValid() != null && !result.getFootnoteNumberingValid()) hasInvalid = true;
+if (result.getFigureTableFormatValid() != null && !result.getFigureTableFormatValid()) hasInvalid = true;
+if (result.getReferenceFormatValid() != null && !result.getReferenceFormatValid()) hasInvalid = true;
 
-            if (hasInvalid) {
-                checkResult = "FAIL";
-            }
+// ✅ 最终以“审查结果”下选择的选项为准：
+// - 如果用户明确选择 PASS/FAIL，则尊重选择，不再被 hasInvalid 强制覆盖
+// - 如果未选择（为空），才根据检查项推导默认结果
+boolean userSelected = "PASS".equals(checkResult) || "FAIL".equals(checkResult);
+if (!userSelected) {
+    checkResult = hasInvalid ? "FAIL" : "PASS";
+}
 
-            result.setCheckResult(checkResult);
+result.setCheckResult(checkResult);
 
             String feedback = req.getParameter("feedback");
             if (feedback == null || feedback.trim().isEmpty()) {

@@ -38,7 +38,7 @@
             <tbody>
             <tr><th style="width:220px;">作者信息</th><td><c:out value="${result.authorInfoValid}"/></td></tr>
             <tr><th>摘要字数</th><td><c:out value="${result.abstractWordCountValid}"/></td></tr>
-            <tr><th>正文字数</th><td><c:out value="${result.bodyWordCountValid}"/></td></tr>
+            <tr><th>PDF页数</th><td><c:out value="${result.bodyWordCountValid}"/></td></tr>
             <tr><th>关键词</th><td><c:out value="${result.keywordsValid}"/></td></tr>
             <tr><th>注释编号（人工）</th><td><c:out value="${result.footnoteNumberingValid}"/></td></tr>
             <tr><th>图表格式（人工）</th><td><c:out value="${result.figureTableFormatValid}"/></td></tr>

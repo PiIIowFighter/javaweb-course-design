@@ -34,6 +34,56 @@ public class PdfTextUtil {
         return "";
     }
 
+/**
+ * 读取 PDF 页数（尽量避免硬依赖）。
+ *
+ * 运行时优先使用 PDFBox（若项目已包含相关 jar），否则尝试 iText/lowagie。
+ * 若环境缺少 PDF 解析库或解析失败，返回 0。
+ */
+public static int extractPageCount(File pdfFile) {
+    if (pdfFile == null || !pdfFile.exists() || !pdfFile.isFile()) return 0;
+
+    // 1) PDFBox 2.x：PDDocument.load(File) + getNumberOfPages()
+    try {
+        Class<?> pdDocumentCls = Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
+        Method loadMethod = pdDocumentCls.getMethod("load", File.class);
+        Object document = loadMethod.invoke(null, pdfFile);
+        try {
+            Method getNumberOfPages = pdDocumentCls.getMethod("getNumberOfPages");
+            int pages = ((Number) getNumberOfPages.invoke(document)).intValue();
+            // close
+            try { Method closeMethod = pdDocumentCls.getMethod("close"); closeMethod.invoke(document); } catch (Exception ignore) {}
+            return pages;
+        } finally {
+            try { Method closeMethod = pdDocumentCls.getMethod("close"); closeMethod.invoke(document); } catch (Exception ignore) {}
+        }
+    } catch (Throwable ignore) {}
+
+    // 2) iText 5.x：new PdfReader(path) + getNumberOfPages()
+    try {
+        Class<?> readerCls = Class.forName("com.itextpdf.text.pdf.PdfReader");
+        Constructor<?> ctor = readerCls.getConstructor(String.class);
+        Object reader = ctor.newInstance(pdfFile.getAbsolutePath());
+        Method getNumberOfPages = readerCls.getMethod("getNumberOfPages");
+        int pages = ((Number) getNumberOfPages.invoke(reader)).intValue();
+        try { Method close = readerCls.getMethod("close"); close.invoke(reader); } catch (Exception ignore2) {}
+        return pages;
+    } catch (Throwable ignore) {}
+
+    // 3) lowagie：new PdfReader(path) + getNumberOfPages()
+    try {
+        Class<?> readerCls = Class.forName("com.lowagie.text.pdf.PdfReader");
+        Constructor<?> ctor = readerCls.getConstructor(String.class);
+        Object reader = ctor.newInstance(pdfFile.getAbsolutePath());
+        Method getNumberOfPages = readerCls.getMethod("getNumberOfPages");
+        int pages = ((Number) getNumberOfPages.invoke(reader)).intValue();
+        try { Method close = readerCls.getMethod("close"); close.invoke(reader); } catch (Exception ignore2) {}
+        return pages;
+    } catch (Throwable ignore) {}
+
+    return 0;
+}
+
     private static String tryPdfBox(File pdfFile) {
         // 兼容 PDFBox 2.x 与 1.8.x
         // 2.x: org.apache.pdfbox.text.PDFTextStripper
