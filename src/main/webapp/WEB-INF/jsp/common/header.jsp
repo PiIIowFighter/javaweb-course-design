@@ -23,7 +23,7 @@
 <header class="site-header">
     <div class="container header-inner">
         <a class="brand" href="${pageContext.request.contextPath}/" aria-label="返回首页">
-            <span class="brand-mark" aria-hidden="true"></span>
+            <img class="brand-logo" src="${pageContext.request.contextPath}/static/img/logo-online-sm-64.jpg" alt="Online Submission Logo"/>
             <span class="brand-name">Online Submission</span>
         </a>
 

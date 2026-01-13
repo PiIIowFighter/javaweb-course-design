@@ -8,37 +8,46 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <!-- 期刊介绍 (about the journal) -->
-<div class="hero stack">
-    <h1>
-        <c:out value="${journal != null ? journal.name : '期刊首页'}"/>
-    </h1>
+<div class="hero hero-split">
+    <div class="stack">
+        <div class="kicker">科研论文在线投稿系统 · Online Submission System</div>
 
-    <c:choose>
-        <c:when test="${journal != null && not empty journal.description}">
-            <p><c:out value="${journal.description}"/></p>
-        </c:when>
-        <c:otherwise>
-            <p>欢迎访问本刊官方网站。</p>
-        </c:otherwise>
-    </c:choose>
+        <h1>
+            <c:out value="${journal != null ? journal.name : '期刊首页'}"/>
+        </h1>
 
-    <div class="toolbar">
-        <c:if test="${journal != null && journal.impactFactor != null}">
-            <span class="badge">Impact Factor: <c:out value="${journal.impactFactor}"/></span>
-        </c:if>
-        <c:if test="${journal != null && not empty journal.issn}">
-            <span class="badge">ISSN: <c:out value="${journal.issn}"/></span>
-        </c:if>
-        <c:if test="${journal != null && not empty journal.timeline}">
-            <span class="badge">Timeline: <c:out value="${journal.timeline}"/></span>
-        </c:if>
-        <span class="grow"></span>
-        <a class="btn-primary" style="text-decoration:none;" href="${ctx}/about/aims">
-            <i class="bi bi-info-circle" aria-hidden="true"></i>
-            查看期刊介绍
-        </a>
+        <c:choose>
+            <c:when test="${journal != null && not empty journal.description}">
+                <p><c:out value="${journal.description}"/></p>
+            </c:when>
+            <c:otherwise>
+                <p>欢迎访问本刊官方网站。</p>
+            </c:otherwise>
+        </c:choose>
+
+        <div class="toolbar">
+            <c:if test="${journal != null && journal.impactFactor != null}">
+                <span class="badge">Impact Factor: <c:out value="${journal.impactFactor}"/></span>
+            </c:if>
+            <c:if test="${journal != null && not empty journal.issn}">
+                <span class="badge">ISSN: <c:out value="${journal.issn}"/></span>
+            </c:if>
+            <c:if test="${journal != null && not empty journal.timeline}">
+                <span class="badge">Timeline: <c:out value="${journal.timeline}"/></span>
+            </c:if>
+            <span class="grow"></span>
+            <a class="btn-primary" style="text-decoration:none;" href="${ctx}/about/aims">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                查看期刊介绍
+            </a>
+        </div>
+    </div>
+
+    <div class="hero-media" aria-hidden="true">
+        <img class="hero-illustration" src="${ctx}/static/img/illustrations/hero-ai-network.jpg" alt="submission system illustration"/>
     </div>
 </div>
+
 <div class="stack-lg" style="margin-top: var(--space-6);">
 
     <!-- 期刊编委会介绍：编委照片/简介 -->
