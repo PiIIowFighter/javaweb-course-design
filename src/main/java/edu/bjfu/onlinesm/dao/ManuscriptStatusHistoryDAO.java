@@ -7,15 +7,10 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 稿件状态历史记录 DAO
- * 用于追踪稿件状态变更
- */
+
 public class ManuscriptStatusHistoryDAO {
 
-    /**
-     * 查询指定稿件的所有状态变更历史（按时间正序）
-     */
+    
     public List<ManuscriptStatusHistory> findByManuscriptId(int manuscriptId) throws SQLException {
         String sql = "SELECT h.HistoryId, h.ManuscriptId, h.FromStatus, h.ToStatus, h.Event, " +
                      "h.ChangedBy, h.ChangeTime, h.Remark, u.Username AS ChangedByUsername, u.FullName AS ChangedByFullName " +
@@ -37,9 +32,7 @@ public class ManuscriptStatusHistoryDAO {
         return list;
     }
 
-    /**
-     * 查询指定稿件的最新N条状态变更历史（按时间倒序）
-     */
+    
     public List<ManuscriptStatusHistory> findRecentByManuscriptId(int manuscriptId, int limit) throws SQLException {
         String sql = "SELECT TOP " + limit + " h.HistoryId, h.ManuscriptId, h.FromStatus, h.ToStatus, h.Event, " +
                      "h.ChangedBy, h.ChangeTime, h.Remark, u.Username AS ChangedByUsername, u.FullName AS ChangedByFullName " +
@@ -61,9 +54,7 @@ public class ManuscriptStatusHistoryDAO {
         return list;
     }
 
-    /**
-     * 插入状态变更记录
-     */
+    
     public void insert(int manuscriptId, String fromStatus, String toStatus, 
                        String event, int changedBy, String remark) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptStatusHistory " +
@@ -89,9 +80,7 @@ public class ManuscriptStatusHistoryDAO {
         }
     }
 
-    /**
-     * 插入状态变更记录（事务版本）
-     */
+    
     public void insert(Connection conn, int manuscriptId, String fromStatus, String toStatus,
                        String event, int changedBy, String remark) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptStatusHistory " +
@@ -116,9 +105,7 @@ public class ManuscriptStatusHistoryDAO {
         }
     }
 
-    /**
-     * 获取稿件的预计审稿周期描述
-     */
+    
     public String getEstimatedReviewCycle(String currentStatus) {
         if (currentStatus == null) return "未知";
         switch (currentStatus) {
@@ -163,7 +150,7 @@ public class ManuscriptStatusHistoryDAO {
         
         Timestamp ts = rs.getTimestamp("ChangeTime");
         if (ts != null) {
-            // 数据库中存储为北京时间（UTC+8），直接映射
+            
             h.setChangeTime(ts.toLocalDateTime());
         }
         
@@ -174,3 +161,28 @@ public class ManuscriptStatusHistoryDAO {
         return h;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

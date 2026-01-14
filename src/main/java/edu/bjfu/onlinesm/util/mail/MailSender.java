@@ -18,15 +18,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-/**
- * JavaMail 版本的邮件发送器（替代原 Socket+SMTP 实现）。
- *
- * <p>优点：
- * - STARTTLS/SSL 由 JavaMail 处理，更稳定
- * - MIME/编码/附件更规范
- *
- * <p>依赖：WEB-INF/lib 下的 javax.mail.jar 与 activation.jar（或 activation-*.jar）。
- */
+
 public class MailSender {
 
     private final MailConfig config;
@@ -35,13 +27,7 @@ public class MailSender {
         this.config = config;
     }
 
-    /**
-     * @param to          收件人（可用逗号分隔多个）
-     * @param subject     主题
-     * @param textBody    纯文本正文（可空）
-     * @param htmlBody    HTML 正文（可空）
-     * @param attachments 附件（可空；本项目附件是 byte[]，不依赖 File）
-     */
+    
     public void send(String to, String subject, String textBody, String htmlBody, List<MailAttachment> attachments) throws MessagingException {
         if (to == null || to.trim().isEmpty()) return;
 
@@ -57,7 +43,7 @@ public class MailSender {
         Session session = buildSession();
         MimeMessage mm = new MimeMessage(session);
 
-        // From
+        
         String fromAddr = config.getFrom();
         try {
             if (!isEmpty(config.getFromName())) {
@@ -69,7 +55,7 @@ public class MailSender {
             mm.setFrom(new InternetAddress(fromAddr));
         }
 
-        // To（支持逗号分隔）
+        
         for (InternetAddress ia : InternetAddress.parse(to, false)) {
             mm.addRecipient(Message.RecipientType.TO, ia);
         }
@@ -87,13 +73,13 @@ public class MailSender {
         }
 
         if (!hasAtt) {
-            // 无附件：直接发 text 或 html 或 alternative
+            
             if (hasHtml && !hasText) {
                 mm.setContent(htmlBody, "text/html; charset=UTF-8");
             } else if (!hasHtml) {
                 mm.setText(textBody, StandardCharsets.UTF_8.name());
             } else {
-                // text + html
+                
                 MimeMultipart alt = new MimeMultipart("alternative");
 
                 MimeBodyPart textPart = new MimeBodyPart();
@@ -107,10 +93,10 @@ public class MailSender {
                 mm.setContent(alt);
             }
         } else {
-            // 有附件：mixed，正文放在第一个 part
+            
             MimeMultipart mixed = new MimeMultipart("mixed");
 
-            // body part（优先用 html+text alternative）
+            
             MimeBodyPart body = new MimeBodyPart();
             if (hasHtml && hasText) {
                 MimeMultipart alt = new MimeMultipart("alternative");
@@ -131,7 +117,7 @@ public class MailSender {
             }
             mixed.addBodyPart(body);
 
-            // attachments（byte[]）
+            
             for (MailAttachment a : attachments) {
                 if (a == null || a.getBytes() == null) continue;
 
@@ -204,3 +190,28 @@ public class MailSender {
         return s == null ? "" : s;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

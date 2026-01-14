@@ -8,9 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * dbo.Files DAO：用于稿件的多附件（如 Cover Letter 附件）。
- */
+
 public class FileDAO {
 
     public static final String TYPE_COVER_ATTACHMENT = "COVER_ATTACHMENT";
@@ -87,9 +85,7 @@ public class FileDAO {
         return list;
     }
 
-    /**
-     * 将某个版本的附件复制到新版本（用于“生成新版本但未重新上传附件”时仍能沿用）。
-     */
+    
     public void copyByVersionAndType(Connection conn, int manuscriptId, int fromVersionId, int toVersionId, String fileType) throws SQLException {
         String sql = "INSERT INTO dbo.Files (FileName, FilePath, FileType, FileSize, UploaderId, ManuscriptId, VersionId) " +
                 "SELECT FileName, FilePath, FileType, FileSize, UploaderId, ManuscriptId, ? " +
@@ -126,3 +122,28 @@ public class FileDAO {
         return f;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

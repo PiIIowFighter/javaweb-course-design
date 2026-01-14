@@ -9,20 +9,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 征稿通知（dbo.CallForPapers）DAO（前台 + 管理端）。
- *
- * 说明：
- * - 前台：只读取 IsPublished=1 的记录
- * - 管理端：可 CRUD，兼容旧库可能缺少 CoverImagePath/AttachmentPath 字段（自动降级）
- */
+
 public class CallForPaperDAO {
 
-    // =========================
-    // Front-end (public)
-    // =========================
+    
+    
+    
 
-    /** 兼容：PublicCallForPaperServlet 调用 listPublished(journalId, 50) */
+    
     public List<CallForPaper> listPublished(Integer journalId, int limit) throws SQLException {
         if (journalId == null) return Collections.emptyList();
         String top = (limit > 0) ? ("TOP " + limit + " ") : "";
@@ -52,12 +46,12 @@ public class CallForPaperDAO {
         }
     }
 
-    /** 兼容重载：避免 Integer/int 重载解析不到 */
+    
     public List<CallForPaper> listPublished(Integer journalId, Integer limit) throws SQLException {
         return listPublished(journalId, limit == null ? 0 : limit);
     }
 
-    /** 兼容重载：避免 journalId 被解析为 int 的情况 */
+    
     public List<CallForPaper> listPublished(int journalId, int limit) throws SQLException {
         return listPublished(Integer.valueOf(journalId), limit);
     }
@@ -82,11 +76,11 @@ public class CallForPaperDAO {
         }
     }
 
-    // =========================
-    // Admin (journal board)
-    // =========================
+    
+    
+    
 
-    /** 管理端：列出某期刊下全部征稿通知（含未发布） */
+    
     public List<CallForPaper> listAllByJournal(Integer journalId) throws SQLException {
         if (journalId == null) return Collections.emptyList();
 
@@ -112,7 +106,7 @@ public class CallForPaperDAO {
         }
     }
 
-    /** 管理端：新增征稿通知，返回新 CallId */
+    
     public int insertAdmin(CallForPaper call) throws SQLException {
         if (call == null) throw new SQLException("call is null");
 
@@ -151,7 +145,7 @@ public class CallForPaperDAO {
         throw new SQLException("insert call failed: cannot fetch identity");
     }
 
-    /** 管理端：更新征稿通知 */
+    
     public void updateAdmin(CallForPaper call) throws SQLException {
         if (call == null || call.getCallId() == null) throw new SQLException("callId is null");
 
@@ -183,7 +177,7 @@ public class CallForPaperDAO {
         }
     }
 
-    /** 管理端：删除征稿通知 */
+    
     public void deleteAdmin(int callId) throws SQLException {
         String sql = "DELETE FROM dbo.CallForPapers WHERE CallId=?";
         try (Connection conn = DbUtil.getConnection();
@@ -193,9 +187,9 @@ public class CallForPaperDAO {
         }
     }
 
-    // =========================
-    // Helpers
-    // =========================
+    
+    
+    
 
     private CallForPaper map(ResultSet rs, boolean hasCover, boolean hasAttach) throws SQLException {
         CallForPaper c = new CallForPaper();
@@ -224,11 +218,11 @@ public class CallForPaperDAO {
     private boolean hasColumn(Connection conn, String table, String col) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
-            // SQL Server：schema 通常为 dbo
+            
             try (ResultSet rs = meta.getColumns(null, "dbo", table, col)) {
                 if (rs.next()) return true;
             }
-            // 兼容：有些 JDBC 可能不给 schema
+            
             try (ResultSet rs = meta.getColumns(null, null, table, col)) {
                 return rs.next();
             }
@@ -260,3 +254,28 @@ public class CallForPaperDAO {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

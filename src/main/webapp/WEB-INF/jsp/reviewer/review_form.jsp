@@ -6,7 +6,7 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<%-- Quill 富文本编辑器（本地引用） --%>
+
 <link href="${ctx}/static/css/quill.snow.css" rel="stylesheet">
 <script src="${ctx}/static/js/quill.min.js"></script>
 
@@ -48,7 +48,7 @@
     }
 </style>
 
-<%-- Font Awesome 图标（用于评分/提示等） --%>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <c:choose>
@@ -178,7 +178,7 @@
                                 </td>
                             </tr>
                             
-                            <!-- 新增维度 1: 实验/数据分析 -->
+                            
                             <tr>
                                 <td><strong>实验/数据分析（Experimentation & Analysis）</strong></td>
                                 <td>
@@ -197,7 +197,7 @@
                                 </td>
                             </tr>
                             
-                            <!-- 新增维度 2: 文献综述 -->
+                            
                             <tr>
                                 <td><strong>文献综述（Literature Review）</strong></td>
                                 <td>
@@ -216,7 +216,7 @@
                                 </td>
                             </tr>
                             
-                            <!-- 新增维度 3: 结论与讨论 -->
+                            
                             <tr>
                                 <td><strong>结论与讨论（Conclusions & Discussion）</strong></td>
                                 <td>
@@ -235,7 +235,7 @@
                                 </td>
                             </tr>
                             
-                            <!-- 新增维度 4: 学术规范性 -->
+                            
                             <tr>
                                 <td><strong>学术规范性（Academic Integrity）</strong></td>
                                 <td>
@@ -254,7 +254,7 @@
                                 </td>
                             </tr>
                             
-                            <!-- 新增维度 5: 实用性 -->
+                            
                             <tr>
                                 <td><strong>实用性（Practicality）</strong></td>
                                 <td>
@@ -340,10 +340,10 @@
                 </small>
                 <textarea name="commentsToAuthor" id="commentsToAuthor" rows="10" required placeholder="请输入给作者的具体修改建议..." class="form-control"></textarea>
                 <div id="commentsToAuthorEditor" class="quill-editor" style="display:none;"></div>
-                <%-- 兼容旧后端 --%>
+                
                 <input type="hidden" name="content" id="contentCompat"/>
                 
-                <%-- 新增维度的隐藏字段（如果需要兼容旧后端） --%>
+                
                 <input type="hidden" name="scoreExperimentationCompat" id="scoreExperimentationCompat" value="5"/>
                 <input type="hidden" name="scoreLiteratureReviewCompat" id="scoreLiteratureReviewCompat" value="5"/>
                 <input type="hidden" name="scoreConclusionsCompat" id="scoreConclusionsCompat" value="5"/>
@@ -645,3 +645,30 @@
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

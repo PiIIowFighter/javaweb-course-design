@@ -9,16 +9,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 稿件项目资助 DAO（支持多条）。
- *
- * 表：dbo.ManuscriptFundings
- */
+
 public class ManuscriptFundingDAO {
 
-    /**
-     * 查询稿件的所有资助记录。
-     */
+    
     public List<ManuscriptFunding> findByManuscriptId(int manuscriptId) throws SQLException {
         String sql = "SELECT FundingId, ManuscriptId, FundingName, FundingLevel, FundingAmount " +
                 "FROM dbo.ManuscriptFundings WHERE ManuscriptId = ? ORDER BY FundingId ASC";
@@ -40,7 +34,7 @@ public class ManuscriptFundingDAO {
                 return list;
             }
         } catch (SQLException e) {
-            // 兼容：尚未执行建表脚本时，避免整个页面挂掉
+            
             if (looksLikeMissingTable(e)) {
                 return Collections.emptyList();
             }
@@ -76,9 +70,7 @@ public class ManuscriptFundingDAO {
         }
     }
 
-    /**
-     * 全量覆盖：先删后插。
-     */
+    
     public void replaceByManuscriptId(Connection conn, int manuscriptId, List<ManuscriptFunding> fundings) throws SQLException {
         deleteByManuscriptId(conn, manuscriptId);
         insertBatch(conn, manuscriptId, fundings);
@@ -91,3 +83,28 @@ public class ManuscriptFundingDAO {
         return msg.contains("invalid object name") && msg.contains("manuscriptfundings");
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

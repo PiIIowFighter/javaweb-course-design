@@ -3,47 +3,39 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 稿件阶段时间戳实体类
- * 对应数据库表 dbo.ManuscriptStageTimestamps
- * 用于记录每份稿件在各审稿阶段的完成时间
- */
+
 public class ManuscriptStageTimestamps implements Serializable {
 
     private Integer manuscriptId;
     
-    /** 草稿编辑完成时间 - DRAFT */
+    
     private LocalDateTime draftCompletedAt;
     
-    /** 已提交待处理完成时间 - SUBMITTED */
+    
     private LocalDateTime submittedAt;
     
-    /** 形式审查完成时间 - FORMAL_CHECK */
+    
     private LocalDateTime formalCheckCompletedAt;
     
-    /** 案头初筛完成时间 - DESK_REVIEW_INITIAL */
+    
     private LocalDateTime deskReviewInitialCompletedAt;
     
-    /** 待分配编辑完成时间 - TO_ASSIGN */
+    
     private LocalDateTime toAssignCompletedAt;
     
-    /** 编辑处理完成时间 - WITH_EDITOR */
+    
     private LocalDateTime withEditorCompletedAt;
     
-    /** 外审完成时间 - UNDER_REVIEW */
+    
     private LocalDateTime underReviewCompletedAt;
     
-    /** 编辑推荐意见完成时间 - EDITOR_RECOMMENDATION */
+    
     private LocalDateTime editorRecommendationCompletedAt;
     
-    /** 待主编终审完成时间 - FINAL_DECISION_PENDING */
+    
     private LocalDateTime finalDecisionPendingCompletedAt;
 
-    /**
-     * 根据状态码获取对应的完成时间
-     * @param statusCode 状态码
-     * @return 对应的完成时间，如果状态码无效则返回null
-     */
+    
     public LocalDateTime getCompletedAtByStatus(String statusCode) {
         if (statusCode == null) return null;
         switch (statusCode) {
@@ -70,7 +62,7 @@ public class ManuscriptStageTimestamps implements Serializable {
         }
     }
 
-    // ========== Getters and Setters ==========
+    
 
     public Integer getManuscriptId() {
         return manuscriptId;
@@ -168,3 +160,28 @@ public class ManuscriptStageTimestamps implements Serializable {
                 '}';
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

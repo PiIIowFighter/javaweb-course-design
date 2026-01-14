@@ -10,11 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/**
- * 主编（EDITOR_IN_CHIEF）相关功能入口。
- *
- * URL 保持兼容：仍使用 /editor/... 下的各模块路径。
- */
+
 @WebServlet(
         name = "ChiefEditorServlet",
         urlPatterns = {
@@ -111,7 +107,7 @@ public class ChiefEditorServlet extends EditorServlet {
     }
 
     private String buildOldStylePath(HttpServletRequest req) {
-        // /editor/desk + null -> /desk
+        
         String sp = req.getServletPath();
         String pi = req.getPathInfo();
         if (pi == null) pi = "";
@@ -122,3 +118,28 @@ public class ChiefEditorServlet extends EditorServlet {
         return sp + pi;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -9,7 +9,7 @@
   <packaging>war</packaging>
 
   <name>Online_SMsystem4SP</name>
-  <description>科研论文在线投稿及管理系统 - JavaWeb 课程设计基本框架（Servlet + JSP）</description>
+  <description>科研论文在线投稿及管理系统</description>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -22,7 +22,7 @@
     <jstl.version>1.2</jstl.version>
     <mssql.jdbc.version>9.4.0.jre8</mssql.jdbc.version>
 
-    <!-- 邮件依赖：JDK 9+ 运行时通常需要显式引入（如果你的 MailNotifications 用到 javax.mail） -->
+    <!-- 邮件依赖 -->
     <javax.mail.version>1.6.2</javax.mail.version>
     <javax.activation.version>1.2.0</javax.activation.version>
     <!-- JSON处理依赖版本 -->
@@ -30,7 +30,7 @@
     <!-- HTML转PDF依赖版本 -->
     <flying.saucer.version>9.1.22</flying.saucer.version>
     <itext.version>2.1.7</itext.version>
-    <!-- 新增：Bouncycastle版本（1.70修复了循环继承bug） -->
+    <!-- Bouncycastle版本 -->
     <bouncycastle.version>1.70</bouncycastle.version>
   </properties>
 
@@ -77,19 +77,19 @@
       <version>${javax.activation.version}</version>
     </dependency>
 
-    <!-- 新增：JSON处理依赖（解决org.json.JSONObject找不到的报错） -->
+    <!-- JSON处理依赖  -->
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
       <version>${json.version}</version>
     </dependency>
 
-    <!-- 新增：HTML转PDF工具（Flying Saucer）- 解决ITextRenderer类找不到的报错 -->
+    <!-- HTML转PDF工具  -->
     <dependency>
       <groupId>org.xhtmlrenderer</groupId>
       <artifactId>flying-saucer-pdf</artifactId>
       <version>${flying.saucer.version}</version>
-      <!-- 排除旧版本的Bouncycastle依赖，避免冲突 -->
+      <!-- 排除旧版本的Bouncycastle依赖 -->
       <exclusions>
         <exclusion>
           <groupId>org.bouncycastle</groupId>
@@ -98,14 +98,14 @@
       </exclusions>
     </dependency>
 
-    <!-- 新增：Flying Saucer依赖的PDF生成库（iText 2.x为开源兼容版） -->
+    <!-- Flying Saucer依赖的PDF生成库 -->
     <dependency>
       <groupId>com.lowagie</groupId>
       <artifactId>itext</artifactId>
       <version>${itext.version}</version>
     </dependency>
 
-    <!-- 新增：修复循环继承bug的Bouncycastle核心依赖 -->
+    <!-- 修复循环继承bug的Bouncycastle核心依赖 -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>

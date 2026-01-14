@@ -31,7 +31,7 @@
     </c:if>
 
     <c:choose>
-        <%-- 已发送 --%>
+        
         <c:when test="${box eq 'sent'}">
             <c:choose>
                 <c:when test="${empty sentNotifications}">
@@ -80,7 +80,7 @@
                                         <c:if test="${not empty n.relatedManuscriptId}">
                                             ·
                                             <c:choose>
-                                                <%-- 作者在通知中心点击“查看稿件”应跳转到作者可访问的稿件详情页，避免 403 --%>
+                                                
                                                 <c:when test="${sessionScope.currentUser.roleCode eq 'AUTHOR'}">
                                                     <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
                                                 </c:when>
@@ -116,7 +116,7 @@
             </c:choose>
         </c:when>
 
-        <%-- 收件箱 --%>
+        
         <c:otherwise>
             <c:choose>
                 <c:when test="${empty inboxNotifications}">
@@ -153,7 +153,7 @@
                                         <c:if test="${not empty n.relatedManuscriptId}">
                                             ·
                                             <c:choose>
-                                                <%-- 作者在通知中心点击“查看稿件”应跳转到作者可访问的稿件详情页，避免 403 --%>
+                                                
                                                 <c:when test="${sessionScope.currentUser.roleCode eq 'AUTHOR'}">
                                                     <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}">查看稿件</a>
                                                 </c:when>
@@ -188,3 +188,30 @@
 </div>
 
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -46,23 +46,23 @@
 
     <c:if test="${not empty manuscripts}">
         <div class="table-wrap">
-            <table class="table-fixed" border="1" cellpadding="6" cellspacing="0" style="min-width: 1180px;">
+            <table class="table-fixed final-decision-table" border="1" cellpadding="6" cellspacing="0">
                 <thead>
                 <tr>
-                    <th style="width: 110px;">稿件编号</th>
-                    <th style="width: 320px;">标题</th>
-                    <th style="width: 190px;">当前状态</th>
-                    <th style="width: 220px;">编辑建议 / 决策</th>
-                    <th style="width: 190px;">终审时间</th>
-                    <th style="width: 190px;">提交时间</th>
-                    <th style="width: 300px;">操作</th>
+                    <th class="fd-id">稿件编号</th>
+                    <th class="fd-title">标题</th>
+                    <th class="fd-status">当前状态</th>
+                    <th class="fd-suggest">编辑建议 / 决策</th>
+                    <th class="fd-final">终审时间</th>
+                    <th class="fd-submit">提交时间</th>
+                    <th class="fd-op">操作</th>
                 </tr>
                 </thead>
                 <tbody>
                 <c:forEach items="${manuscripts}" var="m">
                     <tr>
                         <td><c:out value="${m.manuscriptId}"/></td>
-                        <td class="cell-wrap"><c:out value="${m.title}"/></td>
+                        <td class="cell-wrap fd-title-cell"><span class="fd-title-text"><c:out value="${m.title}"/></span></td>
                         <td>
                             <span class="badge"><c:out value="${m.currentStatus}"/></span>
                         </td>
@@ -102,15 +102,15 @@
                                 <c:otherwise>--</c:otherwise>
                             </c:choose>
                         </td>
-                        <td>
+                        <td class="fd-op">
                             <c:choose>
                                 <c:when test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
-                                    <div class="admin-actions">
-                                        <!-- 只有主编并且状态在待终审/有编辑推荐时才显示三个决策按钮 -->
+                                    <div class="admin-actions final-decision-actions">
+                                        
                                         <c:if test="${m.currentStatus == 'FINAL_DECISION_PENDING' or m.currentStatus == 'EDITOR_RECOMMENDATION'}">
                                             <form method="post"
                                                   action="${ctx}/editor/finalDecision"
-                                                  style="display:inline-flex; gap:8px; flex-wrap:wrap;">
+                                                  class="fd-action-group">
                                                 <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
 
                                                 <button type="submit" class="btn-primary" name="op" value="accept">录用（Accept）</button>
@@ -124,9 +124,9 @@
                                             </form>
                                         </c:if>
 
-                                        <!-- 特殊权限：撤销终审决定 / 撤稿 -->
+                                        
                                         <form method="post" action="${ctx}/editor/finalDecision"
-                                              style="display:inline-flex; gap:8px; flex-wrap:wrap;">
+                                              class="fd-action-group">
                                             <input type="hidden" name="manuscriptId" value="${m.manuscriptId}"/>
 
                                             <c:if test="${m.currentStatus == 'ACCEPTED' or m.currentStatus == 'REJECTED' or m.currentStatus == 'REVISION'}">
@@ -160,3 +160,30 @@
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

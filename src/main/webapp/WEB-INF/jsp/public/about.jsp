@@ -30,7 +30,7 @@
 </div>
 
 <div class="about-panels">
-    <!-- Aims and scope -->
+    
     <section class="about-panel" id="aboutPanelAims" data-tab="aims" role="tabpanel">
         <div class="card">
             <div class="card-header">
@@ -77,7 +77,7 @@
         </div>
     </section>
 
-    <!-- Editorial board -->
+    
     <section class="about-panel" id="aboutPanelBoard" data-tab="board" role="tabpanel">
         <div class="card">
             <div class="card-header">
@@ -129,7 +129,7 @@
         </div>
     </section>
 
-    <!-- Journal insights -->
+    
     <section class="about-panel" id="aboutPanelInsights" data-tab="insights" role="tabpanel">
         <div class="card">
             <div class="card-header">
@@ -176,7 +176,7 @@
         </div>
     </section>
 
-    <!-- News -->
+    
     <section class="about-panel" id="aboutPanelNews" data-tab="news" role="tabpanel">
         <div class="card">
             <div class="card-header">
@@ -218,7 +218,7 @@
         </div>
     </section>
 
-    <!-- Policies -->
+    
     <section class="about-panel" id="aboutPanelPolicies" data-tab="policies" role="tabpanel">
         <div class="card">
             <div class="card-header">
@@ -305,3 +305,30 @@
 </script>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

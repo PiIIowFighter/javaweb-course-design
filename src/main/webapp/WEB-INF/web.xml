@@ -5,14 +5,14 @@
                              http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
          version="4.0">
 
-    <!-- Online_SMsystem4SP web.xml -->
+    
     <display-name>Online_SMsystem4SP</display-name>
 
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
 
-    <!-- 统一编码过滤器 -->
+    
     <filter>
         <filter-name>encodingFilter</filter-name>
         <filter-class>edu.bjfu.onlinesm.util.EncodingFilter</filter-class>
@@ -22,7 +22,7 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
-    <!-- 操作日志兜底过滤器：自动记录 POST/PUT/DELETE/PATCH 到 dbo.OperationLogs -->
+    
     <filter>
         <filter-name>operationLogFilter</filter-name>
         <filter-class>edu.bjfu.onlinesm.util.OperationLogFilter</filter-class>
@@ -32,7 +32,7 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
-    <!-- 顶栏消息中心：为已登录用户计算未读通知数，用于小铃铛红点数字 -->
+    
     <filter>
         <filter-name>notificationBadgeFilter</filter-name>
         <filter-class>edu.bjfu.onlinesm.util.NotificationBadgeFilter</filter-class>
@@ -42,7 +42,7 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
-    <!-- 登录/注销 -->
+    
     <servlet>
         <servlet-name>AuthServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.AuthServlet</servlet-class>
@@ -52,7 +52,7 @@
         <url-pattern>/auth/*</url-pattern>
     </servlet-mapping>
 
-    <!-- 角色工作台（根据登录用户 roleCode 分发） -->
+    
     <servlet>
         <servlet-name>DashboardServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.DashboardServlet</servlet-class>
@@ -62,7 +62,7 @@
         <url-pattern>/dashboard</url-pattern>
     </servlet-mapping>
 
-    <!-- 用户管理（管理员/超级管理员） -->
+    
     <servlet>
         <servlet-name>UserServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.UserServlet</servlet-class>
@@ -72,7 +72,7 @@
         <url-pattern>/admin/users/*</url-pattern>
     </servlet-mapping>
 
-    <!-- 稿件/投稿流程 -->
+    
     <servlet>
         <servlet-name>ManuscriptServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.ManuscriptServlet</servlet-class>
@@ -82,7 +82,7 @@
         <url-pattern>/manuscripts/*</url-pattern>
     </servlet-mapping>
 
-    <!-- 文件预览 -->
+    
     <servlet>
         <servlet-name>FilePreviewServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.FilePreviewServlet</servlet-class>
@@ -92,7 +92,7 @@
         <url-pattern>/files/*</url-pattern>
     </servlet-mapping>
 
-    <!-- 通知中心（消息中心）& 发送通知 -->
+    
     <servlet>
         <servlet-name>NotificationServlet</servlet-name>
         <servlet-class>edu.bjfu.onlinesm.controller.NotificationServlet</servlet-class>
@@ -102,7 +102,7 @@
         <url-pattern>/notifications/*</url-pattern>
     </servlet-mapping>
 
-    <!-- 错误页面 -->
+    
     <error-page>
         <error-code>404</error-code>
         <location>/WEB-INF/jsp/error/404.jsp</location>
@@ -112,7 +112,7 @@
         <location>/WEB-INF/jsp/error/500.jsp</location>
     </error-page>
 
-    <!-- 静态资源 MIME 映射兜底 -->
+    
     <mime-mapping>
         <extension>css</extension>
         <mime-type>text/css</mime-type>
@@ -143,3 +143,30 @@
     </mime-mapping>
 
 </web-app>
+
+<!--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+-->

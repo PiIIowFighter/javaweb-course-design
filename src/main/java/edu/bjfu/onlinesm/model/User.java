@@ -3,35 +3,31 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 与 SQL Server 中 dbo.Users 表大致对应的实体类。
- * 这里只保留课程设计当前阶段需要用到的字段，
- * 方便后续替换为真正的 DAO / Service 实现。
- */
+
 public class User implements Serializable {
 
     private Integer userId;
-    /** 登录名，对应 dbo.Users.Username */
+    
     private String username;
-    /** 明文/散列密码，当前阶段直接使用明文，后续可替换为加密存储 */
+    
     private String passwordHash;
     private String email;
     private String fullName;
-    /** 单位/机构 */
+    
     private String affiliation;
-    /** 研究方向 */
+    
     private String researchArea;
-    /** 角色代码，例如：SUPER_ADMIN / SYSTEM_ADMIN / AUTHOR / REVIEWER / EDITOR / EDITOR_IN_CHIEF */
+    
     private String roleCode;
-    /** 账号状态：ACTIVE / DISABLED / LOCKED 等 */
+    
     private String status;
-    /** 注册时间（可为空，后续与数据库同步时再使用） */
+    
     private LocalDateTime registerTime;
 
-    // ====== v2: 审稿人绩效统计（用于编辑端筛选/展示） ======
-    /** 已完成审稿次数（Reviews.Status='SUBMITTED' 的数量） */
+    
+    
     private Integer completedReviewCount;
-    /** 已提交评审的平均评分（基于 Reviews.Score，可能为空） */
+    
     private Double avgReviewScore;
 
     public User() {
@@ -160,3 +156,28 @@ public class User implements Serializable {
                 '}';
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

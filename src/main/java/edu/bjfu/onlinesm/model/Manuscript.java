@@ -1,4 +1,4 @@
-package edu.bjfu.onlinesm.model; // 必须补充包名
+package edu.bjfu.onlinesm.model; 
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -15,31 +15,25 @@ public class Manuscript implements Serializable {
     private String subjectArea;
     private String fundingInfo;
 
-    /** 作者列表简要字符串（用于列表显示/冗余展示），详细作者信息见 dbo.ManuscriptAuthors。 */
+    
     private String authorList;
 
     private String currentStatus;
     private LocalDateTime submitTime;
 
-    /** 编辑建议 / 最终决策（ACCEPT / REJECT / REVISION 等），对应 dbo.Manuscripts.Decision */
+    
     private String decision;
 
-    /** 最终决策时间：主编给出最终决策的时间点 */
+    
     private LocalDateTime finalDecisionTime;
 
-    /* =========================
-       前台展示用统计字段（dbo.ArticleMetrics）
-       说明：不影响投稿流程，仅用于 Articles 页面排序/展示。
-       ========================= */
+    
     private Integer viewCount;
     private Integer downloadCount;
     private Integer citationCount;
     private Double popularityScore;
 
-    /* =========================
-       论文“可引用信息/补充信息”（Public article metadata）
-       说明：用于前台论文详情页展示；当稿件终审录用（ACCEPTED）时自动补全。
-       ========================= */
+    
     private String journalName;
     private String journalIssn;
 
@@ -54,18 +48,13 @@ public class Manuscript implements Serializable {
     private String cnkiUrl;
     private LocalDateTime publishedAt;
 
-    // ========== 新增兼容方法 ==========
-    /**
-     * 兼容方法：获取用户ID
-     * 返回 submitterId，因为现有代码可能期望这个方法
-     */
+    
+    
     public Integer getUserId() {
         return submitterId;
     }
     
-    /**
-     * 兼容方法：设置用户ID
-     */
+    
     public void setUserId(Integer userId) {
         this.submitterId = userId;
     }
@@ -78,7 +67,7 @@ public class Manuscript implements Serializable {
     public void setEditorId(Integer editorId) {
         this.editorId = editorId;
     }
-    // ========== 所有字段的getter/setter ==========
+    
     public Integer getManuscriptId() {
         return manuscriptId;
     }
@@ -333,3 +322,28 @@ public class Manuscript implements Serializable {
                 '}';
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

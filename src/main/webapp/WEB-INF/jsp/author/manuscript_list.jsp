@@ -6,7 +6,7 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<%-- 防御：当用户直接访问 /manuscripts/list 且未携带 group 参数时，默认落在 processing --%>
+
 <c:if test="${empty group}">
     <c:set var="group" value="processing"/>
 </c:if>
@@ -19,9 +19,9 @@
 </div></div>
     </div>
 
-    <%-- 顶部分组 Tab 已移除：分组入口改为侧边栏二级菜单 --%>
+    
 
-    <!-- 筛选区域：状态 + 日期范围 -->
+    
     <form method="get" action="${ctx}/manuscripts/list" class="card">
         <input type="hidden" name="group" value="${group}"/>
         <div class="toolbar filter-toolbar">
@@ -29,11 +29,11 @@
                 <label style="display:block; margin-bottom:6px;">状态</label>
                 <select name="status">
         <option value="">全部状态</option>
-        <%-- Incomplete（草稿）分组：只显示草稿相关状态 --%>
+        
         <c:if test="${group == 'incomplete'}">
             <option value="DRAFT" ${statusFilter == 'DRAFT' ? 'selected="selected"' : ''}>DRAFT - 编辑中</option>
         </c:if>
-        <%-- Processing（处理中）分组：显示处理流程中的状态 --%>
+        
         <c:if test="${group == 'processing'}">
             <option value="SUBMITTED" ${statusFilter == 'SUBMITTED' ? 'selected="selected"' : ''}>SUBMITTED - 已提交待处理</option>
             <option value="FORMAL_CHECK" ${statusFilter == 'FORMAL_CHECK' ? 'selected="selected"' : ''}>FORMAL_CHECK - 形式审查</option>
@@ -46,13 +46,13 @@
             <option value="EDITOR_RECOMMENDATION" ${statusFilter == 'EDITOR_RECOMMENDATION' ? 'selected="selected"' : ''}>EDITOR_RECOMMENDATION - 编辑推荐意见</option>
             <option value="FINAL_DECISION_PENDING" ${statusFilter == 'FINAL_DECISION_PENDING' ? 'selected="selected"' : ''}>FINAL_DECISION_PENDING - 待主编终审</option>
         </c:if>
-        <%-- Revision（待修改）分组：显示需要修改的状态 --%>
+        
         <c:if test="${group == 'revision'}">
             <option value="RETURNED" ${statusFilter == 'RETURNED' ? 'selected="selected"' : ''}>RETURNED - 编辑部退回待修改</option>
             <option value="REVISION" ${statusFilter == 'REVISION' ? 'selected="selected"' : ''}>REVISION - 审稿后修改中</option>
             <option value="REVISION_REQUESTED" ${statusFilter == 'REVISION_REQUESTED' ? 'selected="selected"' : ''}>REVISION_REQUESTED - 已要求修改</option>
         </c:if>
-        <%-- Decision（已决策）分组：显示最终决策状态 --%>
+        
         <c:if test="${group == 'decision'}">
             <option value="ACCEPTED" ${statusFilter == 'ACCEPTED' ? 'selected="selected"' : ''}>ACCEPTED - 已录用</option>
             <option value="REJECTED" ${statusFilter == 'REJECTED' ? 'selected="selected"' : ''}>REJECTED - 已退稿</option>
@@ -148,3 +148,30 @@
 
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

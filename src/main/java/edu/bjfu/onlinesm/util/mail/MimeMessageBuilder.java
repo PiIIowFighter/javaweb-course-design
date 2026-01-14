@@ -7,9 +7,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * 在不引入 JavaMail 依赖的情况下，手工拼装 MIME 邮件内容。
- */
+
 final class MimeMessageBuilder {
 
     private MimeMessageBuilder() {
@@ -40,14 +38,14 @@ final class MimeMessageBuilder {
 
         sb.append("Content-Type: multipart/mixed; boundary=\"").append(boundary).append("\"\r\n\r\n");
 
-        // 正文
+        
         sb.append("--").append(boundary).append("\r\n");
         sb.append("Content-Type: text/html; charset=UTF-8\r\n");
         sb.append("Content-Transfer-Encoding: 8bit\r\n\r\n");
         sb.append(msg.getHtmlBody() == null ? "" : msg.getHtmlBody());
         sb.append("\r\n");
 
-        // 附件
+        
         for (MailAttachment a : msg.getAttachments()) {
             sb.append("--").append(boundary).append("\r\n");
             sb.append("Content-Type: ").append(a.getContentType()).append("; name=\"").append(encodeFilename(a.getFilename())).append("\"\r\n");
@@ -67,14 +65,14 @@ final class MimeMessageBuilder {
 
     private static String encodeHeader(String s) {
         if (s == null) s = "";
-        // RFC2047 B-encoding
+        
         String b = Base64.getEncoder().encodeToString(s.getBytes(StandardCharsets.UTF_8));
         return "=?UTF-8?B?" + b + "?=";
     }
 
     private static String encodeFilename(String s) {
         if (s == null || s.isEmpty()) return "attachment";
-        // 简化：直接用 RFC2047 编码
+        
         return encodeHeader(s);
     }
 
@@ -98,3 +96,28 @@ final class MimeMessageBuilder {
         return sb.toString();
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -4,12 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 系统内置的“权限点”目录。
- *
- * 
- * 仅做模块/URL 级别授权（如：用户管理、权限管理、日志管理等）。
- */
+
 public final class PermissionCatalog {
 
     public static final String ADMIN_USERS = "ADMIN_USERS";
@@ -22,7 +17,7 @@ public final class PermissionCatalog {
     public static final String ADMIN_NEWS = "ADMIN_NEWS";
 
 
-// ====== 菜单入口权限（工作台/侧边栏按入口粒度控制） ======
+
 
 public static final String MENU_AUTHOR_MY_MANUSCRIPTS = "MENU_AUTHOR_MY_MANUSCRIPTS";
 public static final String MENU_AUTHOR_SUBMIT = "MENU_AUTHOR_SUBMIT";
@@ -70,10 +65,7 @@ public static final String MENU_EO_FORMAL_HISTORY = "MENU_EO_FORMAL_HISTORY";
             return description;
         }
 
-        /**
-         * 兼容 JSP EL 属性名：permission_list.jsp 使用 ${p.desc}。
-         * Tomcat/EL 会按 JavaBean 规范查找 getDesc()。
-         */
+        
         public String getDesc() {
             return description;
         }
@@ -93,7 +85,7 @@ public static final String MENU_EO_FORMAL_HISTORY = "MENU_EO_FORMAL_HISTORY";
         list.add(new Item(ADMIN_NEWS, "公告/新闻管理", "发布与维护公告新闻"));
 
 
-// ====== 菜单入口权限（工作台/侧边栏） ======
+
 list.add(new Item(MENU_AUTHOR_MY_MANUSCRIPTS, "我的稿件", "作者：查看稿件列表/详情/进度/导出"));
 list.add(new Item(MENU_AUTHOR_SUBMIT, "提交稿件", "作者：提交新稿/修回再投"));
 
@@ -125,3 +117,28 @@ list.add(new Item(MENU_EO_FORMAL_HISTORY, "形式审查历史", "编辑部管理
         return ALL;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -4,12 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-/**
- * 读取 classpath 下的 mail.properties。
- *
- * 说明：本项目未使用 Maven/Gradle，引入 JavaMail 依赖不稳定。
- * 为保证“可发送邮件”的功能可落地，这里实现了一个轻量 SMTP 客户端。
- */
+
 public class MailConfig {
 
     private final Properties props;
@@ -25,7 +20,7 @@ public class MailConfig {
                 p.load(in);
             }
         } catch (IOException ignored) {
-            // 没有配置文件时，按默认禁用邮件
+            
         }
         return new MailConfig(p);
     }
@@ -85,7 +80,7 @@ public class MailConfig {
         return get("app.baseUrl", "");
     }
     
- // ====== JavaBean 兼容层：给 MailSender / 旧代码调用 ======
+ 
     public boolean isEnabled() { return enabled(); }
 
     public String getHost() { return host(); }
@@ -99,7 +94,7 @@ public class MailConfig {
     public String getFrom() {
         String f = from();
         if (f == null || f.trim().isEmpty()) {
-            // 有些 SMTP 服务要求 MAIL FROM 必须是登录账号
+            
             return getUsername();
         }
         return f.trim();
@@ -107,10 +102,10 @@ public class MailConfig {
 
     public String getFromName() { return fromName(); }
 
-    // 兼容你 MailSender 里写的 isStarttls() / isStarttls && !isSsl()
+    
     public boolean isStarttls() { return startTls(); }
 
-    // 同时也给更规范的 isStartTls()（可选，但推荐）
+    
     public boolean isStartTls() { return startTls(); }
 
     public boolean isSsl() { return ssl(); }
@@ -119,15 +114,15 @@ public class MailConfig {
 
     public String getBaseUrl() { return baseUrl(); }
 
-    // 如果你的其它地方用到了 systemName，可加这个（对应 mail.properties 里可填 systemName）
+    
     public String getSystemName() {
-        // 兼容之前模板里用到的名字；没有就退回 fromName
+        
         return props == null ? fromName() : props.getProperty("smtp.systemName", fromName());
     }
 
 
-    // ===== 自动催审（Auto Remind）配置，供 AutoRemindListener 使用 =====
-    // 说明：统一从 mail.properties 读取（不再依赖另一套 mail 包）
+    
+    
 
     public int getAutoRemindOverdueDays() {
         try { return Integer.parseInt(get("mail.autoRemind.overdueDays", "7")); }
@@ -145,3 +140,28 @@ public class MailConfig {
     }
 
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

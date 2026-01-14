@@ -20,11 +20,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-/**
- * 前台论文下载（无需登录）：仅允许下载已“发表/公开”的论文。
- *
- * URL 示例：/articles/download?id=123
- */
+
 @WebServlet(name = "PublicArticleDownloadServlet", urlPatterns = {"/articles/download"})
 public class PublicArticleDownloadServlet extends HttpServlet {
 
@@ -40,7 +36,7 @@ public class PublicArticleDownloadServlet extends HttpServlet {
         }
 
         try {
-            // 仅允许下载已公开论文（当前实现：ACCEPTED 近似已发表）
+            
             Manuscript m = manuscriptDAO.findAcceptedById(id);
             if (m == null) {
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND, "未找到该论文（或该稿件未处于 ACCEPTED 状态）。");
@@ -59,7 +55,7 @@ public class PublicArticleDownloadServlet extends HttpServlet {
                 return;
             }
 
-            // 统计：下载计数（不影响下载流程）
+            
             try {
                 manuscriptDAO.incrementDownloadCount(id);
             } catch (Exception ignore) {
@@ -78,7 +74,7 @@ public class PublicArticleDownloadServlet extends HttpServlet {
             String safeName = fileName.replace("\"", "");
             String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
 
-            // 同时提供 filename 与 filename*，兼容中文文件名
+            
             String disposition = (inline ? "inline" : "attachment")
                     + "; filename=\"" + safeName + "\""
                     + "; filename*=UTF-8''" + encoded;
@@ -136,3 +132,28 @@ public class PublicArticleDownloadServlet extends HttpServlet {
         return "application/octet-stream";
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

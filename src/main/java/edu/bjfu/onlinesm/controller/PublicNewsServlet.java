@@ -13,13 +13,7 @@ import java.sql.SQLException;
 import java.util.List;
 import edu.bjfu.onlinesm.util.PaginationUtil;
 
-/**
- * 前台 - 新闻列表与详情。
- *
- * URL：
- *   GET /news/list
- *   GET /news/detail?id=1
- */
+
 @WebServlet(name = "PublicNewsServlet", urlPatterns = {"/news/*"})
 public class PublicNewsServlet extends HttpServlet {
 
@@ -80,3 +74,28 @@ public class PublicNewsServlet extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/jsp/public/news_detail.jsp").forward(req, resp);
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

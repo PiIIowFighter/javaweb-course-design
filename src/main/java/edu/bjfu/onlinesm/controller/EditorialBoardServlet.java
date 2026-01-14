@@ -18,16 +18,7 @@ import java.sql.SQLException;
 import java.util.List;
 import edu.bjfu.onlinesm.util.PaginationUtil;
 
-/**
- * 编辑委员会管理模块控制器：维护 dbo.EditorialBoard。
- *
- * URL:
- *  GET  /admin/editorial/list
- *  GET  /admin/editorial/add
- *  GET  /admin/editorial/edit?id=xx
- *  POST /admin/editorial/save
- *  POST /admin/editorial/delete
- */
+
 @WebServlet(name = "EditorialBoardServlet", urlPatterns = {"/admin/editorial/*"})
 public class EditorialBoardServlet extends HttpServlet {
 
@@ -85,7 +76,7 @@ public class EditorialBoardServlet extends HttpServlet {
             throw new ServletException("保存编委会数据失败", e);
         }
 
-        // 课程设计场景只有 1 个期刊：不需要 journalId 参数。
+        
         resp.sendRedirect(req.getContextPath() + "/admin/editorial/list");
     }
 
@@ -184,3 +175,28 @@ public class EditorialBoardServlet extends HttpServlet {
         return s == null ? "" : s.trim();
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

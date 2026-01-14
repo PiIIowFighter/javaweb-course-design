@@ -14,9 +14,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 
-/**
- * 前台页面：Publish 与 Guide。
- */
+
 @WebServlet(name = "PublicStaticPageServlet", urlPatterns = {"/publish", "/guide"})
 public class PublicStaticPageServlet extends HttpServlet {
 
@@ -27,7 +25,7 @@ public class PublicStaticPageServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String sp = req.getServletPath();
         try {
-            // 期刊信息（主期刊）
+            
             Journal journal = null;
             try {
                 journal = journalDAO.findPrimary();
@@ -38,7 +36,7 @@ public class PublicStaticPageServlet extends HttpServlet {
             Integer journalId = (journal == null) ? null : journal.getJournalId();
 
             if ("/publish".equals(sp)) {
-                // 如果数据库未初始化 publish 页面，则自动补齐一份默认内容，避免前台空白
+                
                 ensureDefaultPage(journalId,
                         "publish",
                         "期刊出版信息（Publish）",
@@ -49,7 +47,7 @@ public class PublicStaticPageServlet extends HttpServlet {
             }
 
             if ("/guide".equals(sp)) {
-                // 如果数据库未初始化 guide 页面，则自动补齐一份默认内容，避免前台空白
+                
                 ensureDefaultPage(journalId,
                         "guide",
                         "用户指南（Guide for authors）",
@@ -69,7 +67,7 @@ public class PublicStaticPageServlet extends HttpServlet {
         JournalPage page;
         if (journalId != null) {
             page = journalPageDAO.findByJournalAndKey(journalId, pageKey);
-            // 兼容：若主期刊没有配置该页面，尝试按 key 找“任意期刊”的同名页面做兜底展示
+            
             if (page == null) {
                 page = journalPageDAO.findFirstJournalByKey(pageKey);
             }
@@ -82,10 +80,7 @@ public class PublicStaticPageServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 课程设计场景：很多同学只跑了建表脚本但没有初始化 JournalPages，导致 /publish /guide 为空。
-     * 这里在首次访问时自动插入默认页面（如已存在则不动），方便“开箱即用”。
-     */
+    
     private void ensureDefaultPage(Integer journalId, String pageKey, String title, String html) throws SQLException {
         if (journalId == null) return;
         JournalPage exists = journalPageDAO.findByJournalAndKey(journalId, pageKey);
@@ -135,3 +130,28 @@ public class PublicStaticPageServlet extends HttpServlet {
                 "<p>点击页面右上角 <b>提交论文</b> 或使用本页按钮进入投稿流程。</p>";
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -133,7 +133,7 @@
     <div class="card" style="margin-top: var(--space-5);">
         <div class="stack" style="flex-direction: row; justify-content: space-between; align-items:center; gap:10px;">
             <h3 style="margin:0;">当前审稿记录</h3>
-            <!-- 注意：c:url 在 value 以 / 开头时会自动拼接 contextPath，因此不要再手动拼 ${ctx}，避免 /ctx/ctx/... 导致 404 -->
+            
             <c:url var="selectUrl" value="/editor/review/select">
                 <c:param name="manuscriptId" value="${manuscript.manuscriptId}"/>
                 <c:param name="backTo" value="${backToUrl}"/>
@@ -175,7 +175,7 @@
                         <td>
                             <c:choose>
                                 <c:when test="${r.status == 'INVITED' || r.status == 'ACCEPTED'}">
-                                    <%-- 需求：稿件详情页不展示“催审”按钮（催审统一在“审稿监控 / 催审”面板中处理） --%>
+                                    
                                     <form method="post" action="${ctx}/editor/review/cancel" style="display:inline;" onsubmit="return confirm('确认解除该审稿人？')">
                                         <input type="hidden" name="reviewId" value="${r.reviewId}"/>
                                         <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
@@ -189,7 +189,7 @@
                                             <a class="btn btn-quiet" href="${ctx}/editor/review/detail?reviewId=${r.reviewId}">查看详细评价</a>
                                         </c:when>
 
-                                        <%-- 审稿人已拒绝：操作按钮置灰不可点 --%>
+                                        
                                         <c:when test="${r.status == 'DECLINED' || (r.status == 'EXPIRED' && (not empty r.rejectionReason || not empty r.declinedAt))}">
                                             <button class="btn btn-quiet" type="button" disabled="disabled">已拒绝</button>
                                         </c:when>
@@ -210,7 +210,7 @@
         </p>
     </div>
 
-    <!-- 页面底部操作区：按需求在最底下放置“添加邀请审稿人”按钮（只保留一个，避免重复） -->
+    
     <div class="stack" style="flex-direction: row; gap: 10px; margin-top: var(--space-5); justify-content:flex-end;">
         <a class="btn btn-primary" href="${selectUrl}">
             <i class="bi bi-person-plus" aria-hidden="true"></i>
@@ -221,3 +221,30 @@
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

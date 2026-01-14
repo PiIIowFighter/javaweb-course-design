@@ -19,16 +19,7 @@ import javax.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/**
- * 个人信息管理：
- *  - GET  /profile  展示当前登录用户的基本信息；
- *  - POST /profile  更新基本信息并处理头像/简历附件上传。
- *
- * 头像和简历文件统一保存在 Web 应用路径下的 /upload/profile 目录中，
- * 文件命名规则：
- *  - 头像：user_{userId}_avatar.ext
- *  - 简历：user_{userId}_resume.ext
- */
+
 @WebServlet(
         name = "ProfileServlet",
         urlPatterns = {"/profile", "/profile/avatar", "/profile/resume"}
@@ -40,13 +31,7 @@ public class ProfileServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
 
-    /**
-     * 上传目录统一由 UploadPathUtil 管理：
-     *  - 头像: {base}/avatars
-     *  - 简历: {base}/resumes
-     *
-     * 同时为历史版本兼容：以前把头像/简历放到 {base}/profile 下，读取时会同时尝试该目录。
-     */
+    
     private static final String LEGACY_PROFILE_SUB_DIR = "profile";
 
 
@@ -54,19 +39,19 @@ public class ProfileServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String servletPath = req.getServletPath();
 
-        // 1) 处理头像预览
+        
         if ("/profile/avatar".equals(servletPath)) {
             streamAvatar(req, resp);
             return;
         }
 
-        // 2) 处理简历预览
+        
         if ("/profile/resume".equals(servletPath)) {
             streamResume(req, resp);
             return;
         }
 
-        // 3) 正常的个人信息页面 /profile
+        
         User current = getCurrentUser(req);
         if (current == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
@@ -101,7 +86,7 @@ public class ProfileServlet extends HttpServlet {
 
         int userId = current.getUserId();
 
-        // 允许在个人中心直接修改用户名（用于后续登录）
+        
         String username = trim(req.getParameter("username"));
         String email = trim(req.getParameter("email"));
         String fullName = trim(req.getParameter("fullName"));
@@ -111,7 +96,7 @@ public class ProfileServlet extends HttpServlet {
         try {
             boolean usernameChanged = false;
 
-            // 1) 校验并更新用户名（若有变化）
+            
             if (username == null || username.trim().isEmpty()) {
                 User fresh = userDAO.findById(userId);
                 req.setAttribute("user", fresh);
@@ -140,7 +125,7 @@ public class ProfileServlet extends HttpServlet {
                 usernameChanged = true;
             }
 
-            // 2) 更新其它个人信息（不包含密码）
+            
             User toUpdate = new User();
             toUpdate.setUserId(userId);
             toUpdate.setEmail(email);
@@ -149,10 +134,10 @@ public class ProfileServlet extends HttpServlet {
             toUpdate.setResearchArea(researchArea);
             userDAO.updateProfile(toUpdate);
 
-            // 3) 保存附件（头像 / 简历）
+            
             saveProfileFiles(req, userId);
 
-            // 4) 刷新 session 中的 currentUser
+            
             User fresh = userDAO.findById(userId);
             req.getSession(true).setAttribute("currentUser", fresh);
 
@@ -180,10 +165,10 @@ private User getCurrentUser(HttpServletRequest req) {
 
     private void saveProfileFiles(HttpServletRequest req, int userId) throws IOException, ServletException {
         
-        // 统一目录：
-        // - 头像：{base}/avatars
-        // - 简历：{base}/resumes
-        // 目录创建/权限检查在 UploadPathUtil 内完成
+        
+        
+        
+        
         File avatarDir = UploadPathUtil.getAvatarDir(getServletContext()).toFile();
         File resumeDir = UploadPathUtil.getResumeDir(getServletContext()).toFile();
 
@@ -192,12 +177,12 @@ private User getCurrentUser(HttpServletRequest req) {
         try {
             avatarPart = req.getPart("avatar");
         } catch (IllegalStateException | IOException | ServletException e) {
-            // 单个文件上传失败忽略
+            
         }
         try {
             resumePart = req.getPart("resume");
         } catch (IllegalStateException | IOException | ServletException e) {
-            // 单个文件上传失败忽略
+            
         }
 
         if (avatarPart != null && avatarPart.getSize() > 0) {
@@ -225,11 +210,11 @@ private User getCurrentUser(HttpServletRequest req) {
 
         File file = findFileWithPrefix(avatarDir, "user_" + current.getUserId() + "_avatar");
         if (file == null) {
-            // 兼容旧目录：{legacyBase}/profile
+            
             file = findFileWithPrefix(legacyProfileDir, "user_" + current.getUserId() + "_avatar");
         }
         if (file == null || !file.exists()) {
-            // 没有上传头像：返回默认头像（避免 <img> 显示 alt 文本“用户头像”）
+            
             streamDefaultAvatar(req, resp);
             return;
         }
@@ -257,7 +242,7 @@ private User getCurrentUser(HttpServletRequest req) {
     
     private void streamDefaultAvatar(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setContentType("image/svg+xml; charset=UTF-8");
-        // 避免浏览器缓存旧的 404 结果
+        
         resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         resp.setHeader("Pragma", "no-cache");
         resp.setDateHeader("Expires", 0);
@@ -284,7 +269,7 @@ private User getCurrentUser(HttpServletRequest req) {
         }
 
         File resumeDir = UploadPathUtil.getResumeDir(getServletContext()).toFile();
-        // 兼容旧目录：/var/lib/tomcat9/uploads/profile
+        
         File legacyProfileDir = new File(UploadPathUtil.getLegacyBaseDir(getServletContext()), LEGACY_PROFILE_SUB_DIR);
 
         File file = findFileWithPrefix(resumeDir, "user_" + current.getUserId() + "_resume");
@@ -304,7 +289,7 @@ private User getCurrentUser(HttpServletRequest req) {
             contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         }
         resp.setContentType(contentType);
-        // inline: 浏览器内预览；attachment: 直接下载
+        
         resp.setHeader("Content-Disposition", "inline; filename=\"" + file.getName() + "\"");
         resp.setHeader("Content-Length", String.valueOf(file.length()));
 
@@ -357,3 +342,28 @@ private User getCurrentUser(HttpServletRequest req) {
     
     
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

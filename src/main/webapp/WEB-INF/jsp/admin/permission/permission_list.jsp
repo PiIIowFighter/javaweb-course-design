@@ -15,10 +15,7 @@
 </div></div>
     </div>
 
-    <!--
-      success 参数使用数字码，避免在 URL 中携带中文导致出现“????”乱码。
-        1: 保存成功      如仍收到历史字符串参数，则兜底直接输出。
-    -->
+    
     <c:if test="${param.success == '1'}">
         <div class="alert alert-success" style="margin-bottom: var(--space-4);">保存成功</div>
     </c:if>
@@ -28,7 +25,7 @@
         </div>
     </c:if>
 
-    <!-- 选择用户（GET） -->
+    
     <form method="get" action="${ctx}/admin/permissions/list" class="stack" style="gap: var(--space-3); margin-bottom: var(--space-5);">
         <div class="grid grid-2" style="align-items:end;">
             <div>
@@ -41,9 +38,7 @@
                     </c:forEach>
                 </select>
             </div>
-            <div style="text-align:right;">
-                <small>提示：可按用户配置入口权限；SUPER_ADMIN 也可配置（“权限管理”入口不可取消）。</small>
-            </div>
+            
         </div>
     </form>
 
@@ -52,7 +47,7 @@
     </c:if>
 
     <c:if test="${not empty selectedUser}">
-        <!-- 保存权限（POST） -->
+        
         <form method="post" action="${ctx}/admin/permissions/save" class="stack" style="gap: var(--space-4);">
             <input type="hidden" name="userId" value="${selectedUser.userId}"/>
 
@@ -61,15 +56,15 @@
                     <strong>当前用户：</strong>
                     <c:out value="${selectedUser.username}"/> （<c:out value="${selectedUser.roleCode}"/>）
                 <c:if test="${selectedUser.roleCode == 'SUPER_ADMIN'}">
-                    <div class="alert alert-warning" style="margin-top: var(--space-2);">该用户为 SUPER_ADMIN：入口权限可编辑；为防止锁死自己，“权限管理”入口不可取消。</div>
+                    <div class="alert alert-warning" style="margin-top: var(--space-2);">该用户为 SUPER_ADMIN,入口权限固定。</div>
                 </c:if>
                 </div>
 </div>
 
-            <!-- 入口权限分组（与工作台 / 侧边栏一致） -->
+            
             <div class="stack" style="gap: var(--space-4);">
 
-                <!-- 系统管理（管理员类入口） -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">系统管理（管理员）</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -78,7 +73,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -90,7 +85,7 @@
                     </div>
                 </div>
 
-                <!-- 投稿 / 作者 -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">投稿 / 作者</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -99,7 +94,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -111,7 +106,7 @@
                     </div>
                 </div>
 
-                <!-- 外审 / 审稿人 -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">外审 / 审稿人</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -120,7 +115,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -132,7 +127,7 @@
                     </div>
                 </div>
 
-                <!-- 编辑 -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">编辑工作台</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -141,7 +136,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -153,7 +148,7 @@
                     </div>
                 </div>
 
-                <!-- 主编 -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">主编工作台</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -162,7 +157,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -174,7 +169,7 @@
                     </div>
                 </div>
 
-                <!-- 编辑部管理员 -->
+                
                 <div>
                     <h3 style="margin: 0 0 var(--space-2);">编辑部管理员</h3>
                     <div class="grid grid-2" style="align-items:start;">
@@ -183,7 +178,7 @@
                                 <label class="card" style="display:flex; gap: var(--space-3); align-items:flex-start; cursor:pointer;">
                                     <input type="checkbox" name="permissions" value="${p.key}"
                                            <c:if test="${assignedMap[p.key]}">checked</c:if>
-                                           <c:if test="${lockedMap[p.key]}">disabled</c:if>
+                                           <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>
                                            style="margin-top: 4px;"/>
                                     <span>
                                         <div style="font-weight:600;"><c:out value="${p.name}"/></div>
@@ -198,8 +193,8 @@
             </div>
 
             <div style="display:flex; gap: var(--space-3); justify-content:flex-end;">
-                <a class="btn btn-ghost" href="${ctx}/dashboard">返回工作台</a>
-                <button class="btn btn-primary" type="submit" <c:if test="${lockedMap[p.key]}">disabled</c:if>>保存</button>
+                
+                <button class="btn btn-primary" type="submit" <c:if test="${lockedMap[p.key] or readOnly}">disabled</c:if>>保存</button>
             </div>
         </form>
     </c:if>
@@ -207,5 +202,31 @@
 
 
 
-<%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

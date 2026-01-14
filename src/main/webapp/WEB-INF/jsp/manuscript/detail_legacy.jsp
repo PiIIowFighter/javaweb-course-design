@@ -40,7 +40,7 @@
     </c:if>
 
     <div class="stack">
-        <!-- 基本信息（不展示期刊ID，改为展示期刊名称） -->
+        
         <div class="card">
             <div class="card-header">
                 <div>
@@ -66,7 +66,7 @@
                     </div>
                 </div>
 
-                <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
+                
                 <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
                     <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08); margin-top:12px;">
                         <div class="kicker" style="margin-bottom:6px;">退回修改意见</div>
@@ -74,7 +74,7 @@
                     </div>
                 </c:if>
 
-                <!-- 作者视角：案头退稿后，展示主编填写的退稿理由 -->
+                
                 <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'REJECTED' and not empty deskRejectReason}">
                     <div class="alert" style="border-color: rgba(239, 68, 68, 0.55); background: rgba(239, 68, 68, 0.08); margin-top:12px;">
                         <div class="kicker" style="margin-bottom:6px;">退稿理由</div>
@@ -84,7 +84,7 @@
             </div>
         </div>
 
-        <!-- 资助信息：单独一栏展示（与下方作者列表同风格） -->
+        
         <div class="card">
             <div class="card-header"><div class="card-title">资助信息</div></div>
             <div class="card-content">
@@ -119,7 +119,7 @@
         </div>
 
         <div class="grid grid-2">
-            <!-- 摘要 -->
+            
             <div class="card">
                 <div class="card-header"><div class="card-title">摘要</div></div>
                 <div class="card-content">
@@ -131,7 +131,7 @@
                 </div>
             </div>
 
-            <!-- 文件与附件 -->
+            
             <div class="card">
                 <div class="card-header"><div class="card-title">文件与附件</div></div>
                 <div class="card-content">
@@ -178,7 +178,7 @@
             </div>
         </div>
 
-        <!-- 作者信息 + 投稿人信息 -->
+        
         <div class="card">
             <div class="card-header"><div class="card-title">作者信息</div></div>
             <div class="card-content">
@@ -236,7 +236,7 @@
             </div>
         </div>
 
-    <!-- 形式审查界面 -->
+    
     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN' and (manuscript.currentStatus == 'SUBMITTED' or manuscript.currentStatus == 'FORMAL_CHECK')}">
         <h3 style="margin-top:14px;">形式审查</h3>
         
@@ -647,7 +647,7 @@
 
 <hr/>
 
-<!-- ====================== 作者“待修改” -> 修改并 Resubmit ====================== -->
+
 <c:if test="${not empty manuscript
           and sessionScope.currentUser.roleCode == 'AUTHOR'
           and manuscript.submitterId == sessionScope.currentUser.userId
@@ -669,7 +669,7 @@
 
 </c:if>
 
-<!-- ====================== 只有编辑 / 主编 且 稿件已进入外审相关阶段 时显示审稿相关内容 ====================== -->
+
 <c:if test="${not empty manuscript
           and (sessionScope.currentUser.roleCode == 'EDITOR'
                or sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF')
@@ -678,7 +678,7 @@
                or manuscript.currentStatus == 'EDITOR_RECOMMENDATION'
                or manuscript.currentStatus == 'FINAL_DECISION_PENDING')}">
 
-    <!-- 作者推荐审稿人：在稿件工作台直接可见，减少“详情/选择页面”来回跳转的冗余 -->
+    
     <h3>作者推荐审稿人</h3>
     <c:if test="${empty recommendedReviewers}">
         <p>作者未推荐审稿人。</p>
@@ -832,7 +832,7 @@
     <h3 id="inviteReviewers">审稿人管理</h3>
     <p style="margin:8px 0; color:#666;">本页已合并“稿件详情”与“审稿人选择”页面：可在此直接搜索审稿人、邀请/撤回/催审，并查看已提交的详细评价，避免页面来回跳转与功能重复。</p>
 
-    <!-- ====================== 从审稿人库中搜索并邀请 ====================== -->
+    
     <h4 style="margin-top:12px;">从审稿人库中选择</h4>
 
     <form method="get" action="${ctx}/manuscripts/detail" style="max-width:960px; background:#fff; border:1px solid #e5e7eb; padding:10px 12px; border-radius:8px;">
@@ -926,7 +926,7 @@
 
     <hr style="margin:22px 0; max-width:960px;"/>
 
-    <!-- ====================== 邀请外部审稿人：创建账号并发送邮件 ====================== -->
+    
     <h4 style="margin-top:12px;">邀请外部审稿人（创建账号并邮件邀请）</h4>
     <p style="color:#666; max-width:960px;">当审稿人不在现有审稿人库中时，可在此创建审稿人账号，并向其发送账户信息及本稿件的审稿邀请邮件。</p>
 
@@ -1005,7 +1005,7 @@
     </c:if>
 </c:if>
 
-<!-- ====================== 作者查看：仅展示给作者的意见（Content） ====================== -->
+
 <c:if test="${not empty manuscript
           and sessionScope.currentUser.roleCode == 'AUTHOR'
           and manuscript.currentStatus != 'DRAFT'}">
@@ -1053,3 +1053,30 @@
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -5,19 +5,17 @@ import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.sql.*;
 
-/**
- * 稿件版本 DAO：对应 dbo.ManuscriptVersions。
- */
+
 public class ManuscriptVersionDAO {
 
     private boolean hasColumn(Connection conn, String table, String column) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
-            // SQL Server 通常大小写不敏感；schema 这里用 dbo
+            
             try (ResultSet rs = meta.getColumns(null, "dbo", table, column)) {
                 if (rs.next()) return true;
             }
-            // 兜底：不带 schema 再查一次
+            
             try (ResultSet rs = meta.getColumns(null, null, table, column)) {
                 return rs.next();
             }
@@ -40,10 +38,7 @@ public class ManuscriptVersionDAO {
         return false;
     }
 
-    /**
-     * 在同一事务/连接内读取当前版本。
-     * 用于“保存草稿/Resubmit”时：当用户未重新上传文件，仍需沿用上一个当前版本的附件路径。
-     */
+    
     public ManuscriptVersion findCurrentByManuscriptId(Connection conn, int manuscriptId) throws SQLException {
         boolean hasCoverHtml = hasColumn(conn, "ManuscriptVersions", "CoverLetterHtml");
         String sql = "SELECT TOP 1 VersionId, ManuscriptId, VersionNumber, IsCurrent, " +
@@ -158,3 +153,28 @@ public class ManuscriptVersionDAO {
         return v;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

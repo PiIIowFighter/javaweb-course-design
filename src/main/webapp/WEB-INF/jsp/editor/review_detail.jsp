@@ -128,7 +128,7 @@
         <div class="card-body">
             <c:choose>
                 <c:when test="${not empty review.confidentialToEditor}">
-                    <%-- CKEditor 富文本：这里不做转义，以便正常显示段落/列表等格式 --%>
+                    
                     <div class="rich-text" style="line-height: 1.7;">
                         <c:out value="${review.confidentialToEditor}" escapeXml="false"/>
                     </div>
@@ -147,7 +147,7 @@
         <div class="card-body">
             <c:choose>
                 <c:when test="${not empty review.content}">
-                    <%-- CKEditor 富文本：这里不做转义，以便正常显示段落/列表等格式 --%>
+                    
                     <div class="rich-text" style="line-height: 1.7;">
                         <c:out value="${review.content}" escapeXml="false"/>
                     </div>
@@ -160,3 +160,30 @@
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

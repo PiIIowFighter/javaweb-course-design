@@ -15,29 +15,17 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * 负责登录、注册、注销等基本认证流程。
- *
- * URL 约定（见 web.xml 中的 /auth/* 映射）：
- *  GET  /auth/login      显示登录页
- *  GET  /auth/register   显示注册页
- *  GET  /auth/reset      显示重置密码页
- *  GET  /auth/logout     注销并返回首页
- *
- *  POST /auth/login      执行登录
- *  POST /auth/register   执行注册
- *  POST /auth/reset      执行密码重置（当前仅给出提示信息）
- */
+
 @WebServlet(name = "AuthServlet", urlPatterns = {"/auth/*"})
 public class AuthServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
     private final MenuPermissionService menuPermissionService = new MenuPermissionService();
 
-    // === Register email OTP (simple session-based) ===
+    
     private static final String SESSION_REG_OTP_CODE = "REG_OTP_CODE";
     private static final String SESSION_REG_OTP_EMAIL = "REG_OTP_EMAIL";
-    private static final String SESSION_REG_OTP_EXPIRES_AT = "REG_OTP_EXPIRES_AT"; // long 
+    private static final String SESSION_REG_OTP_EXPIRES_AT = "REG_OTP_EXPIRES_AT"; 
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -90,13 +78,7 @@ public class AuthServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 登录：
-     *  1. 校验用户名和密码非空；
-     *  2. 从 SQL Server 按用户名查询用户；
-     *  3. 校验密码是否匹配，以及账号状态（ACTIVE 才能登录）；
-     *  4. 成功则将 User 放入 sessionScope.currentUser，并跳转首页 / 。
-     */
+    
     private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String username = trim(req.getParameter("username"));
         String password = trim(req.getParameter("password"));
@@ -123,29 +105,22 @@ public class AuthServlet extends HttpServlet {
                 return;
             }
 
-            // 登录成功
+            
             HttpSession session = req.getSession(true);
             session.setAttribute("currentUser", user);
-            // 初始化菜单入口权限（供 header/sidebar/拦截器使用）
+            
             menuPermissionService.loadIntoSession(session, user);
-            // 需求：登录后直接返回首页，不进入工作台
+            
             resp.sendRedirect(req.getContextPath() + "/");
         } catch (SQLException e) {
             throw new ServletException("登录时访问数据库出错", e);
         }
     }
 
-    /**
-     * 注册新用户（AUTHOR / REVIEWER）：
-     *  1. 校验必填字段、密码长度以及两次密码是否一致；
-     *  2. 校验邮箱验证码（5 分钟有效）；
-     *  3. 检查用户名是否已存在；
-     *  4. 新用户状态置为 ACTIVE，调用 UserDAO 写入数据库；
-     *  5. 给出“注册成功，可直接登录”的提示，不自动登录。
-     */
+    
     
     private void handleRegister(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // "发送验证码" 仅发送邮箱验证码，不执行注册
+        
         String op = trim(req.getParameter("op"));
         if ("sendCode".equalsIgnoreCase(op)) {
             handleSendRegisterCode(req, resp);
@@ -160,7 +135,7 @@ public class AuthServlet extends HttpServlet {
         String fullName = trim(req.getParameter("fullName"));
         String affiliation = trim(req.getParameter("affiliation"));
         String researchArea = trim(req.getParameter("researchArea"));
-        String registerRole = trim(req.getParameter("registerRole")); // AUTHOR / REVIEWER
+        String registerRole = trim(req.getParameter("registerRole")); 
 
         if (isEmpty(username) || isEmpty(password) || isEmpty(confirmPassword)) {
             req.setAttribute("error", "用户名、密码和确认密码均不能为空。");
@@ -178,7 +153,7 @@ public class AuthServlet extends HttpServlet {
             return;
         }
 
-        // 验证邮箱验证码
+        
         if (isEmpty(email)) {
             req.setAttribute("error", "邮箱不能为空。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
@@ -195,7 +170,7 @@ public class AuthServlet extends HttpServlet {
             return;
         }
 
-        // 缺省身份为 AUTHOR，允许用户选择注册为审稿人（REVIEWER）
+        
         String targetRoleCode = "AUTHOR";
         if ("REVIEWER".equalsIgnoreCase(registerRole)) {
             targetRoleCode = "REVIEWER";
@@ -203,7 +178,7 @@ public class AuthServlet extends HttpServlet {
 
         try {
             if (userDAO.findByUsername(username) != null) {
-                // 按任务书要求：提示“用户已存在，请重新注册”
+                
                 req.setAttribute("error", "用户已存在，请重新注册");
                 req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
                 return;
@@ -211,12 +186,12 @@ public class AuthServlet extends HttpServlet {
 
             User user = new User();
             user.setUsername(username);
-            user.setPasswordHash(password); // 简化：明文存储
+            user.setPasswordHash(password); 
             user.setEmail(defaultString(email));
             user.setFullName(defaultString(fullName));
             user.setAffiliation(defaultString(affiliation));
             user.setResearchArea(defaultString(researchArea));
-            // 需求变更：注册后直接为 ACTIVE
+            
             user.setStatus("ACTIVE");
 
             if ("REVIEWER".equals(targetRoleCode)) {
@@ -225,10 +200,10 @@ public class AuthServlet extends HttpServlet {
                 userDAO.registerAuthor(user);
             }
 
-            // 清理验证码，避免复用
+            
             clearRegisterEmailOtp(req.getSession(false));
 
-            // 不自动登录（保持原交互），提示可直接登录
+            
             req.setAttribute("message", "注册成功，您的账户已激活，可直接登录。");
             req.getRequestDispatcher("/WEB-INF/jsp/auth/register.jsp").forward(req, resp);
         } catch (SQLException e) {
@@ -236,9 +211,7 @@ public class AuthServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 发送注册邮箱验证码：生成 6 位数字验证码，保存在 session（5 分钟有效）并尝试发送邮件。
-     */
+    
     private void handleSendRegisterCode(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String email = trim(req.getParameter("email"));
         if (isEmpty(email)) {
@@ -255,7 +228,7 @@ public class AuthServlet extends HttpServlet {
         session.setAttribute(SESSION_REG_OTP_CODE, code);
         session.setAttribute(SESSION_REG_OTP_EXPIRES_AT, expiresAt);
 
-        // 发送邮件（若未配置 SMTP，发送可能失败；页面将提示已发送，建议在生产环境正确配置邮箱服务）
+        
         String subject = "注册验证码";
         String body = "您的注册验证码为：" + code + "\n\n有效期 5 分钟。若非本人操作请忽略此邮件。";
         MailService.sendText(email, subject, body);
@@ -298,15 +271,7 @@ public class AuthServlet extends HttpServlet {
     }
 
     
-    /**
-     * 密码重置：通过邮箱验证码校验身份后，允许设置新密码。
-     *
-     * 流程：
-     *  1) GET  /auth/reset                     -> 打开重置页面
-     *  2) POST /auth/reset?op=sendResetCode    -> 发送验证码到用户绑定邮箱
-     *  3) POST /auth/reset?op=verifyResetCode  -> 校验验证码，进入设置新密码页面
-     *  4) POST /auth/reset?op=doResetPassword  -> 提交新密码并更新
-     */
+    
     private void handleReset(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String op = trim(req.getParameter("op"));
         HttpSession session = req.getSession(true);
@@ -419,7 +384,7 @@ public class AuthServlet extends HttpServlet {
                 }
                 userDAO.resetPassword(user.getUserId(), password);
 
-                // 清理会话痕迹
+                
                 session.removeAttribute(SESSION_RESET_VERIFIED);
                 session.removeAttribute(SESSION_RESET_USERNAME);
                 session.removeAttribute(SESSION_RESET_EMAIL);
@@ -435,7 +400,7 @@ public class AuthServlet extends HttpServlet {
             }
         }
 
-        // 默认：打开页面
+        
         req.getRequestDispatcher("/WEB-INF/jsp/auth/reset_password.jsp").forward(req, resp);
     }
 
@@ -470,7 +435,7 @@ public class AuthServlet extends HttpServlet {
         return storedCode.equals(code == null ? "" : code.trim());
     }
 
-// === 工具方法 ===
+
 
     private static String trim(String s) {
         return s == null ? null : s.trim();
@@ -484,3 +449,28 @@ public class AuthServlet extends HttpServlet {
         return s == null ? "" : s;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

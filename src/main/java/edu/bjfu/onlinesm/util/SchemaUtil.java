@@ -4,13 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-/**
- * 课程设计阶段的轻量级“建表兜底”。
- *
- * 注意：
- * 1) 在生产系统中应使用正式迁移工具（Liquibase/Flyway）；
- * 2) 此处只在管理员模块需要时尝试创建必需的表，避免首次运行因缺表导致页面 500。
- */
+
 public final class SchemaUtil {
 
     private SchemaUtil() {
@@ -28,10 +22,7 @@ public final class SchemaUtil {
         exec(sql);
     }
 
-    /**
-     * 编委会表：dbo.EditorialBoard。
-     * 课程设计阶段用于“编委会管理”模块，避免首次运行因缺表导致 500。
-     */
+    
     public static void ensureEditorialBoardTable() throws SQLException {
         String sql = "IF OBJECT_ID('dbo.EditorialBoard', 'U') IS NULL\n" +
                 "BEGIN\n" +
@@ -66,13 +57,7 @@ public final class SchemaUtil {
         exec(sql);
     }
 
-    /**
-     * 站内通知表：dbo.Notifications。
-     *
-     * 说明：
-     * - 只做“单向通知”（无对话串），用于任务书中的“通知中心 / 系统通知”。
-     * - 为避免首次运行缺表导致 500，DAO 会在调用前兜底创建。
-     */
+    
     public static void ensureNotificationsTable() throws SQLException {
         String sql = "IF OBJECT_ID('dbo.Notifications', 'U') IS NULL\n" +
                 "BEGIN\n" +
@@ -120,3 +105,28 @@ public final class SchemaUtil {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

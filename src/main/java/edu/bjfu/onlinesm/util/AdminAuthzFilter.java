@@ -9,17 +9,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
-/**
- * 统一“菜单入口权限”过滤器：
- *  1) 未登录 -> 跳转登录页；
- *  2) 已登录 -> 根据 URL 判断所需入口权限；
- *  3) 无权限 -> 403 并展示 access_denied.jsp。
- *
- * 说明：
- *  - 按“菜单入口”粒度做权限点；
- *  - 允许跨角色授予入口：只要有入口权限，就允许访问功能页面；
- *  - 默认权限在首次登录时已初始化（见 MenuPermissionService）。
- */
+
 @WebFilter(filterName = "MenuAuthzFilter", urlPatterns = {"/admin/*", "/editor/*", "/reviewer/*", "/manuscripts/*"})
 public class AdminAuthzFilter implements Filter {
 
@@ -38,7 +28,7 @@ public class AdminAuthzFilter implements Filter {
             return;
         }
 
-        // 确保 session 中已有菜单权限缓存（允许用户直接输入 URL）
+        
         if (session.getAttribute(MenuPermissionService.SESSION_MENU_PERMS) == null) {
             menuPermissionService.loadIntoSession(session, current);
         }
@@ -79,15 +69,11 @@ public class AdminAuthzFilter implements Filter {
         chain.doFilter(request, response);
     }
 
-        /**
-     * 根据 URL 前缀映射到入口权限点。
-     *
-     * 注意：某些页面（如稿件详情）可能被多个角色复用，因此允许“任一权限满足即可”。
-     */
+        
     private String[] requiredPermissions(String path, String method) {
         if (path == null) return null;
 
-        // ====== Admin ======
+        
         if (path.startsWith("/admin/users")) return new String[]{PermissionCatalog.ADMIN_USERS};
         if (path.startsWith("/admin/permissions")) return new String[]{PermissionCatalog.ADMIN_PERMISSIONS};
         if (path.startsWith("/admin/logs")) return new String[]{PermissionCatalog.ADMIN_LOGS};
@@ -97,10 +83,10 @@ public class AdminAuthzFilter implements Filter {
         if (path.startsWith("/admin/editorial")) return new String[]{PermissionCatalog.ADMIN_EDITORIAL};
         if (path.startsWith("/admin/news")) return new String[]{PermissionCatalog.ADMIN_NEWS};
 
-        // ====== Author ======
+        
         if (path.startsWith("/manuscripts/submit")) return new String[]{PermissionCatalog.MENU_AUTHOR_SUBMIT};
 
-        // 稿件详情/跟踪会被多个角色复用（编辑部形式审查、责任编辑处理、主编案头/终审等）
+        
         if (path.startsWith("/manuscripts/detail") || path.startsWith("/manuscripts/track")) {
             return new String[]{
                     PermissionCatalog.MENU_AUTHOR_MY_MANUSCRIPTS,
@@ -125,11 +111,11 @@ public class AdminAuthzFilter implements Filter {
 
         if (path.startsWith("/manuscripts")) return new String[]{PermissionCatalog.MENU_AUTHOR_MY_MANUSCRIPTS};
 
-        // ====== Reviewer ======
+        
         if (path.startsWith("/reviewer/history")) return new String[]{PermissionCatalog.MENU_REVIEWER_HISTORY};
         if (path.startsWith("/reviewer")) return new String[]{PermissionCatalog.MENU_REVIEWER_ASSIGNED};
 
-        // ====== Editor / EIC / EO_ADMIN (all under /editor/*) ======
+        
         if (path.startsWith("/editor/formalCheck/history")) return new String[]{PermissionCatalog.MENU_EO_FORMAL_HISTORY};
         if (path.startsWith("/editor/formalCheck")) return new String[]{PermissionCatalog.MENU_EO_FORMAL_CHECK};
 
@@ -142,10 +128,10 @@ public class AdminAuthzFilter implements Filter {
 
         if (path.startsWith("/editor/withEditor")) return new String[]{PermissionCatalog.MENU_EDITOR_TODO};
         if (path.startsWith("/editor/underReview")) return new String[]{PermissionCatalog.MENU_EDITOR_UNDER_REVIEW};
-        // 主编终审页会复用 /editor/recommend?manuscriptId=... 来“查看编辑建议/审稿意见汇总”。
-        // 为避免主编误走“提交建议”流程：
-        //  - GET 允许：责任编辑入口 或 主编终审入口
-        //  - POST 仅允许：责任编辑入口
+        
+        
+        
+        
         if (path.startsWith("/editor/recommend")) {
             if (method != null && method.equalsIgnoreCase("GET")) {
                 return new String[]{
@@ -165,7 +151,32 @@ public class AdminAuthzFilter implements Filter {
             return new String[]{PermissionCatalog.MENU_EDITOR_AUTHOR_COMM};
         }
 
-        // 未覆盖的 /editor 子路径默认不拦截（避免误伤其他内部跳转）
+        
         return null;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -16,9 +16,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 前台 Issues 页面：Latest Issues / Special Issues / All Issues。
- */
+
 @WebServlet(name = "PublicIssueServlet", urlPatterns = {"/issues"})
 public class PublicIssueServlet extends HttpServlet {
 
@@ -74,7 +72,7 @@ public class PublicIssueServlet extends HttpServlet {
         try {
             articles = issueDAO.listIssueArticles(id);
         } catch (SQLException ex) {
-            // 关联表不存在时不报 500，页面给提示即可
+            
             articles = Collections.emptyList();
             req.setAttribute("articleLoadError", ex.getMessage());
         }
@@ -93,3 +91,28 @@ public class PublicIssueServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

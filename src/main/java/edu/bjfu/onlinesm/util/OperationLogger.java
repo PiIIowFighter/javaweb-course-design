@@ -8,15 +8,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.sql.SQLException;
 
-/**
- * 统一写入 dbo.OperationLogs 的工具。
- */
+
 public final class OperationLogger {
 
-    /**
-     * 在同一次请求中避免“手工记录 + 过滤器兜底记录”导致的重复日志。
-     * 只要本次请求已经成功写入过日志，则设置该标记。
-     */
+    
     public static final String REQ_ATTR_LOG_WRITTEN = "__oplog_written";
 
     private static final OperationLogDAO DAO = new OperationLogDAO();
@@ -38,12 +33,12 @@ public final class OperationLogger {
             log.setIp(getClientIp(req));
             DAO.insert(log);
 
-            // 标记：本次请求已经成功写入过操作日志（用于过滤器去重）
+            
             if (req != null) {
                 req.setAttribute(REQ_ATTR_LOG_WRITTEN, Boolean.TRUE);
             }
         } catch (SQLException ignore) {
-            // 日志写入失败不影响主流程（避免管理员操作因日志失败导致 500）
+            
         }
     }
 
@@ -63,3 +58,28 @@ public final class OperationLogger {
         return req.getRemoteAddr();
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

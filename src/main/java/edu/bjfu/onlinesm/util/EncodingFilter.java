@@ -14,7 +14,7 @@ public class EncodingFilter implements Filter {
         if (path == null) return false;
 
         String lower = path.toLowerCase();
-        // 你项目里静态资源一般在 /static 下；再用后缀兜底，避免资源不在 /static 时也被误伤
+        
         if (lower.startsWith("/static/") || lower.startsWith("/assets/")) return true;
 
         return lower.endsWith(".css") || lower.endsWith(".js") || lower.endsWith(".map")
@@ -32,19 +32,19 @@ public class EncodingFilter implements Filter {
 
         HttpServletRequest req = (HttpServletRequest) request;
 
-        // ✅ 静态资源放行：不要强行 setContentType，否则 CSS/JS 会被浏览器按 MIME 拒绝
+        
         if (isStaticResource(req)) {
             chain.doFilter(request, response);
             return;
         }
 
-        // 表单参数编码
+        
         request.setCharacterEncoding("UTF-8");
 
-        // 先执行后续，让 JSP/Servlet 自己设置 content-type
+        
         chain.doFilter(request, response);
 
-        // 对没设置 content-type 的响应再兜底
+        
         if (response instanceof HttpServletResponse) {
             HttpServletResponse resp = (HttpServletResponse) response;
             if (!resp.isCommitted() && resp.getContentType() == null) {
@@ -56,3 +56,28 @@ public class EncodingFilter implements Filter {
     @Override
     public void destroy() { }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

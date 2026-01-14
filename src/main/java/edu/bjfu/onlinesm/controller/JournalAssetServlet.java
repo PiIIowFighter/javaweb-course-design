@@ -19,13 +19,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
-/**
- * 期刊资源访问（封面图 / 附件）：
- *  - /journal/asset?type=page_cover&id=1
- *  - /journal/asset?type=issue_attachment&id=2
- *
- * 文件实际存放：D:/upload/journal/{pages|issues|calls}/<storedName>
- */
+
 @WebServlet(name = "JournalAssetServlet", urlPatterns = {"/journal/asset"})
 public class JournalAssetServlet extends HttpServlet {
 
@@ -88,7 +82,7 @@ public class JournalAssetServlet extends HttpServlet {
                         resp.sendError(HttpServletResponse.SC_NOT_FOUND, "该期次没有封面图");
                         return;
                     }
-                    // 未登录用户：仅允许访问已发布期次资源
+                    
                     if (!isLoggedIn(req) && (i.getPublished() == null || !i.getPublished())) {
                         resp.sendError(HttpServletResponse.SC_FORBIDDEN, "未发布的期次资源不允许访问");
                         return;
@@ -190,3 +184,28 @@ public class JournalAssetServlet extends HttpServlet {
         return u != null;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

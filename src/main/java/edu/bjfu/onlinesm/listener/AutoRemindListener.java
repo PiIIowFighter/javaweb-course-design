@@ -15,15 +15,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-/**
- * 自动催审监听器：
- * - Tomcat 启动后定时扫描逾期审稿任务
- * - 对逾期审稿人发送催审邮件
- *
- * 注意：
- * - 邮件发送失败不会影响主业务流程（仅打印日志）
- * - 为避免“没发出去但记录已提醒”，逻辑是：先发邮件，成功后再更新提醒时间/次数
- */
+
 @WebListener
 public class AutoRemindListener implements ServletContextListener {
 
@@ -31,7 +23,7 @@ public class AutoRemindListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        // 统一使用 util.mail 下的配置与发送实现
+        
         MailConfig cfg = MailConfig.load();
         if (!cfg.enabled()) {
             System.out.println("[AutoRemind] mail disabled, job not started.");
@@ -47,7 +39,7 @@ public class AutoRemindListener implements ServletContextListener {
 
         timer = new Timer("auto-remind-timer", true);
 
-        // 每天跑一次：启动后 60 秒第一次执行
+        
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -58,10 +50,10 @@ public class AutoRemindListener implements ServletContextListener {
 
                     for (Review r : targets) {
                         try {
-                            // 1) 先发邮件：成功才算“已提醒”
+                            
                             notifications.onReviewerRemind(r.getReviewId());
 
-                            // 2) 发成功后再更新提醒次数/时间
+                            
                             reviewDAO.remind(r.getReviewId());
 
                         } catch (Exception e) {
@@ -87,3 +79,28 @@ public class AutoRemindListener implements ServletContextListener {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

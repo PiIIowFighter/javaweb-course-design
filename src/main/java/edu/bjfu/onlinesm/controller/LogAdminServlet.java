@@ -17,9 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import edu.bjfu.onlinesm.util.PaginationUtil;
 
-/**
- * 系统日志查询模块控制器。
- */
+
 @WebServlet(name = "LogAdminServlet", urlPatterns = {"/admin/logs/*"})
 public class LogAdminServlet extends HttpServlet {
 
@@ -82,22 +80,18 @@ public class LogAdminServlet extends HttpServlet {
         return s == null ? "" : s.trim();
     }
 
-    /**
-     * 支持两种格式：
-     * 1) datetime-local: 2025-12-22T10:30
-     * 2) date: 2025-12-22（按当天 00:00 处理）
-     */
+    
     private static LocalDateTime parseDateTime(String raw) {
         if (raw == null) return null;
         String s = raw.trim();
         if (s.isEmpty()) return null;
 
         try {
-            // datetime-local
+            
             if (s.contains("T")) {
                 return LocalDateTime.parse(s, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             }
-            // date
+            
             LocalDate d = LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE);
             return d.atStartOfDay();
         } catch (DateTimeParseException e) {
@@ -105,3 +99,28 @@ public class LogAdminServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

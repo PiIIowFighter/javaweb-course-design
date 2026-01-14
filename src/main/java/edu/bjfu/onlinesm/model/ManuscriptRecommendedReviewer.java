@@ -2,9 +2,7 @@ package edu.bjfu.onlinesm.model;
 
 import java.io.Serializable;
 
-/**
- * 推荐审稿人：对应 dbo.ManuscriptRecommendedReviewers。
- */
+
 public class ManuscriptRecommendedReviewer implements Serializable {
 
     private Integer id;
@@ -13,12 +11,7 @@ public class ManuscriptRecommendedReviewer implements Serializable {
     private String email;
     private String reason;
 
-    /**
-     * 兼容旧版 JSP/表单字段：reviewerName / reviewerEmail。
-     * 一些页面使用 rr.reviewerName / rr.reviewerEmail（EL 会去找 getReviewerName()/getReviewerEmail()）。
-     * 但当前模型字段命名为 fullName / email。
-     * 因此这里提供别名 getter/setter，避免 JSP 报 PropertyNotFoundException。
-     */
+    
     public String getReviewerName() {
         return getFullName();
     }
@@ -75,3 +68,28 @@ public class ManuscriptRecommendedReviewer implements Serializable {
         this.reason = reason;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

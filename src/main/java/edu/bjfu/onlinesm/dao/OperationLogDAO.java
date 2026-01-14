@@ -9,9 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 操作日志 DAO（dbo.OperationLogs）。
- */
+
 public class OperationLogDAO {
 
     public void insert(OperationLog log) throws SQLException {
@@ -33,11 +31,7 @@ public class OperationLogDAO {
         }
     }
 
-    /**
-     * 查询最近的操作日志。
-     *
-     * @param keyword 可为空，会在 ActorUsername/Module/Action/Detail 中做模糊查询
-     */
+    
     public List<OperationLog> findRecent(int limit, String keyword) throws SQLException {
         SchemaUtil.ensureOperationLogsTable();
 
@@ -72,16 +66,7 @@ public class OperationLogDAO {
         return list;
     }
 
-    /**
-     * 按条件查询操作日志（用于“系统管理 -> 日志审计/排查故障”）。
-     *
-     * @param limit    最大返回条数，<=0 默认 200
-     * @param keyword  模糊关键字：会在 ActorUsername/Module/Action/Detail 中做 LIKE
-     * @param actor    指定用户名（精确匹配），可为空
-     * @param module   指定模块（精确匹配），可为空
-     * @param from     起始时间（包含），可为空
-     * @param to       结束时间（包含），可为空
-     */
+    
     public List<OperationLog> findByFilters(int limit,
                                            String keyword,
                                            String actor,
@@ -102,7 +87,7 @@ public class OperationLogDAO {
 
         boolean hasWhere = false;
 
-        // 时间范围
+        
         if (from != null) {
             sb.append(hasWhere ? " AND " : " WHERE ");
             hasWhere = true;
@@ -113,13 +98,13 @@ public class OperationLogDAO {
         if (to != null) {
             sb.append(hasWhere ? " AND " : " WHERE ");
             hasWhere = true;
-            // 结束时间包含
+            
             sb.append("CreatedAt <= ? ");
             params.add(Timestamp.valueOf(to));
             types.add(Types.TIMESTAMP);
         }
 
-        // 精确用户名
+        
         if (actor != null && !actor.trim().isEmpty()) {
             sb.append(hasWhere ? " AND " : " WHERE ");
             hasWhere = true;
@@ -128,7 +113,7 @@ public class OperationLogDAO {
             types.add(Types.NVARCHAR);
         }
 
-        // 精确模块
+        
         if (module != null && !module.trim().isEmpty()) {
             sb.append(hasWhere ? " AND " : " WHERE ");
             hasWhere = true;
@@ -137,7 +122,7 @@ public class OperationLogDAO {
             types.add(Types.NVARCHAR);
         }
 
-        // 模糊关键字
+        
         boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
         if (hasKeyword) {
             sb.append(hasWhere ? " AND " : " WHERE ");
@@ -201,3 +186,28 @@ public class OperationLogDAO {
         return log;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

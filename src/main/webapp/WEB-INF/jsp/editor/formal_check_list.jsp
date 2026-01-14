@@ -32,11 +32,11 @@
                     <c:if test="${sessionScope.currentUser.roleCode == 'EO_ADMIN'}">
                         <c:choose>
                             <c:when test="${m.currentStatus == 'SUBMITTED'}">
-                                <!-- 直接进入审查页：无需“开始审查”二次点击 -->
+                                
                                 <a class="btn btn-primary" href="${ctx}/editor/formalCheck/review?manuscriptId=${m.manuscriptId}">进入审查</a>
                             </c:when>
                             <c:when test="${m.currentStatus == 'FORMAL_CHECK'}">
-                                <!-- 审查进行中：直接进入稿件详情页继续审查 -->
+                                
                                 <a class="btn btn-primary" href="${ctx}/editor/formalCheck/review?manuscriptId=${m.manuscriptId}">进入审查</a>
                             </c:when>
                             <c:otherwise>
@@ -55,3 +55,30 @@
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

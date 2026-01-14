@@ -13,45 +13,65 @@
     </div>
 
     <form action="${pageContext.request.contextPath}/admin/logs/list" method="get" class="stack">
-        <div class="form-row">
-            <label>时间从</label>
-            <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <input type="datetime-local" name="from" value="${from}" style="max-width: 280px;"/>
-                <div style="display:flex; align-items:center; color: var(--muted);">到</div>
-                <input type="datetime-local" name="to" value="${to}" style="max-width: 280px;"/>
+        <style>
+            /* page-only: keep filters in 2 fixed lines */
+            .log-filter-line{display:flex; gap:16px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; align-items:flex-end;}
+            .log-filter-line::-webkit-scrollbar{height:8px;}
+            .log-filter-field{display:flex; flex-direction:column; gap:6px; min-width:220px;}
+            .log-filter-field label{color:var(--muted); font-size:13px;}
+            .log-filter-time{min-width:620px;}
+            .log-filter-time-range{display:flex; gap:12px; flex-wrap:nowrap; align-items:center;}
+            .log-filter-time-range input{max-width:280px;}
+            .log-filter-keyword{flex:1; min-width:520px;}
+            .log-filter-keyword-inner{display:flex; gap:12px; flex-wrap:nowrap; align-items:center;}
+            .log-filter-keyword-inner input{min-width:260px; flex:1;}
+        </style>
+
+        
+        <div class="log-filter-line">
+            <div class="log-filter-field log-filter-time">
+                <label>时间从</label>
+                <div class="log-filter-time-range">
+                    <input type="datetime-local" name="from" value="${from}" />
+                    <div style="display:flex; align-items:center; color: var(--muted);">到</div>
+                    <input type="datetime-local" name="to" value="${to}" />
+                </div>
+            </div>
+
+            <div class="log-filter-field" style="min-width:260px;">
+                <label>用户名</label>
+                <input type="text" name="actor" value="${actor}" placeholder="精确匹配"/>
             </div>
         </div>
 
-        <div class="form-row">
-            <label>用户名</label>
-            <input type="text" name="actor" value="${actor}" placeholder="精确匹配"/>
-        </div>
+        
+        <div class="log-filter-line">
+            <div class="log-filter-field" style="min-width:360px;">
+                <label>模块</label>
+                <select name="module" style="max-width: 360px;">
+                    <option value="" <c:if test="${empty module}">selected</c:if>>全部</option>
+                    <option value="USER" <c:if test="${module == 'USER'}">selected</c:if>>USER（用户）</option>
+                    <option value="PERMISSION" <c:if test="${module == 'PERMISSION'}">selected</c:if>>PERMISSION（权限）</option>
+                    <option value="SYSTEM" <c:if test="${module == 'SYSTEM'}">selected</c:if>>SYSTEM（系统）</option>
+                    <option value="LOG" <c:if test="${module == 'LOG'}">selected</c:if>>LOG（日志）</option>
+                    <option value="JOURNAL" <c:if test="${module == 'JOURNAL'}">selected</c:if>>JOURNAL（期刊）</option>
+                    <option value="EDITORIAL" <c:if test="${module == 'EDITORIAL'}">selected</c:if>>EDITORIAL（编委会）</option>
+                    <option value="NEWS" <c:if test="${module == 'NEWS'}">selected</c:if>>NEWS（公告）</option>
+                    <option value="AUTH" <c:if test="${module == 'AUTH'}">selected</c:if>>AUTH（认证）</option>
+                    <option value="MANUSCRIPT" <c:if test="${module == 'MANUSCRIPT'}">selected</c:if>>MANUSCRIPT（稿件）</option>
+                    <option value="EDITOR" <c:if test="${module == 'EDITOR'}">selected</c:if>>EDITOR（编辑工作台）</option>
+                    <option value="EIC" <c:if test="${module == 'EIC'}">selected</c:if>>EIC（主编）</option>
+                    <option value="REVIEW" <c:if test="${module == 'REVIEW'}">selected</c:if>>REVIEW（审稿）</option>
+                </select>
+            </div>
 
-        <div class="form-row">
-            <label>模块</label>
-            <select name="module" style="max-width: 360px;">
-                <option value="" <c:if test="${empty module}">selected</c:if>>全部</option>
-                <option value="USER" <c:if test="${module == 'USER'}">selected</c:if>>USER（用户）</option>
-                <option value="PERMISSION" <c:if test="${module == 'PERMISSION'}">selected</c:if>>PERMISSION（权限）</option>
-                <option value="SYSTEM" <c:if test="${module == 'SYSTEM'}">selected</c:if>>SYSTEM（系统）</option>
-                <option value="LOG" <c:if test="${module == 'LOG'}">selected</c:if>>LOG（日志）</option>
-                <option value="JOURNAL" <c:if test="${module == 'JOURNAL'}">selected</c:if>>JOURNAL（期刊）</option>
-                <option value="EDITORIAL" <c:if test="${module == 'EDITORIAL'}">selected</c:if>>EDITORIAL（编委会）</option>
-                <option value="NEWS" <c:if test="${module == 'NEWS'}">selected</c:if>>NEWS（公告）</option>
-                <option value="AUTH" <c:if test="${module == 'AUTH'}">selected</c:if>>AUTH（认证）</option>
-                <option value="MANUSCRIPT" <c:if test="${module == 'MANUSCRIPT'}">selected</c:if>>MANUSCRIPT（稿件）</option>
-                <option value="EDITOR" <c:if test="${module == 'EDITOR'}">selected</c:if>>EDITOR（编辑工作台）</option>
-                <option value="EIC" <c:if test="${module == 'EIC'}">selected</c:if>>EIC（主编）</option>
-                <option value="REVIEW" <c:if test="${module == 'REVIEW'}">selected</c:if>>REVIEW（审稿）</option>
-            </select>
-        </div>
-
-        <div class="form-row">
-            <label>关键字</label>
-            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                <input type="text" name="keyword" value="${keyword}" placeholder="用户名/模块/动作/详情（模糊匹配）" style="min-width: 260px; flex: 1;"/>
-                <button type="submit">查询</button>
-                <a href="${pageContext.request.contextPath}/admin/logs/list" style="color: var(--muted); text-decoration:none;">重置</a>
+            <div class="log-filter-field log-filter-keyword">
+                <label>关键字</label>
+                <div class="log-filter-keyword-inner">
+                    <input type="text" name="keyword" value="${keyword}" placeholder="用户名/模块/动作/详情（模糊匹配）"/>
+                    <button type="submit">查询</button>
+                    <a href="${pageContext.request.contextPath}/admin/logs/list" style="color: var(--muted); text-decoration:none; white-space:nowrap;">重置</a>
+                </div>
             </div>
         </div>
     </form>
@@ -94,3 +114,30 @@
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

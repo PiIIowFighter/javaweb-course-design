@@ -7,16 +7,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * dbo.IssueManuscripts 关联表 DAO：
- * - 一个稿件选择/关联一个 Issue（卷期/专刊）。
- * - 页面展示/Issue 详情页可通过此表关联稿件列表。
- */
+
 public class IssueManuscriptDAO {
 
-    /**
-     * 查询稿件已关联的 IssueId（取第一个关联）。
-     */
+    
     public Integer findIssueIdByManuscriptId(Connection conn, int manuscriptId) throws SQLException {
         String sql = "SELECT TOP 1 IssueId FROM dbo.IssueManuscripts " +
                 "WHERE ManuscriptId=? ORDER BY OrderNo ASC, AddedAt DESC, IssueId ASC";
@@ -29,19 +23,14 @@ public class IssueManuscriptDAO {
         return null;
     }
 
-    /**
-     * 便捷：独立连接查询稿件已关联 IssueId。
-     */
+    
     public Integer findIssueIdByManuscriptId(int manuscriptId) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             return findIssueIdByManuscriptId(conn, manuscriptId);
         }
     }
 
-    /**
-     * 设定稿件关联的 Issue（采用“删除旧关联 -> 插入新关联”的方式）。
-     * 如果 issueId 为 null，则只删除旧关联。
-     */
+    
     public void setIssueForManuscript(Connection conn, int manuscriptId, Integer issueId) throws SQLException {
         try (PreparedStatement del = conn.prepareStatement("DELETE FROM dbo.IssueManuscripts WHERE ManuscriptId=?")) {
             del.setInt(1, manuscriptId);
@@ -57,3 +46,28 @@ public class IssueManuscriptDAO {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

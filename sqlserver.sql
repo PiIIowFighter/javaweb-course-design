@@ -120,7 +120,10 @@ BEGIN
     (N'SYSTEM_ADMIN', N'ADMIN_EDITORIAL'),
     (N'SYSTEM_ADMIN', N'ADMIN_NEWS'),
 
-    (N'EO_ADMIN', N'ADMIN_NEWS');
+    (N'EO_ADMIN', N'ADMIN_JOURNALS'),
+    (N'EO_ADMIN', N'ADMIN_NEWS'),
+    (N'EO_ADMIN', N'MENU_EO_FORMAL_CHECK'),
+    (N'EO_ADMIN', N'MENU_EO_FORMAL_HISTORY');
 END
 GO
 
@@ -146,15 +149,14 @@ BEGIN
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'MANUSCRIPT_VIEW_REVIEWER_ID');
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'DECISION_MAKE_ACCEPT_REJECT')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'DECISION_MAKE_ACCEPT_REJECT');
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_VIEW_ALL')
-        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_VIEW_ALL');
-    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
-        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_INVITE_ASSIGN');
-    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_VIEW_REVIEWER_ID')
-        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_VIEW_REVIEWER_ID');
-    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'SYSTEM_EDIT_CONFIG')
-        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'SYSTEM_EDIT_CONFIG');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'ADMIN_JOURNALS')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'ADMIN_JOURNALS');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'ADMIN_NEWS')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'ADMIN_NEWS');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MENU_EO_FORMAL_CHECK')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MENU_EO_FORMAL_CHECK');
+    IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MENU_EO_FORMAL_HISTORY')
+        INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MENU_EO_FORMAL_HISTORY');
 END
 GO
 
@@ -1145,6 +1147,21 @@ BEGIN
         ADD Granted BIT NOT NULL CONSTRAINT DF_UserMenuPermissions_Granted DEFAULT(1);
     END
 END
+GO
+
+DECLARE @EOAdminUsers TABLE(UserId INT);
+INSERT INTO @EOAdminUsers(UserId)
+SELECT u.UserId FROM dbo.Users u
+JOIN dbo.Roles r ON u.RoleId = r.RoleId
+WHERE r.RoleCode = N'EO_ADMIN';
+
+DELETE FROM dbo.UserMenuPermissions WHERE UserId IN (SELECT UserId FROM @EOAdminUsers);
+
+INSERT INTO dbo.UserMenuPermissions(UserId, PermissionKey, Granted)
+SELECT u.UserId, v.PermissionKey, 1
+FROM @EOAdminUsers u
+CROSS JOIN (VALUES (N'ADMIN_JOURNALS'),(N'ADMIN_NEWS'),(N'MENU_EO_FORMAL_CHECK'),(N'MENU_EO_FORMAL_HISTORY')) v(PermissionKey);
+
 GO
 
 GO

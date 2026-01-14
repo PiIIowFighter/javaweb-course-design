@@ -2,20 +2,16 @@ package edu.bjfu.onlinesm.model;
 
 import java.time.LocalDateTime;
 
-/**
- * 站内通知（单向）。
- *
- * 不做对话串/回复，仅用于“通知中心”。
- */
+
 public class Notification {
 
     private Integer notificationId;
     private Integer recipientUserId;
     private Integer createdByUserId;
 
-    /** SYSTEM / MANUAL */
+    
     private String type;
-    /** SUBMISSION / ASSIGN / REVIEW / DECISION / ADMIN ... */
+    
     private String category;
 
     private String title;
@@ -114,3 +110,28 @@ public class Notification {
         this.createdAt = createdAt;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

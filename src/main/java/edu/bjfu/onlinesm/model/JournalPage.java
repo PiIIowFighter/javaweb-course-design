@@ -3,19 +3,16 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 期刊页面内容：用于“关于期刊”等可配置页面。
- * 对应 dbo.JournalPages。
- */
+
 public class JournalPage implements Serializable {
 
     private Integer pageId;
     private Integer journalId;
-    private String pageKey;   // aims / policies / ...
+    private String pageKey;   
     private String title;
-    private String content;   // HTML（可包含 <p><ul> 等）
+    private String content;   
 
-    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/pages/ 下）
+    
     private String coverImagePath;
     private String attachmentPath;
 
@@ -85,3 +82,28 @@ public class JournalPage implements Serializable {
         this.updatedAt = updatedAt;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

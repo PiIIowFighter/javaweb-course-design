@@ -22,12 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
 
-/**
- * 通知中心（单向站内通知）。
- *
- * - 所有登录用户可查看自己的通知、标记已读；
- * - 主编/编辑部管理员/系统管理员/超级管理员可发送“自定义通知”（单发）。
- */
+
 public class NotificationServlet extends HttpServlet {
 
     private final NotificationDAO notificationDAO = new NotificationDAO();
@@ -144,12 +139,12 @@ public class NotificationServlet extends HttpServlet {
                 return;
             }
 
-            // 机制：用户点击“查看详情”即自动将未读通知标记为已读
+            
             boolean isRead = (n.getRead() != null && n.getRead());
             if (isRecipient && !isRead) {
                 try {
                     notificationDAO.markRead(current.getUserId(), id);
-                    // 重新拉取，保证详情页展示“已读/已读时间”等字段是最新的
+                    
                     n = notificationDAO.findById(id);
                 } catch (SQLException ignore) {
                 }
@@ -167,7 +162,7 @@ public class NotificationServlet extends HttpServlet {
             req.setAttribute("canSend", canSendManual(current));
             req.setAttribute("pageTitle", "通知详情");
 
-            // 发送者/接收者信息（用于详情页展示名称）
+            
             if (n.getCreatedByUserId() != null) {
                 try {
                     req.setAttribute("senderUser", userDAO.findById(n.getCreatedByUserId()));
@@ -316,3 +311,28 @@ private void handleMarkRead(HttpServletRequest req, HttpServletResponse resp, Us
 
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

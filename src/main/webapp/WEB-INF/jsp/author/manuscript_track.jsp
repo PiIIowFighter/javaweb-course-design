@@ -11,7 +11,7 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<%-- 定义完整的状态流程 --%>
+
 <%
     // 完整的状态流程定义
     String[][] statusFlow = {
@@ -470,7 +470,7 @@
         </div>
     </div>
 
-    <!-- 退回后：展示编辑部给作者的修改意见（形式审查反馈） -->
+    
     <c:if test="${manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
         <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
             <b>退回修改意见（请按此修改后重新提交）</b>
@@ -480,7 +480,7 @@
         </div>
     </c:if>
 
-    <!-- 当前状态卡片 -->
+    
     <div class="status-card">
         <div class="status-card-header">
             <div class="status-icon 
@@ -514,7 +514,7 @@
         </div>
     </div>
 
-    <!-- 标签页切换 -->
+    
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="showTab('timeline')">
             <i class="bi bi-diagram-3" aria-hidden="true"></i>
@@ -526,7 +526,7 @@
         </button>
     </div>
 
-    <!-- 流程进度视图 -->
+    
     <div id="timeline-tab" class="tab-content active">
         <div class="full-timeline">
             <c:forEach var="step" items="${statusFlow}" varStatus="idx">
@@ -555,7 +555,7 @@
                     <div class="timeline-content">
                         <div class="timeline-title">${step[1]}</div>
                         <div class="timeline-status-code">${step[0]}</div>
-                        <%-- 显示该阶段的完成时间（从 stageTimestamps 获取） --%>
+                        
                         <%
                             String statusCode = (String)((String[])pageContext.getAttribute("step"))[0];
                             ManuscriptStageTimestamps timestamps = (ManuscriptStageTimestamps)request.getAttribute("stageTimestamps");
@@ -578,7 +578,7 @@
             </c:forEach>
         </div>
 
-        <!-- 终态分支 -->
+        
         <div class="final-status-section">
             <div class="final-status-title">最终决策</div>
             <div class="final-status-grid">
@@ -596,7 +596,7 @@
         </div>
     </div>
 
-    <!-- 变更历史视图 -->
+    
     <div id="history-tab" class="tab-content">
         <c:choose>
             <c:when test="${empty historyList}">
@@ -697,3 +697,30 @@ function showTab(tabName) {
 </script>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

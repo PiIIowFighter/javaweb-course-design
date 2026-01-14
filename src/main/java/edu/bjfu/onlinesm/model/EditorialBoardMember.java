@@ -2,10 +2,7 @@ package edu.bjfu.onlinesm.model;
 
 import java.io.Serializable;
 
-/**
- * 编辑委员会成员（前台展示用）。
- * 数据来自 dbo.EditorialBoard + dbo.Users。
- */
+
 public class EditorialBoardMember implements Serializable {
 
     private Integer boardMemberId;
@@ -19,7 +16,7 @@ public class EditorialBoardMember implements Serializable {
     private String affiliation;
     private String email;
 
-    /** 关联的系统账号信息（用于后台编委会管理列表展示） */
+    
     private String username;
     private String roleCode;
 
@@ -111,3 +108,28 @@ public class EditorialBoardMember implements Serializable {
         this.roleCode = roleCode;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

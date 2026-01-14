@@ -7,16 +7,7 @@ import javax.servlet.http.HttpServletResponseWrapper;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * 操作日志“兜底”过滤器：
- *  - 解决“发生操作但未写入 dbo.OperationLogs，导致管理员日志为空”的问题。
- *  - 对绝大多数“产生副作用”的请求（POST/PUT/DELETE/PATCH）在请求完成后自动记录。
- *
- * 说明：
- * 1) 现有某些 Servlet 已经手工调用 OperationLogger.log(...)；为了避免重复，
- *    OperationLogger 会在成功写入后设置 request attribute（REQ_ATTR_LOG_WRITTEN）。
- * 2) 本过滤器仅做兜底：如果该标记存在，则跳过记录。
- */
+
 public class OperationLogFilter implements Filter {
 
     private static final Set<String> MUTATION_METHODS = new HashSet<>(Arrays.asList(
@@ -35,7 +26,7 @@ public class OperationLogFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         StatusCaptureResponseWrapper resp = new StatusCaptureResponseWrapper((HttpServletResponse) response);
 
-        // 静态资源不记录
+        
         if (isStaticResource(req)) {
             chain.doFilter(request, resp);
             return;
@@ -44,21 +35,21 @@ public class OperationLogFilter implements Filter {
         String method = safeUpper(req.getMethod());
         boolean candidate = MUTATION_METHODS.contains(method);
 
-        // 先执行主流程
+        
         chain.doFilter(request, resp);
 
-        // 仅兜底记录“可能产生副作用”的请求
+        
         if (!candidate) {
             return;
         }
 
-        // 过滤器兜底日志去重：如果业务代码已经记录过日志，则跳过
+        
         Object written = req.getAttribute(OperationLogger.REQ_ATTR_LOG_WRITTEN);
         if (Boolean.TRUE.equals(written)) {
             return;
         }
 
-        // 仅记录成功或重定向（Post-Redirect-Get）
+        
         int status = resp.getStatus();
         if (!(status >= 200 && status < 400)) {
             return;
@@ -92,7 +83,7 @@ public class OperationLogFilter implements Filter {
 
     private static String resolveModule(String path) {
         if (path == null) return "";
-        // /admin/*
+        
         if (path.startsWith("/admin/users")) return "USER";
         if (path.startsWith("/admin/permissions")) return "PERMISSION";
         if (path.startsWith("/admin/logs")) return "LOG";
@@ -101,7 +92,7 @@ public class OperationLogFilter implements Filter {
         if (path.startsWith("/admin/system")) return "SYSTEM";
         if (path.startsWith("/admin/editorial")) return "EDITORIAL";
 
-        // 业务流程
+        
         if (path.startsWith("/manuscripts")) return "MANUSCRIPT";
         if (path.startsWith("/auth")) return "AUTH";
         if (path.startsWith("/dashboard")) return "DASHBOARD";
@@ -110,7 +101,7 @@ public class OperationLogFilter implements Filter {
         if (path.startsWith("/eic")) return "EIC";
         if (path.startsWith("/eoadmin")) return "EO_ADMIN";
 
-        // 兜底：取第一个路径段
+        
         String p = path.startsWith("/") ? path.substring(1) : path;
         int idx = p.indexOf('/');
         return (idx > 0 ? p.substring(0, idx) : p).toUpperCase(Locale.ROOT);
@@ -118,7 +109,7 @@ public class OperationLogFilter implements Filter {
 
     private static String resolveAction(String method, String path) {
         if (path == null) path = "";
-        // 取最后一个 path segment，兼容 /xxx/* 的 action
+        
         String p = path;
         int q = p.indexOf('?');
         if (q >= 0) p = p.substring(0, q);
@@ -141,7 +132,7 @@ public class OperationLogFilter implements Filter {
             return sb.toString();
         }
 
-        // 过滤敏感字段，避免密码/令牌等进入日志
+        
         List<String> keys = new ArrayList<>(pm.keySet());
         Collections.sort(keys);
 
@@ -201,9 +192,7 @@ public class OperationLogFilter implements Filter {
                 || lower.endsWith(".woff") || lower.endsWith(".woff2") || lower.endsWith(".ttf") || lower.endsWith(".eot");
     }
 
-    /**
-     * 捕获 response status（兼容 sendRedirect / sendError / setStatus）。
-     */
+    
     private static class StatusCaptureResponseWrapper extends HttpServletResponseWrapper {
 
         private int status = HttpServletResponse.SC_OK;
@@ -242,3 +231,28 @@ public class OperationLogFilter implements Filter {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

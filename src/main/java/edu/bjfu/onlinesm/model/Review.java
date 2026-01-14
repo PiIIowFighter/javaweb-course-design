@@ -3,20 +3,7 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 与 SQL Server 中 dbo.Reviews 表对应的简单实体类。
- *
- * 仅保留课程设计所需的核心字段：
- *  - ReviewId
- *  - ManuscriptId
- *  - ReviewerId
- *  - Content
- *  - Score
- *  - Recommendation
- *  - Status (INVITED / ACCEPTED / SUBMITTED / EXPIRED)
- *  - InvitedAt / AcceptedAt / SubmittedAt / DueAt
- *  - RemindCount / LastRemindedAt
- */
+
 public class Review implements Serializable {
 
     private int reviewId;
@@ -33,28 +20,28 @@ public class Review implements Serializable {
     private int remindCount;
     private LocalDateTime lastRemindedAt;
 
-    // ====== v2: 结构图要求的评审字段（给编辑/作者的意见与打分表） ======
-    /** 给编辑的保密意见（Confidential to Editor） */
+    
+    
     private String confidentialToEditor;
-    /** 关键评价（Key Evaluation） */
+    
     private String keyEvaluation;
-    /** 打分表：原创性（0-10） */
+    
     private Integer scoreOriginality;
-    /** 打分表：重要性（0-10） */
+    
     private Integer scoreSignificance;
-    /** 打分表：方法/技术质量（0-10） */
+    
     private Integer scoreMethodology;
-    /** 打分表：表达/结构（0-10） */
+    
     private Integer scorePresentation;
-    /** 打分表：实验设计/实施（0-10） */
+    
     private Integer scoreExperimentation;
-    /** 打分表：文献综述（0-10） */
+    
     private Integer scoreLiteratureReview;
-    /** 打分表：结论与讨论（0-10） */
+    
     private Integer scoreConclusions;
-    /** 打分表：学术诚信（0-10） */
+    
     private Integer scoreAcademicIntegrity;
-    /** 打分表：实用性/应用价值（0-10） */
+    
     private Integer scorePracticality;
 
     public int getReviewId() {
@@ -268,7 +255,7 @@ public class Review implements Serializable {
     public void setReviewerEmail(String reviewerEmail) {
         this.reviewerEmail = reviewerEmail;
     }
- // 添加稿件标题属性
+ 
     private String manuscriptTitle;
     
     public String getManuscriptTitle() {
@@ -278,14 +265,14 @@ public class Review implements Serializable {
     public void setManuscriptTitle(String manuscriptTitle) {
         this.manuscriptTitle = manuscriptTitle;
     }
- // ====== 新增字段 ======
-    /** 拒绝理由 */
+ 
+    
     private String rejectionReason;
 
-    /** 拒绝时间 */
+    
     private LocalDateTime declinedAt;
 
-    // 在现有方法后添加 getter/setter
+    
 
     public String getRejectionReason() {
         return rejectionReason;
@@ -303,3 +290,28 @@ public class Review implements Serializable {
         this.declinedAt = declinedAt;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -5,13 +5,7 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<!--
-  工作台（入口页）响应式优化：
-  1) 解除登录态内容区 1160px 的 max-width 限制，避免大屏两侧出现大片空白；
-  2) 入口卡片使用自适应栅格；
-  3) 卡片内按钮铺满宽度，移动端更易点击。
-  为避免影响其它页面，这里采用页面内局部样式。
--->
+
 <style>
   /* 登录态右侧内容区默认 max-width: 1160px，这里仅对工作台页解除限制 */
   .authed .content-inner {
@@ -50,10 +44,10 @@
   </div>
 </c:if>
 
-<!-- 入口区：按权限显示 -->
+
 <div class="workbench-grid">
 
-  <!-- 作者 -->
+  
   <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_MY_MANUSCRIPTS'] or sessionScope.menuPermMap['MENU_AUTHOR_SUBMIT']}">
     <div class="card workbench-card">
       <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-upload" aria-hidden="true"></i> 投稿 / 作者</div>
@@ -69,7 +63,7 @@
     </div>
   </c:if>
 
-  <!-- 审稿人 -->
+  
   <c:if test="${sessionScope.menuPermMap['MENU_REVIEWER_ASSIGNED'] or sessionScope.menuPermMap['MENU_REVIEWER_HISTORY']}">
     <div class="card workbench-card">
       <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-person-check" aria-hidden="true"></i> 外审 / 审稿人</div>
@@ -85,7 +79,7 @@
     </div>
   </c:if>
 
-  <!-- 编辑 -->
+  
   <c:if test="${sessionScope.menuPermMap['MENU_EDITOR_TODO'] or sessionScope.menuPermMap['MENU_EDITOR_UNDER_REVIEW']
       or sessionScope.menuPermMap['MENU_EDITOR_RECOMMEND'] or sessionScope.menuPermMap['MENU_EDITOR_REVIEW_MONITOR']
       or sessionScope.menuPermMap['MENU_EDITOR_AUTHOR_COMM']}">
@@ -112,7 +106,7 @@
     </div>
   </c:if>
 
-  <!-- 主编 -->
+  
   <c:if test="${sessionScope.menuPermMap['MENU_EIC_OVERVIEW'] or sessionScope.menuPermMap['MENU_EIC_DESK']
       or sessionScope.menuPermMap['MENU_EIC_TO_ASSIGN'] or sessionScope.menuPermMap['MENU_EIC_REVIEWERS']
       or sessionScope.menuPermMap['MENU_EIC_FINAL_DECISION'] or sessionScope.menuPermMap['MENU_EIC_SPECIAL']}">
@@ -142,7 +136,7 @@
     </div>
   </c:if>
 
-  <!-- 编辑部管理员 -->
+  
 <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY'] or sessionScope.menuPermMap['ADMIN_JOURNALS'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
   <div class="card workbench-card">
     <div style="font-weight:700; margin-bottom:6px;"><i class="bi bi-clipboard-check" aria-hidden="true"></i> 编辑部管理</div>
@@ -164,7 +158,7 @@
   </div>
 </c:if>
 
-<!-- 后台管理 -->
+
 
   <c:if test="${sessionScope.menuPermMap['ADMIN_USERS'] or sessionScope.menuPermMap['ADMIN_PERMISSIONS'] or sessionScope.menuPermMap['ADMIN_LOGS']
       or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE']
@@ -198,3 +192,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -13,24 +13,12 @@
     </div>
 
     <div class="grid grid-2">
-        <%-- <a class="card" style="text-decoration:none;" href="${pageContext.request.contextPath}/editor/formalCheck">
-            <h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> 形式审查</h3>
-            <p>处理 SUBMITTED / FORMAL_CHECK：检查格式与基础合规性。</p>
-            <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开工作台</small>
-        </a> --%>
-        <%-- <a class="card" style="text-decoration:none;" href="${pageContext.request.contextPath}/editor/desk">
-            <h3><i class="bi bi-search" aria-hidden="true"></i> 案头审查</h3>
-            <p>处理 DESK_REVIEW_INITIAL：初筛、建议退稿或进入分配环节。</p>
-            <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开列表</small>
-        </a> --%>
+        
+        
 
         <c:choose>
             <c:when test="${sessionScope.currentUser.roleCode == 'EDITOR_IN_CHIEF'}">
-                <%-- <a class="card" style="text-decoration:none;" href="${pageContext.request.contextPath}/editor/toAssign">
-                    <h3><i class="bi bi-diagram-3" aria-hidden="true"></i> 待分配队列</h3>
-                    <p>处理 TO_ASSIGN：指派责任编辑与审稿人，推进外审流程。</p>
-                    <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开列表</small>
-                </a> --%>
+                
             </c:when>
             <c:otherwise>
                 <a class="card" style="text-decoration:none;" href="${pageContext.request.contextPath}/editor/withEditor">
@@ -69,11 +57,7 @@
             <p>编辑推荐意见与主编终审：录用 / 退稿 / 退修。</p>
             <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 打开列表</small>
         </a>
-       <%--  <a class="card" style="text-decoration:none;" href="${pageContext.request.contextPath}/editor/reviewers">
-            <h3><i class="bi bi-people" aria-hidden="true"></i> 审稿人库</h3>
-            <p>维护审稿人信息（仅主编可操作）。</p>
-            <small><i class="bi bi-arrow-right" aria-hidden="true"></i> 管理库</small>
-        </a> --%>
+       
     </div>
 
     <div class="stack" style="margin-top: var(--space-6);">
@@ -82,3 +66,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

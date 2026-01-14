@@ -5,12 +5,7 @@ import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
 import edu.bjfu.onlinesm.model.User;
 
-/**
- * 统一封装“业务事件 -> 站内通知”。
- *
- * 仅做单向通知，不做对话串。
- * 通知写入失败不影响主流程。
- */
+
 public class InAppNotifications {
 
     private final NotificationDAO notificationDAO;
@@ -25,7 +20,7 @@ public class InAppNotifications {
         this.reviewDAO = reviewDAO;
     }
 
-    /** 投稿提交成功：给作者发通知。 */
+    
     public void onSubmissionSuccess(User author, Manuscript m, String manuscriptCode) {
         try {
             if (author == null || author.getUserId() == null) return;
@@ -37,7 +32,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 形式审查退回：给作者发通知。 */
+    
     public void onFormalCheckReturn(int manuscriptId, String issues) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -50,7 +45,7 @@ public class InAppNotifications {
         } catch (Exception ignore) {
         }
     }
-    /** 形式审查开始：给作者发通知。 */
+    
     public void onFormalCheckStarted(int manuscriptId) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -65,7 +60,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 形式审查通过：给作者发通知。 */
+    
     public void onFormalCheckPassed(int manuscriptId) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -80,7 +75,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 主编案头初审通过：给作者发通知。 */
+    
     public void onDeskAccepted(int manuscriptId) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -95,7 +90,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 主编案头退稿：给作者发通知（含退稿理由）。 */
+    
     public void onDeskRejected(int manuscriptId, String rejectReason) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -113,7 +108,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 主编指派责任编辑：同步通知作者。 */
+    
     public void onEditorAssignedToAuthor(int manuscriptId, User chief, int editorId) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -134,7 +129,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 审稿意见提交：通知责任编辑/主编。 */
+    
     public void onReviewSubmitted(int reviewId) {
         try {
             Review r = reviewDAO.findById(reviewId);
@@ -164,7 +159,7 @@ public class InAppNotifications {
 
     
 
-    /** 邀请审稿人：给审稿人发通知。 */
+    
     public void onReviewerInvited(int reviewId) {
         try {
             Review r = reviewDAO.findById(reviewId);
@@ -179,7 +174,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 催审提醒：给审稿人发通知。 */
+    
     public void onReviewerRemind(int reviewId) {
         try {
             Review r = reviewDAO.findById(reviewId);
@@ -194,15 +189,12 @@ public class InAppNotifications {
         }
     }
 
-    /** 审稿人接受/拒绝：通知编辑（主责编辑）。 */
+    
     public void onReviewerResponded(int reviewId, boolean accepted) {
         onReviewerResponded(reviewId, accepted, null);
     }
 
-    /**
-     * 审稿人接受/拒绝：通知编辑（主责编辑）。
-     * @param rejectionReasonOverride 如果是拒绝操作且希望在旧库（缺少 RejectionReason 列）也能显示理由，可通过此参数传入。
-     */
+    
     public void onReviewerResponded(int reviewId, boolean accepted, String rejectionReasonOverride) {
         try {
             Review r = reviewDAO.findById(reviewId);
@@ -218,7 +210,7 @@ public class InAppNotifications {
             String content = "审稿人：" + (reviewer == null ? "" : safe(reviewer.getUsername())) + (accepted ? " 已接受" : " 已拒绝") + "审稿邀请。";
             if (m != null) content += "\n稿件标题：" + safe(m.getTitle());
 
-            // 关键：拒绝邀请时，把拒绝理由写进站内消息，方便编辑在“消息/通知”中直接看到。
+            
             if (!accepted) {
                 String reason = (rejectionReasonOverride != null ? rejectionReasonOverride : r.getRejectionReason());
                 if (reason != null) reason = reason.trim();
@@ -231,7 +223,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 主编指派编辑：通知被指派编辑。 */
+    
     public void onEditorAssigned(int manuscriptId, User chief, int editorId, String chiefComment) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -247,7 +239,7 @@ public class InAppNotifications {
     }
 
 
-    /** 编辑提交建议：通知主编（终审队列）。 */
+    
     public void onEditorRecommendationSubmitted(int manuscriptId, User editor, String suggestionText, String summary) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -258,7 +250,7 @@ public class InAppNotifications {
             if (suggestionText != null && !suggestionText.trim().isEmpty()) content += "\n建议：" + suggestionText.trim();
             if (summary != null && !summary.trim().isEmpty()) content += "\n总结：" + summary.trim();
 
-            // 通知所有主编（支持多主编）
+            
             for (User chief : userDAO.findByRoleCode("EDITOR_IN_CHIEF")) {
                 notificationDAO.create(chief.getUserId(),
                         editor == null ? null : editor.getUserId(),
@@ -272,13 +264,13 @@ public class InAppNotifications {
         }
     }
 
-    /** 终审决策：通知作者与编辑。 */
+    
     public void onFinalDecision(int manuscriptId, String decisionText) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
             if (m == null) return;
 
-            // 作者
+            
             User author = userDAO.findById(m.getSubmitterId());
             if (author != null) {
                 String title = "终审结果已出";
@@ -286,7 +278,7 @@ public class InAppNotifications {
                 notificationDAO.create(author.getUserId(), null, "SYSTEM", "FINAL_DECISION", title, content, manuscriptId);
             }
 
-            // 编辑
+            
             Integer editorId = manuscriptDAO.findCurrentEditorId(manuscriptId);
             if (editorId != null) {
                 User editor = userDAO.findById(editorId);
@@ -301,7 +293,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 撤稿：通知作者。 */
+    
     public void onRetract(int manuscriptId) {
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
@@ -315,7 +307,7 @@ public class InAppNotifications {
         }
     }
 
-    /** 主编邀请新审稿人（创建账号）：给被邀请人发一条站内通知。 */
+    
     public void onInviteNewReviewer(User reviewer) {
         try {
             if (reviewer == null || reviewer.getUserId() == null) return;
@@ -327,9 +319,7 @@ public class InAppNotifications {
     }
 
 
-    /**
-     * 催办责任编辑：在站内向该编辑发送一条“处理稿件提醒”通知。
-     */
+    
     public void onEditorReminder(Manuscript manuscript, User chief, User editor) {
         try {
             if (manuscript == null || editor == null || editor.getUserId() == null) return;
@@ -362,3 +352,28 @@ public class InAppNotifications {
         return s == null ? "" : s;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

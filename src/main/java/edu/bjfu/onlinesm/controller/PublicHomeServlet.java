@@ -21,9 +21,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 前台首页：展示期刊介绍、论文列表、新闻、征稿通知。
- */
+
 @WebServlet(name = "PublicHomeServlet", urlPatterns = {"/home"})
 public class PublicHomeServlet extends HttpServlet {
 
@@ -41,15 +39,15 @@ public class PublicHomeServlet extends HttpServlet {
 
             List<EditorialBoardMember> boardMembers = Collections.emptyList();
 if (journal != null && journal.getJournalId() != null) {
-    // 首页只展示前 6 位编委
+    
     boardMembers = editorialBoardDAO.findByJournal(journal.getJournalId(), 6);
 
-    // 兼容：若按期刊查询为空，但数据库中实际存在编委（例如 JournalId 不一致/历史数据问题），
-    // 则回退到全表查询后再尽量筛选当前期刊，确保首页能展示编委信息。
+    
+    
     if (boardMembers == null || boardMembers.isEmpty()) {
         List<EditorialBoardMember> all = editorialBoardDAO.findAll();
         if (all != null && !all.isEmpty()) {
-            // 优先筛选当前期刊的编委
+            
             int jid = journal.getJournalId();
             List<EditorialBoardMember> sameJournal = new java.util.ArrayList<>();
             for (EditorialBoardMember m : all) {
@@ -69,7 +67,7 @@ req.setAttribute("boardMembers", boardMembers);
             List<News> newsList = newsDAO.findPublishedTopN(6);
             req.setAttribute("newsList", newsList);
 
-            // 征稿通知（Call for papers）：读取 dbo.CallForPapers 已发布数据
+            
             if (journal != null && journal.getJournalId() != null) {
                 List<CallForPaper> calls = callDAO.listPublished(journal.getJournalId(), 6);
                 req.setAttribute("callForPapers", calls);
@@ -83,3 +81,28 @@ req.setAttribute("boardMembers", boardMembers);
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

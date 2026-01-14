@@ -3,10 +3,7 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 稿件状态变更历史记录实体类
- * 对应数据库表 dbo.ManuscriptStatusHistory
- */
+
 public class ManuscriptStatusHistory implements Serializable {
 
     private Long historyId;
@@ -18,9 +15,9 @@ public class ManuscriptStatusHistory implements Serializable {
     private LocalDateTime changeTime;
     private String remark;
     
-    /** 操作者用户名（关联查询） */
+    
     private String changedByUsername;
-    /** 操作者全名（关联查询） */
+    
     private String changedByFullName;
 
     public Long getHistoryId() {
@@ -103,9 +100,7 @@ public class ManuscriptStatusHistory implements Serializable {
         this.changedByFullName = changedByFullName;
     }
 
-    /**
-     * 获取状态的中文描述
-     */
+    
     public static String getStatusDescription(String status) {
         if (status == null) return "未知状态";
         switch (status) {
@@ -129,9 +124,7 @@ public class ManuscriptStatusHistory implements Serializable {
         }
     }
 
-    /**
-     * 获取事件的中文描述
-     */
+    
     public static String getEventDescription(String event) {
         if (event == null) return "状态变更";
         switch (event) {
@@ -170,3 +163,28 @@ public class ManuscriptStatusHistory implements Serializable {
                 '}';
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

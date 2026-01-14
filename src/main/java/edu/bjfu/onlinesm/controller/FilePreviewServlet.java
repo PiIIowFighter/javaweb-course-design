@@ -23,29 +23,29 @@ public class FilePreviewServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // 1) 必须登录
+        
         User current = getCurrentUser(req);
         if (current == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
             return;
         }
 
-        // 2) 路由：/files/preview
-        String pathInfo = req.getPathInfo(); // 例如 "/preview"
+        
+        String pathInfo = req.getPathInfo(); 
         if (pathInfo == null || !"/preview".equals(pathInfo)) {
             resp.sendError(404);
             return;
         }
 
-        // 3) 参数
+        
         Integer manuscriptId = parseInt(req.getParameter("manuscriptId"));
-        String type = req.getParameter("type"); // manuscript | cover
+        String type = req.getParameter("type"); 
         if (manuscriptId == null || type == null) {
             resp.sendError(400, "缺少 manuscriptId 或 type 参数");
             return;
         }
 
-        // 4) 取稿件，做权限校验（至少：作者本人；另外允许编辑/主编/编辑部管理员）
+        
         Manuscript m;
         try {
             m = manuscriptDAO.findById(manuscriptId);
@@ -61,15 +61,15 @@ public class FilePreviewServlet extends HttpServlet {
         boolean isOwner = (m.getSubmitterId() == current.getUserId());
         boolean isStaff = "EDITOR".equals(role) || "EDITOR_IN_CHIEF".equals(role) || "EO_ADMIN".equals(role);
 
-        // cover letter 一般不给审稿人看
+        
         if ("cover".equalsIgnoreCase(type)) {
             if (!(isOwner || isStaff)) {
                 resp.sendError(403, "无权限预览 Cover Letter");
                 return;
             }
         } else if ("manuscript".equalsIgnoreCase(type)) {
-            // manuscript：作者/工作人员允许
-            // 如果你以后要给审稿人看“匿名稿”，可以在这里加 reviewer 逻辑
+            
+            
             if (!(isOwner || isStaff)) {
                 resp.sendError(403, "无权限预览稿件文件");
                 return;
@@ -79,7 +79,7 @@ public class FilePreviewServlet extends HttpServlet {
             return;
         }
 
-        // 5) 从 dbo.ManuscriptVersions 取“当前版本”的文件路径
+        
         String filePath;
         try {
             filePath = findCurrentVersionPath(manuscriptId, type);
@@ -98,21 +98,21 @@ public class FilePreviewServlet extends HttpServlet {
             return;
         }
 
-        // 统计：下载计数（仅对 ACCEPTED 的 manuscript 计数）
+        
         if ("manuscript".equalsIgnoreCase(type) && "ACCEPTED".equalsIgnoreCase(m.getCurrentStatus())) {
             try {
                 manuscriptDAO.incrementDownloadCount(manuscriptId);
             } catch (Exception ignore) {
-                // 不让统计失败影响正常下载
+                
             }
         }
 
-        // 6) 输出文件流
+        
         String contentType = guessContentType(f.getName());
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType(contentType);
 
-        // pdf/html 走 inline，其他走附件下载（避免 docx 在浏览器里乱码）
+        
         boolean inline = contentType.startsWith("application/pdf") || contentType.startsWith("text/html");
         String disposition = inline ? "inline" : "attachment";
         resp.setHeader("Content-Disposition", disposition + "; filename=\"" + f.getName() + "\"");
@@ -141,11 +141,7 @@ public class FilePreviewServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 从 dbo.ManuscriptVersions 取当前版本的文件路径：
-     *  - type=manuscript -> FileOriginalPath
-     *  - type=cover      -> CoverLetterPath
-     */
+    
     private String findCurrentVersionPath(int manuscriptId, String type) throws SQLException {
         String col = "manuscript".equalsIgnoreCase(type) ? "FileOriginalPath" : "CoverLetterPath";
         String sql = "SELECT TOP 1 " + col +
@@ -178,3 +174,28 @@ public class FilePreviewServlet extends HttpServlet {
         return "application/octet-stream";
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

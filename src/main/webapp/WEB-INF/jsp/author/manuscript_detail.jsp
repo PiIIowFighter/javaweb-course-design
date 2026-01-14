@@ -19,7 +19,7 @@
             <p>未找到指定的稿件记录。</p>
         </c:when>
         <c:otherwise>
-            <!-- 基本信息 -->
+            
             <div class="stack">
                 <p><strong>标题：</strong><c:out value="${manuscript.title}"/></p>
                 <p><strong>期刊ID：</strong><c:out value="${manuscript.journalId}"/></p>                <p><strong>当前状态：</strong><c:out value="${manuscript.currentStatus}"/></p>
@@ -27,7 +27,7 @@
                 <p><strong>关键词：</strong><c:out value="${manuscript.subjectArea}"/></p>
             </div>
 
-            <!-- 摘要 -->
+            
             <div class="stack">
                 <p><strong>摘要：</strong></p>
                                 <div class="ql-snow richtext-view">
@@ -37,7 +37,7 @@
                 </div>
             </div>
 
-            <!-- 稿件文件 -->
+            
             <c:if test="${not empty currentVersion}">
                 <div class="stack">
                     <h3>稿件文件</h3>
@@ -72,7 +72,7 @@
                 </div>
             </c:if>
 
-            <!-- 操作按钮 -->
+            
             <div class="actions">
                 <a class="btn-quiet" href="${ctx}/manuscripts/list" style="text-decoration:none;">
                     <i class="bi bi-arrow-left"></i> 返回列表
@@ -86,3 +86,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -31,7 +31,7 @@
             <c:if test="${not empty n.relatedManuscriptId}">
                 ·
                 <c:choose>
-                    <%-- 作者在通知中心点击“查看关联稿件”应跳转到作者可访问的稿件详情页，避免 403 --%>
+                    
                     <c:when test="${sessionScope.currentUser.roleCode eq 'AUTHOR'}">
                         <a href="${ctx}/manuscripts/detail?id=${n.relatedManuscriptId}" style="overflow-wrap:anywhere; word-break:break-word;">查看关联稿件</a>
                     </c:when>
@@ -102,3 +102,30 @@
 </div>
 
 <jsp:include page="/WEB-INF/jsp/common/footer.jsp" />
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

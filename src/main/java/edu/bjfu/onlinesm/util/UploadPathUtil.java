@@ -10,18 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-/**
- * Upload path resolver (server-friendly).
- *
- * Priority (high -> low):
- * 1) JVM system property: upload.baseDir / upload.config
- * 2) Environment variable: UPLOAD_BASE_DIR / UPLOAD_CONFIG
- * 3) External config file: /etc/Online_SMsystem/upload.properties (if exists)
- * 4) Classpath resource: upload.properties
- * 5) Default: /var/lib/tomcat9/uploads
- *
- * Note: returned paths are created if missing.
- */
+
 public class UploadPathUtil {
 
     private static final String DEFAULT_BASE_DIR = "/var/lib/tomcat9/uploads";
@@ -36,7 +25,7 @@ public class UploadPathUtil {
             if (cached != null) return cached;
             Properties p = new Properties();
 
-            // 1) Try explicit external config path
+            
             String cfg = System.getProperty("upload.config");
             if (cfg == null || cfg.trim().isEmpty()) cfg = System.getenv("UPLOAD_CONFIG");
             if (cfg != null && !cfg.trim().isEmpty()) {
@@ -45,12 +34,12 @@ public class UploadPathUtil {
                     try (InputStream in = new FileInputStream(f)) {
                         p.load(in);
                     } catch (IOException ignored) {
-                        // fall through
+                        
                     }
                 }
             }
 
-            // 2) If still empty, try /etc default
+            
             if (p.isEmpty()) {
                 File etc = new File("/etc/Online_SMsystem/upload.properties");
                 if (etc.isFile()) {
@@ -61,7 +50,7 @@ public class UploadPathUtil {
                 }
             }
 
-            // 3) If still empty, classpath resource
+            
             if (p.isEmpty()) {
                 try (InputStream in = UploadPathUtil.class.getClassLoader().getResourceAsStream("upload.properties")) {
                     if (in != null) {
@@ -71,7 +60,7 @@ public class UploadPathUtil {
                 }
             }
 
-            // 4) Overlay env/system property
+            
             overlay(p, "upload.baseDir", System.getProperty("upload.baseDir"));
             overlay(p, "upload.baseDir", System.getenv("UPLOAD_BASE_DIR"));
             overlay(p, "upload.avatarSubDir", System.getProperty("upload.avatarSubDir"));
@@ -90,18 +79,12 @@ public class UploadPathUtil {
         }
     }
 
-    /**
-     * Backward compatible API: some servlets call getBaseDir() without ServletContext.
-     * This version uses only env/system properties + default (no classpath read).
-     */
+    
     public static String getBaseDir() {
         return getBaseDirFile().getAbsolutePath();
     }
 
-    /**
-     * Compatibility alias.
-     * Some older controllers referenced this method name.
-     */
+    
     public static String getBaseDirPath() {
         return getBaseDir();
     }
@@ -134,12 +117,9 @@ public class UploadPathUtil {
         return ensureDir(getBaseDir(ctx).resolve(sub.trim()));
     }
 
-    /**
-     * Legacy directory used by older versions (/var/lib/tomcat9/upload).
-     * Only used for reading old files; new uploads should go to uploads/.
-     */
+    
     public static File getLegacyBaseDir(ServletContext ctx) {
-        // keep stable for server deployments
+        
         return new File("/var/lib/tomcat9/upload");
     }
 
@@ -147,8 +127,33 @@ public class UploadPathUtil {
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
-            // Let caller throw a friendly message if needed
+            
         }
         return dir;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

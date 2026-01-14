@@ -18,16 +18,7 @@ import java.util.List;
 import java.util.Map;
 import edu.bjfu.onlinesm.util.PaginationUtil;
 
-/**
- * 
- *
- * URL 设计：
- *  - /admin/journals/list
- *  - /admin/journals/basic/edit|save|delete
- *  - /admin/journals/pages/list|edit|save|delete
- *  - /admin/journals/issues/list|edit|save|delete
- *  - /admin/journals/calls/list|edit|save|delete
- */
+
 @WebServlet(name = "JournalAdminServlet", urlPatterns = {"/admin/journals/*"})
 @MultipartConfig(
         fileSizeThreshold = 1024 * 1024,
@@ -41,7 +32,7 @@ public class JournalAdminServlet extends HttpServlet {
     private final IssueDAO issueDAO = new IssueDAO();
     private final CallForPaperDAO callDAO = new CallForPaperDAO();
 
-    // 与 NewsAdminServlet 保持一致
+    
     private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String JOURNAL_SUB_DIR = "journal";
 
@@ -55,12 +46,12 @@ public class JournalAdminServlet extends HttpServlet {
                     handleJournalList(req, resp);
                     break;
 
-                // 基本信息
+                
                 case "/basic/edit":
                     handleBasicEdit(req, resp);
                     break;
 
-                // 页面
+                
                 case "/pages/list":
                     handlePagesList(req, resp);
                     break;
@@ -68,7 +59,7 @@ public class JournalAdminServlet extends HttpServlet {
                     handlePagesEdit(req, resp);
                     break;
 
-                // 期次
+                
                 case "/issues/list":
                     handleIssuesList(req, resp);
                     break;
@@ -76,7 +67,7 @@ public class JournalAdminServlet extends HttpServlet {
                     handleIssuesEdit(req, resp);
                     break;
 
-                // 征稿
+                
                 case "/calls/list":
                     handleCallsList(req, resp);
                     break;
@@ -134,16 +125,16 @@ public class JournalAdminServlet extends HttpServlet {
         }
     }
 
-    // -------------------- list/dashboard --------------------
+    
 
     private void handleJournalList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
-        // 本项目默认只有一个期刊：期刊管理页面直接展示“主期刊”的可编辑内容
+        
         Journal journal = journalDAO.findPrimary();
         req.setAttribute("journal", journal);
         req.getRequestDispatcher("/WEB-INF/jsp/admin/journal/journal_list.jsp").forward(req, resp);
     }
 
-    // -------------------- basic (dbo.Journals) --------------------
+    
 
     private void handleBasicEdit(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
         Integer journalId = intParam(req, "journalId");
@@ -204,7 +195,7 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/list");
     }
 
-    // -------------------- pages (dbo.JournalPages) --------------------
+    
 
     private void handlePagesList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
         Integer journalId = intParam(req, "journalId");
@@ -215,7 +206,7 @@ public class JournalAdminServlet extends HttpServlet {
         Journal journal = journalDAO.findById(journalId);
         List<JournalPage> pages = journalPageDAO.listByJournal(journalId);
 
-        // 仅暴露本项目需要维护的 4 个“关于期刊页面”内容：publish/guide/aims/policies
+        
         Map<String, JournalPage> pageMap = new HashMap<>();
         for (JournalPage p : pages) {
             if (p != null && p.getPageKey() != null) {
@@ -242,7 +233,7 @@ public class JournalAdminServlet extends HttpServlet {
         if (id != null) {
             page = journalPageDAO.findById(id);
         } else if (pageKeyParam != null && !pageKeyParam.trim().isEmpty()) {
-            // 支持按 key 直接编辑固定页面（若不存在则新建）
+            
             page = journalPageDAO.findByJournalAndKey(journalId, pageKeyParam.trim());
         }
         if (page == null) {
@@ -272,7 +263,7 @@ public class JournalAdminServlet extends HttpServlet {
 
         JournalPage existing = (pageId != null) ? journalPageDAO.findById(pageId) : null;
 
-        // 上传：封面图 + 附件
+        
         String coverPath = (existing != null) ? existing.getCoverImagePath() : null;
         String attachmentPath = (existing != null) ? existing.getAttachmentPath() : null;
 
@@ -310,7 +301,7 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/pages/list?journalId=" + (journalId != null ? journalId : ""));
     }
 
-    // -------------------- issues (dbo.Issues) --------------------
+    
 
     private void handleIssuesList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
         Integer journalId = intParam(req, "journalId");
@@ -411,11 +402,7 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/issues/list?journalId=" + journalId);
     }
 
-    /**
-     * 统一 Issue 标题的存储：
-     * - SPECIAL：允许用户输入 "Special Issue:" / "专刊：" 前缀，但存库时去掉前缀，页面渲染时统一加前缀。
-     * - LATEST：保持用户输入（不做强制改写）。
-     */
+    
     private static String normalizeIssueTitle(String issueType, String raw) {
         if (raw == null) return null;
         String title = raw.trim();
@@ -423,7 +410,7 @@ public class JournalAdminServlet extends HttpServlet {
 
         String t = (issueType == null) ? "" : issueType.trim().toUpperCase();
         if ("SPECIAL".equals(t)) {
-            // 常见前缀：Special Issue: / Special Issue： / 专刊: / 专刊：
+            
             String lower = title.toLowerCase();
             if (lower.startsWith("special issue:")) {
                 title = title.substring("special issue:".length()).trim();
@@ -448,7 +435,7 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/issues/list?journalId=" + (journalId != null ? journalId : ""));
     }
 
-    // -------------------- calls (dbo.CallForPapers) --------------------
+    
 
     private void handleCallsList(HttpServletRequest req, HttpServletResponse resp) throws SQLException, ServletException, IOException {
         Integer journalId = intParam(req, "journalId");
@@ -523,7 +510,7 @@ public class JournalAdminServlet extends HttpServlet {
         call.setEndDate(endDate);
         call.setCoverImagePath(coverPath);
         call.setAttachmentPath(attachmentPath);
-        // createdAt 由 DB 默认
+        
 
         if (call.getCallId() == null) {
             int newId = callDAO.insertAdmin(call);
@@ -546,7 +533,7 @@ public class JournalAdminServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/journals/calls/list?journalId=" + (journalId != null ? journalId : ""));
     }
 
-    // -------------------- helpers --------------------
+    
 
     private String handleUpload(HttpServletRequest req,
                                 String partName,
@@ -558,7 +545,7 @@ public class JournalAdminServlet extends HttpServlet {
         try {
             part = req.getPart(partName);
         } catch (IllegalStateException ex) {
-            // 上传超出限制等异常：忽略该文件，避免影响主体保存
+            
             return oldStoredName;
         }
         if (part == null || part.getSize() <= 0) {
@@ -577,7 +564,7 @@ public class JournalAdminServlet extends HttpServlet {
             if (dot >= 0) ext = submittedName.substring(dot);
         }
 
-        // 图片文件：尽量保持为常见扩展名
+        
         if (isImage && ext.isEmpty()) {
             ext = ".png";
         }
@@ -617,3 +604,28 @@ public class JournalAdminServlet extends HttpServlet {
         return session != null ? (User) session.getAttribute("currentUser") : null;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

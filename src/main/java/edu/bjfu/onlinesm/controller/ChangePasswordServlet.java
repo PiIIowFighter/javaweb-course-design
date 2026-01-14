@@ -12,11 +12,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/**
- * 修改密码：
- *  GET  /profile/changePassword  显示修改密码页面
- *  POST /profile/changePassword  校验旧密码、新密码，更新成功后提示“请重新登录”
- */
+
 @WebServlet(name = "ChangePasswordServlet", urlPatterns = {"/profile/changePassword"})
 public class ChangePasswordServlet extends HttpServlet {
 
@@ -56,7 +52,7 @@ public class ChangePasswordServlet extends HttpServlet {
             return;
         }
 
-        // 可选：与注册逻辑一致，限制最小长度
+        
         if (newPassword.length() < 8) {
             req.setAttribute("error", "新密码长度至少为 8 位，请重新输入。");
             req.getRequestDispatcher("/WEB-INF/jsp/user/change_password.jsp").forward(req, resp);
@@ -72,7 +68,7 @@ public class ChangePasswordServlet extends HttpServlet {
                 return;
             }
 
-            // 修改成功：清理 session，并提示重新登录
+            
             HttpSession session = req.getSession(false);
             if (session != null) {
                 session.invalidate();
@@ -98,3 +94,28 @@ public class ChangePasswordServlet extends HttpServlet {
         return s == null || s.trim().isEmpty();
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

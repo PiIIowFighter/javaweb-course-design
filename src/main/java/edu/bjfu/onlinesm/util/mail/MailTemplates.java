@@ -8,13 +8,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * 统一维护邮件主题/正文模板（HTML）。
- *
- * 说明：
- * - 邮件仅做“通知”，不承诺人工回复；
- * - 具体业务规则以系统页面展示与编辑部通知为准。
- */
+
 public final class MailTemplates {
 
     private MailTemplates() {
@@ -110,7 +104,7 @@ public final class MailTemplates {
 		issuesHtml = "<p style=\"margin:0;\">编辑部未填写具体问题说明。为确保修改准确，请登录系统查看退回原因及补充材料要求。</p>";
 		}
 		
-		// 可选：指南链接段
+		
 		String guideSection = "";
 		if (guideUrl != null && !guideUrl.trim().isEmpty()) {
 		String g = guideUrl.trim();
@@ -139,7 +133,7 @@ public final class MailTemplates {
 }
 
 
-    /** 案头退稿通知（含退稿理由）。 */
+    
     public static MailMessage deskRejectToAuthor(MailConfig cfg, User author, Manuscript m,
             String manuscriptCode, String rejectReason) {
 		String code = manuscriptCodeOrId(manuscriptCode, m);
@@ -255,7 +249,7 @@ public final class MailTemplates {
         return new MailMessage().subject(subject).htmlBody(wrap(body));
     }
 
-    /** 审稿人拒绝邀请时，通知编辑（包含拒绝理由）。 */
+    
     public static MailMessage reviewerDeclinedToEditor(MailConfig cfg, User editor, User reviewer, Manuscript m, String reason) {
         String subject = "【投稿系统】审稿邀请被拒绝（稿件 #" + m.getManuscriptId() + "）";
 
@@ -424,7 +418,7 @@ public final class MailTemplates {
         String b = baseUrl.trim();
         if (b.isEmpty()) return "";
         if (!b.startsWith("http://") && !b.startsWith("https://")) {
-            return ""; // 避免错误地址
+            return ""; 
         }
         if (path == null) path = "";
         if (!path.startsWith("/")) path = "/" + path;
@@ -432,3 +426,28 @@ public final class MailTemplates {
         return b + path;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

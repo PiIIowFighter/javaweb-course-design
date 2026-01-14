@@ -12,9 +12,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
-/**
- * 前台论文列表（Articles & Issues）...
- */
+
 @WebServlet(name = "PublicArticleServlet", urlPatterns = {"/articles"})
 public class PublicArticleServlet extends HttpServlet {
 
@@ -73,11 +71,11 @@ public class PublicArticleServlet extends HttpServlet {
             return;
         }
 
-        // 记录一次浏览（不影响业务流程；仅用于 Articles 页面排序/展示）
+        
         try {
             manuscriptDAO.incrementViewCount(id);
         } catch (SQLException ignore) {
-            // 不让统计失败影响正常浏览
+            
         }
 
         req.setAttribute("article", m);
@@ -93,3 +91,28 @@ public class PublicArticleServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

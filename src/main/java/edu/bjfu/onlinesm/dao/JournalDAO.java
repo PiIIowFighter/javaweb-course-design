@@ -7,15 +7,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 期刊 DAO（dbo.Journals）
- */
+
 public class JournalDAO {
 
     
-    /**
-     * 兼容旧代码：findAll() 等同于 listAll()
-     */
+    
     public List<Journal> findAll() throws SQLException {
         return listAll();
     }
@@ -35,9 +31,7 @@ public List<Journal> listAll() throws SQLException {
         return list;
     }
 
-    /**
-     * 取一个“主期刊”（用于前台兜底显示）。
-     */
+    
     public Journal findPrimary() throws SQLException {
         String sql = "SELECT TOP 1 JournalId, Name, Description, ImpactFactor, Timeline, ISSN " +
                 "FROM dbo.Journals ORDER BY JournalId ASC";
@@ -143,3 +137,28 @@ public List<Journal> listAll() throws SQLException {
         return j;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

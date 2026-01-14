@@ -7,7 +7,7 @@
 
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
-<!-- 期刊介绍 (about the journal) -->
+
 <div class="hero hero-split">
     <div class="stack">
         <div class="kicker">科研论文在线投稿系统 · Online Submission System</div>
@@ -50,7 +50,7 @@
 
 <div class="stack-lg" style="margin-top: var(--space-6);">
 
-    <!-- 期刊编委会介绍：编委照片/简介 -->
+    
     <div class="card stack">
         <div class="card-header">
             <div>
@@ -66,9 +66,9 @@
             <p>编委会信息将陆续更新，敬请关注。</p>
         </c:if>
         <c:if test="${not empty boardMembers}">
-            <!-- 首页预览：统一方块尺寸，横向一行，不换行，超出隐藏 -->
+            
             <div class="eb-strip" aria-label="editorial-board-preview">
-                <!-- 首页仅展示前 5 位编委，完整名单见“查看全部” -->
+                
                 <c:forEach var="m" items="${boardMembers}" begin="0" end="4">
                     <div class="eb-tile">
                         <span class="eb-avatar" aria-hidden="true" style="overflow:hidden;">
@@ -102,7 +102,7 @@
         </c:if>
     </div>
 
-    <!-- 论文列表：Latest / Top cited / Most downloaded / Most popular -->
+    
     <div class="card stack">
         <div class="card-header">
             <div>
@@ -134,7 +134,7 @@
         </c:if>
         <c:if test="${not empty latestPublished}">
             <ul class="list">
-                <!-- 首页仅展示前 3 篇论文，完整列表见“查看全部” -->
+                
                 <c:forEach var="a" items="${latestPublished}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
@@ -191,7 +191,7 @@
         </c:if>
         <c:if test="${not empty newsList}">
             <ul class="list">
-                <!-- 首页仅展示前 3 条新闻，完整列表见“查看全部” -->
+                
                 <c:forEach var="n" items="${newsList}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true"><i class="bi bi-newspaper"></i></span>
@@ -229,7 +229,7 @@
 
         <c:if test="${not empty callForPapers}">
             <ul class="list">
-                <!-- 首页仅展示前 3 条征稿通知，完整列表见“查看全部” -->
+                
                 <c:forEach var="c" items="${callForPapers}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true" style="overflow:hidden;">
@@ -264,9 +264,36 @@
             </ul>
         </c:if>
 
-        <%-- 征稿通知模块下方按钮已按需求移除 --%>
+        
     </div>
 
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

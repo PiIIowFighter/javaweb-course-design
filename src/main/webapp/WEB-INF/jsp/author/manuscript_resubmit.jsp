@@ -12,7 +12,7 @@
 </div></div>
     </div>
 
-    <!-- 退回后：展示编辑部给出的修改意见（形式审查反馈） -->
+    
     <c:if test="${not empty manuscript and (manuscript.currentStatus == 'RETURNED' or manuscript.currentStatus == 'REVISION') and not empty formalCheckResult and not empty formalCheckResult.feedback}">
         <div class="alert" style="border-color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.08);">
             <b>修改意见（请按此修改后重新提交）</b>
@@ -32,10 +32,10 @@
 
     <form id="resubmitEditForm" method="post" action="${ctx}/manuscripts/resubmit" enctype="multipart/form-data" class="stack-lg">
         <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
-        <!-- mode = submit | draft（用于"存为草稿"） -->
+        
         <input type="hidden" id="resubmitMode" name="mode" value="submit"/>
 
-        <!-- ========== 1) 元数据 ========== -->
+        
         <fieldset>
             <legend><b>1. 元数据</b></legend>
 
@@ -143,7 +143,7 @@
             </div>
         </fieldset>
 
-        <!-- ========== 2) 作者列表 ========== -->
+        
         <fieldset>
             <legend><b>2. 作者列表（支持多作者）</b></legend>
             <small>勾选“通讯作者”用于系统记录（默认第一作者）。</small>
@@ -220,7 +220,7 @@
             </div>
         </fieldset>
 
-        <!-- ========== 3) 文件上传 ========== -->
+        
         <fieldset>
             <legend><b>3. 文件上传</b></legend>
 
@@ -271,7 +271,7 @@
                         </div>
                     </c:if>
 
-                    <!-- Cover Letter 附件（支持多文件，任意类型） -->
+                    
                     <div style="margin-top: 10px;">
                         <div class="kicker" style="margin-bottom: 6px;">Cover Letter 附件（可选）</div>
                         <input type="file" name="coverAttachments" multiple/>
@@ -299,7 +299,7 @@
             </div>
         </fieldset>
 
-        <!-- ========== 4) 推荐审稿人 ========== -->
+        
         <fieldset>
             <legend><b>4. 推荐审稿人（可选）</b></legend>
 
@@ -355,7 +355,7 @@
             </div>
         </fieldset>
 
-        <!-- ========== 5) 操作按钮 ========== -->
+        
         <div class="actions">
             <button type="submit" class="btn-quiet" onclick="document.getElementById('resubmitMode').value='draft'; return confirm('保存为草稿？\n\n说明：\n- 不会推进流程状态（仍保持待修改）；\n- 可多次保存，稍后再重新提交。');">
                 <i class="bi bi-save" aria-hidden="true"></i>
@@ -376,7 +376,7 @@
     </form>
 </div>
 
-<!-- Quill 富文本编辑器（本地引用） -->
+
 <link href="${ctx}/static/css/quill.snow.css" rel="stylesheet">
 <script src="${ctx}/static/js/quill.min.js"></script>
 <style>
@@ -436,7 +436,7 @@
         }
     }
 </style>
-<!-- MathJax 用于数学公式渲染 -->
+
 <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script>
@@ -584,3 +584,30 @@ function addReviewerRow() {
 </script>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -7,26 +7,20 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// 用于记录阶段时间戳
+
 import edu.bjfu.onlinesm.dao.ManuscriptStageTimestampsDAO;
 
-/**
- * 负责访问 dbo.Manuscripts 的简单 DAO，
- * 实现作者投稿和“我的稿件列表”等基础功能。
- */
+
 public class ManuscriptDAO {
 
-    // 阶段时间戳 DAO 实例
+    
     private final ManuscriptStageTimestampsDAO stageTimestampsDAO = new ManuscriptStageTimestampsDAO();
 
-    /**
-     * 前台“Latest published”列表：用 ACCEPTED 状态近似已发表。
-     * 课程设计中未单独维护 PublishedArticles 表，因此此处仅做展示用途。
-     */
+    
     public List<Manuscript> findLatestAccepted(int limit) throws SQLException {
         String top = limit > 0 ? "TOP " + limit + " " : "";
 
-        // 优先读取“可引用信息”（期刊名/ISSN、DOI、卷期页码等）；若数据库尚未升级，则回退到旧查询。
+        
         String sqlNew = "SELECT " + top +
                 " m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime, " +
                 " j.Name AS JournalName, j.ISSN AS JournalIssn, " +
@@ -43,7 +37,7 @@ public class ManuscriptDAO {
 
         List<Manuscript> list = new ArrayList<>();
         try (Connection conn = DbUtil.getConnection()) {
-            // 先尝试新查询
+            
             try (PreparedStatement ps = conn.prepareStatement(sqlNew);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -51,7 +45,7 @@ public class ManuscriptDAO {
                 }
                 return list;
             } catch (SQLException e) {
-                // 回退
+                
                 try (PreparedStatement ps = conn.prepareStatement(sqlOld);
                      ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -63,10 +57,10 @@ public class ManuscriptDAO {
         return list;
     }
 
-    /** 前台详情页：只允许读取 ACCEPTED 状态稿件。 */
+    
     public Manuscript findAcceptedById(int manuscriptId) throws SQLException {
-        // 同时读取 dbo.ArticleMetrics（如果存在）用于详情页展示。
-        // 详情页如果发现“可引用信息”缺失，会做一次懒补全，确保老数据也能显示完整信息。
+        
+        
         String sqlNew = "SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime, " +
                 "j.Name AS JournalName, j.ISSN AS JournalIssn, " +
                 "m.Doi, m.PublishYear, m.[Volume] AS Volume, m.[Issue] AS Issue, m.PageRange, m.[Language] AS Language, m.ArticleType, m.ClassificationNo, m.CnkiUrl, m.PublishedAt, " +
@@ -86,14 +80,14 @@ public class ManuscriptDAO {
             try {
                 Manuscript m = queryOneAccepted(conn, sqlNew, manuscriptId);
                 if (m == null) return null;
-                // 懒补全（仅当缺失时）
+                
                 if (isPublicationMetaMissing(m)) {
                     ensurePublicationMetaIfMissing(conn, manuscriptId, m.getTitle(), m.getFinalDecisionTime());
                     m = queryOneAccepted(conn, sqlNew, manuscriptId);
                 }
                 return m;
             } catch (SQLException e) {
-                // 旧库回退
+                
                 return queryOneAccepted(conn, sqlOld, manuscriptId);
             }
         }
@@ -113,7 +107,7 @@ public class ManuscriptDAO {
 
     private boolean isPublicationMetaMissing(Manuscript m) {
         if (m == null) return false;
-        // 以 DOI / 年份 / 卷期页码为“核心字段”，缺任何一个都认为需要补全
+        
         boolean missingCore = (m.getDoi() == null || m.getDoi().trim().isEmpty())
                 || (m.getPublishYear() == null)
                 || (m.getVolume() == null || m.getVolume().trim().isEmpty())
@@ -122,16 +116,12 @@ public class ManuscriptDAO {
         return missingCore;
     }
 
-    /**
-     * 终审录用后自动补全“可引用信息”。
-     * - 仅在目标字段为空时写入（幂等）
-     * - 若数据库尚未升级（列不存在），则静默跳过
-     */
+    
     private void ensurePublicationMetaIfMissing(Connection conn,
                                                 int manuscriptId,
                                                 String titleHint,
                                                 java.time.LocalDateTime finalDecisionTimeHint) throws SQLException {
-        // 先探测列是否存在；否则旧库会直接报错。
+        
         try (PreparedStatement probe = conn.prepareStatement(
                 "SELECT TOP 1 Doi, PublishYear, [Volume], [Issue], PageRange, [Language], ArticleType, ClassificationNo, CnkiUrl, PublishedAt, FinalDecisionTime, Title " +
                         "FROM dbo.Manuscripts WHERE ManuscriptId=?")) {
@@ -155,12 +145,12 @@ public class ManuscriptDAO {
                 String cnkiUrl = rs.getString("CnkiUrl");
                 Timestamp publishedAtTs = rs.getTimestamp("PublishedAt");
 
-                // 仅当缺失时生成
+                
                 java.util.Random rnd = new java.util.Random(System.nanoTime() ^ (((long) manuscriptId) << 32));
                 int year = (finalDecisionTime != null ? finalDecisionTime.getYear() : java.time.LocalDate.now().getYear());
                 if (publishYear == null) publishYear = year;
                 if (volume == null || volume.trim().isEmpty()) {
-                    // 简单规则：以年份偏移映射卷号（只是展示用）
+                    
                     volume = String.valueOf(Math.max(1, (publishYear - 2000) + 1));
                 }
                 if (issue == null || issue.trim().isEmpty()) {
@@ -195,7 +185,7 @@ public class ManuscriptDAO {
                     publishedAt = base.plusDays(rnd.nextInt(21)).withHour(9 + rnd.nextInt(8)).withMinute(rnd.nextInt(60)).withSecond(0).withNano(0);
                 }
 
-                // 指定论文（id=15）给默认 CNKI 链接，方便你直接对照
+                
                 if ((cnkiUrl == null || cnkiUrl.trim().isEmpty()) && manuscriptId == 15) {
                     cnkiUrl = "https://kns.cnki.net/kcms2/article/abstract?v=hyKDWyHWvTt9Oni1P6Lkq-5VqdV4b3UcgbOsmUcT1puL3W-6PsLlSDKHZ6gpEdPY4SfsGv3ZFS_c1MgyFn7GndnipDZeRu41wg_RxX5lHkaNEyCpeOnvM_KGe1fyQLkLDb9lgKT7TbAziCs8J_nvE2sOSYypoM57QybF9fXycU8=&uniplatform=NZKPT";
                 }
@@ -230,7 +220,7 @@ public class ManuscriptDAO {
                 }
             }
         } catch (SQLException e) {
-            // 旧库/未升级：静默跳过，不影响主流程
+            
             String msg = e.getMessage();
             if (msg != null && msg.toLowerCase().contains("invalid column")) {
                 return;
@@ -239,13 +229,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 新增稿件（可指定状态）。
-     * @param conn          事务连接（由调用方控制提交/回滚）
-     * @param m             稿件对象
-     * @param status        DRAFT / SUBMITTED 等
-     * @param setSubmitTime 是否写入 SubmitTime（正式提交时为 true，保存草稿时为 false）
-     */
+    
     public Manuscript insertWithStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
         String sql = "INSERT INTO dbo.Manuscripts " +
                 "(JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime) " +
@@ -279,21 +263,15 @@ public class ManuscriptDAO {
 
         m.setCurrentStatus(status);
         
-        // 创建稿件后立即创建时间戳记录
+        
         stageTimestampsDAO.create(conn, m.getManuscriptId());
         
         return m;
     }
 
-    /**
-     * 更新稿件元数据，并可指定状态流转（保存草稿/最终提交）。
-     * @param conn          事务连接
-     * @param m             稿件对象（需包含 ManuscriptId）
-     * @param status        新状态
-     * @param setSubmitTime 是否写入 SubmitTime（仅当原 SubmitTime 为空时写入）
-     */
+    
     public void updateMetadataAndStatus(Connection conn, Manuscript m, String status, boolean setSubmitTime) throws SQLException {
-        // 先获取当前状态，以便记录时间戳
+        
         String oldStatus = null;
         String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
         try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -332,16 +310,13 @@ public class ManuscriptDAO {
 
         m.setCurrentStatus(status);
         
-        // 如果状态发生变化，记录时间戳
+        
         if (oldStatus != null && !oldStatus.equals(status)) {
             stageTimestampsDAO.ensureAndUpdateStage(conn, m.getManuscriptId(), oldStatus);
         }
     }
 
-    /**
-     * 新增稿件。初始状态设置为 SUBMITTED，提交时间为当前时间。
-     * 返回带有主键 ID 的 Manuscript 对象。
-     */
+    
     public Manuscript insert(Manuscript m) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(true);
@@ -349,9 +324,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 查询指定作者的所有稿件。
-     */
+    
     public List<Manuscript> findBySubmitter(int submitterId) throws SQLException {
         String sql = "SELECT m.ManuscriptId, m.JournalId, " +
                      "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
@@ -372,9 +345,7 @@ public class ManuscriptDAO {
         return list;
     }
 
-    /**
-     * 按主键查询单个稿件，供详情页使用。
-     */
+    
     public Manuscript findById(int manuscriptId) throws SQLException {
         String sql = "SELECT m.ManuscriptId, m.JournalId, " +
                      "m.SubmitterId, m.Title, m.Abstract, m.Keywords, m.SubjectArea, m.FundingInfo, m.AuthorList, " +
@@ -393,12 +364,10 @@ public class ManuscriptDAO {
         }
         return null;
     }
-    /**
-     * 查询稿件的当前责任编辑ID
-     */
+    
     public Integer findCurrentEditorId(int manuscriptId) throws SQLException {
-        // 优先从 dbo.Manuscripts.CurrentEditorId 读取（新版脚本）。
-        // 但部分同学的旧库没有该列，会导致“Invalid column name 'CurrentEditorId'”从而页面 500。
+        
+        
         String sql1 = "SELECT CurrentEditorId FROM dbo.Manuscripts WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql1)) {
@@ -414,7 +383,7 @@ public class ManuscriptDAO {
 
         } catch (SQLException ex) {
 
-            // 仅在“列不存在/老库兼容”场景下回退（避免掩盖真实数据库故障）。
+            
             String msg = ex.getMessage();
             String low = (msg == null) ? "" : msg.toLowerCase();
             boolean columnMissing =
@@ -426,7 +395,7 @@ public class ManuscriptDAO {
                 throw ex;
             }
 
-            // 回退：从 dbo.ManuscriptAssignments 取最新一条指派记录的 EditorId（旧库兼容）。
+            
             String sql2 = "SELECT TOP 1 EditorId " +
                           "FROM dbo.ManuscriptAssignments " +
                           "WHERE ManuscriptId = ? " +
@@ -442,23 +411,18 @@ public class ManuscriptDAO {
                     }
                 }
             } catch (SQLException ignore) {
-                // 如果旧库也没有该表，则返回 null 让上层决定如何处理（不直接 500）。
+                
             }
 
             return null;
         }
     }
-/**
-     * 按单一状态查询所有稿件（编辑部视角简单使用）。
-     */
+
     public List<Manuscript> findByStatus(String status) throws SQLException {
         return findByStatuses(status);
     }
 
-    /**
-     * 按多种状态查询所有稿件。
-     * 仅用于编辑部工作台的简单列表展示，不区分具体编辑。
-     */
+    
     public List<Manuscript> findByStatuses(String... statuses) throws SQLException {
         if (statuses == null || statuses.length == 0) {
             throw new IllegalArgumentException("statuses 不能为空");
@@ -493,20 +457,13 @@ public class ManuscriptDAO {
         return list;
     }
 
-    /**
-     * 根据状态和当前指定的责任编辑筛选稿件列表。
-     * 仅返回 IsArchived = 0 且 IsWithdrawn = 0 的记录。
-     *
-     * 说明：
-     *  - 主要用于编辑“我的稿件”列表，保证编辑只能看到主编指派给自己的稿件；
-     *  - 这里通过 Manuscripts.CurrentEditorId 做过滤，不直接依赖历史指派记录。
-     */
+    
     public List<Manuscript> findByStatusesForEditor(int editorUserId, String... statuses) throws SQLException {
         if (statuses == null || statuses.length == 0) {
             throw new IllegalArgumentException("statuses 不能为空");
         }
 
-        // 1) 优先使用 Manuscripts.CurrentEditorId（如果数据库版本已包含该列）。
+        
         try {
             StringBuilder sql = new StringBuilder(
                     "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, " +
@@ -538,14 +495,14 @@ public class ManuscriptDAO {
             }
             return list;
         } catch (SQLException e) {
-            // 兼容旧版数据库：没有 CurrentEditorId 列时，降级到 ManuscriptAssignments 或逐条判断。
+            
             String msg = (e.getMessage() == null) ? "" : e.getMessage();
             if (!msg.contains("CurrentEditorId")) {
-                throw e; // 不是列缺失导致的错误，继续抛出
+                throw e; 
             }
         }
 
-        // 2) 尝试通过 ManuscriptAssignments 的“最新指派”来过滤
+        
         try {
             StringBuilder sql = new StringBuilder();
             sql.append("WITH latest AS (\n");
@@ -582,7 +539,7 @@ public class ManuscriptDAO {
             }
             return list;
         } catch (SQLException ignore) {
-            // 3) 兜底：先按状态取出，再逐条比对 current editor
+            
             List<Manuscript> raw = findByStatuses(statuses);
             List<Manuscript> filtered = new ArrayList<>();
             for (Manuscript m : raw) {
@@ -595,14 +552,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 主编“全览权限”使用：查询系统内全部稿件（包含已归档/已撤稿/草稿等）。
-     *
-     * 说明：当前项目未单独维护“稿件状态历史表”，因此这里的“历史入口”
-     * 主要通过跳转到 /manuscripts/detail?id=xxx 查看：
-     *  - 当前版本/附件（dbo.ManuscriptVersions 等）
-     *  - 审稿流程记录（dbo.Reviews）
-     */
+    
     public List<Manuscript> findAllForChief() throws SQLException {
         String sql = "SELECT ManuscriptId, JournalId, SubmitterId, Title, Abstract, Keywords, SubjectArea, FundingInfo, AuthorList, Status, SubmitTime, Decision, FinalDecisionTime "
                    + "FROM dbo.Manuscripts "
@@ -620,10 +570,7 @@ public class ManuscriptDAO {
         return list;
     }
 
-    /**
-     * 主编特殊权限：撤销之前的终审决定（Rescind Decision）。
-     * 将稿件状态回退到 FINAL_DECISION_PENDING，并清空 Decision/FinalDecisionTime。
-     */
+    
     public void rescindDecision(int manuscriptId) throws SQLException {
         String sql = "UPDATE dbo.Manuscripts "
                    + "SET Status = 'FINAL_DECISION_PENDING', "
@@ -638,10 +585,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 主编特殊权限：撤稿（Retract）。
-     * 当前实现采用“归档 + 标记撤稿”方式：IsWithdrawn=1、IsArchived=1、Status=ARCHIVED。
-     */
+    
     public void retractManuscript(int manuscriptId) throws SQLException {
         String sql = "UPDATE dbo.Manuscripts "
                    + "SET IsWithdrawn = 1, "
@@ -656,10 +600,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 案头初审退稿：DESK_REVIEW_INITIAL -> REJECTED。
-     * 与“终审退稿”区分点：本操作不会写入 FinalDecisionTime。
-     */
+    
     public void deskReject(int manuscriptId) throws SQLException {
         String sql = "UPDATE dbo.Manuscripts " +
                 "SET Status = 'REJECTED', " +
@@ -675,14 +616,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 主编案头退稿（带退稿理由 + 写入状态历史 + 写入终审字段）。
-     *
-     * 需求：
-     * 1) 退稿理由必须保存，作者侧可见；
-     * 2) 退稿属于流程性决策，因此同时写入 Decision / FinalDecisionTime，便于统计；
-     * 3) 记录状态历史，便于追踪审稿流程节点。
-     */
+    
     public void deskRejectWithReason(int manuscriptId, int changedBy, String rejectReason) throws SQLException {
         if (rejectReason != null) rejectReason = rejectReason.trim();
         if (rejectReason == null || rejectReason.isEmpty()) {
@@ -692,7 +626,7 @@ public class ManuscriptDAO {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -702,7 +636,7 @@ public class ManuscriptDAO {
                     }
                 }
 
-                // 更新稿件状态 + 终审字段
+                
                 String updateSql = "UPDATE dbo.Manuscripts " +
                         "SET Status='REJECTED', Decision='REJECT', FinalDecisionTime=DATEADD(HOUR, 8, SYSUTCDATETIME()), " +
                         "    CurrentEditorId=NULL, LastStatusTime=DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
@@ -712,10 +646,10 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
 
-                // 写入状态历史（作者侧可见）
+                
                 insertStatusHistory(conn, manuscriptId, oldStatus, "REJECTED", "DESK_REJECT", changedBy, rejectReason);
 
-                // 记录阶段完成时间戳（以 oldStatus 为准）
+                
                 if (oldStatus != null) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
@@ -732,15 +666,7 @@ public class ManuscriptDAO {
 
     
 
-    /**
-     * 主编特殊权限：更改案头初审决定。
-     * - deskAccept  -> Status=TO_ASSIGN
-     * - deskReject  -> Status=REJECTED (Decision='REJECT')
-     *
-     * 更改后：
-     * - 过期该稿件所有 INVITED/ACCEPTED 审稿记录（避免审稿人继续操作）
-     * - 写入 ManuscriptStatusHistory
-     */
+    
     public void changeDeskDecision(int manuscriptId, String deskOp, int changedBy, String reason) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -783,10 +709,10 @@ public class ManuscriptDAO {
                 expireActiveReviews(conn, manuscriptId);
                 insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "CHANGE_DESK_DECISION", changedBy, reason);
                 
-                // 记录阶段完成时间戳
+                
                 stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
 
-                // 若更改为录用：同样补全“可引用信息”
+                
                 if ("ACCEPTED".equalsIgnoreCase(toStatus)) {
                     ensurePublicationMetaIfMissing(conn, manuscriptId, null, null);
                 }
@@ -804,12 +730,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 主编特殊权限：更改终审决定（仅对已做出终审决定的稿件）。
-     * - accept   -> ACCEPTED (Decision='ACCEPT')
-     * - reject   -> REJECTED (Decision='REJECT')
-     * - revision -> REVISION (Decision='REVISION')
-     */
+    
     public void changeFinalDecision(int manuscriptId, String finalOp, int changedBy, String reason) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -854,10 +775,10 @@ public class ManuscriptDAO {
                 expireActiveReviews(conn, manuscriptId);
                 insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "CHANGE_FINAL_DECISION", changedBy, reason);
                 
-                // 记录阶段完成时间戳
+                
                 stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
 
-                // 若更改为录用：同样补全“可引用信息”（DOI、卷期页码等）
+                
                 if ("ACCEPTED".equalsIgnoreCase(toStatus)) {
                     ensurePublicationMetaIfMissing(conn, manuscriptId, null, null);
                 }
@@ -875,12 +796,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 主编特殊权限：撤稿（课程口径：ACCEPTED 即视为已发表）。
-     *
-     * 说明：原本可按 Issues.IsPublished=1 + IssueManuscripts 关联判定“已发表”，
-     * 但本课程要求/系统口径调整为：Manuscripts.Status='ACCEPTED' 即视为已发表。
-     */
+    
     public void retractPublished(int manuscriptId, int changedBy, String reason) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -908,7 +824,7 @@ public class ManuscriptDAO {
                 expireActiveReviews(conn, manuscriptId);
                 insertStatusHistory(conn, manuscriptId, fromStatus, toStatus, "RETRACT_PUBLISHED", changedBy, reason);
                 
-                // 记录阶段完成时间戳
+                
                 stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, fromStatus);
 
                 conn.commit();
@@ -924,7 +840,7 @@ public class ManuscriptDAO {
         }
     }
 
-    // ======== helpers (transaction scoped) ========
+    
 
     private static class ManuscriptSnapshot {
         final String status;
@@ -978,16 +894,12 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 简单更新稿件状态，并刷新 LastStatusTime。
-     * 当前阶段不做复杂的状态机校验，由上层 Servlet 控制调用时机。
-     * 同时记录阶段完成时间戳。
-     */
+    
     public void updateStatus(int manuscriptId, String newStatus) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -999,7 +911,7 @@ public class ManuscriptDAO {
                     }
                 }
                 
-                // 更新状态
+                
                 String sql = "UPDATE dbo.Manuscripts " +
                         "SET Status = ?, LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
@@ -1009,7 +921,7 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
                 
-                // 如果状态发生变化，记录时间戳
+                
                 if (oldStatus != null && !oldStatus.equals(newStatus)) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
@@ -1024,19 +936,12 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 更新稿件状态并记录状态变更历史。
-     * @param manuscriptId 稿件ID
-     * @param newStatus 新状态
-     * @param event 事件类型
-     * @param changedBy 操作者用户ID
-     * @param remark 备注
-     */
+    
     public void updateStatusWithHistory(int manuscriptId, String newStatus, String event, int changedBy, String remark) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -1048,7 +953,7 @@ public class ManuscriptDAO {
                     }
                 }
 
-                // 更新状态
+                
                 String updateSql = "UPDATE dbo.Manuscripts SET Status = ?, LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setString(1, newStatus);
@@ -1056,10 +961,10 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
 
-                // 记录历史
+                
                 insertStatusHistory(conn, manuscriptId, oldStatus, newStatus, event, changedBy, remark);
                 
-                // 记录阶段完成时间戳
+                
                 if (oldStatus != null) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
@@ -1074,16 +979,12 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 为稿件分配责任编辑，并将状态变更为 WITH_EDITOR。
-     * 由主编在"待指派编辑"列表中调用。
-     * 同时记录阶段完成时间戳。
-     */
+    
     public void assignEditor(int manuscriptId, int editorUserId) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -1095,7 +996,7 @@ public class ManuscriptDAO {
                     }
                 }
                 
-                // 更新状态和编辑
+                
                 String sql = "UPDATE dbo.Manuscripts " +
                         "SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
@@ -1105,7 +1006,7 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
                 
-                // 如果状态发生变化，记录时间戳
+                
                 if (oldStatus != null && !oldStatus.equals("WITH_EDITOR")) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
@@ -1120,14 +1021,12 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 为稿件分配责任编辑并记录状态变更历史。
-     */
+    
     public void assignEditorWithHistory(int manuscriptId, int editorUserId, int changedBy, String remark) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -1139,7 +1038,7 @@ public class ManuscriptDAO {
                     }
                 }
 
-                // 更新状态和编辑
+                
                 String updateSql = "UPDATE dbo.Manuscripts SET CurrentEditorId = ?, Status = 'WITH_EDITOR', LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setInt(1, editorUserId);
@@ -1147,10 +1046,10 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
 
-                // 记录历史
+                
                 insertStatusHistory(conn, manuscriptId, oldStatus, "WITH_EDITOR", "ASSIGN_EDITOR", changedBy, remark);
                 
-                // 记录阶段完成时间戳
+                
                 if (oldStatus != null) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
@@ -1165,16 +1064,12 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 更新终审决策：录用 / 退稿 / 修回。
-     * 同时写入 Decision 字段，便于后续统计。
-     * 同时记录阶段完成时间戳。
-     */
+    
     public void updateFinalDecision(int manuscriptId, String decision, String newStatus) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                // 获取当前状态
+                
                 String oldStatus = null;
                 String querySql = "SELECT Status FROM dbo.Manuscripts WHERE ManuscriptId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(querySql)) {
@@ -1186,7 +1081,7 @@ public class ManuscriptDAO {
                     }
                 }
                 
-                // 更新状态
+                
                 String sql = "UPDATE dbo.Manuscripts " +
                         "SET Status = ?, Decision = ?, FinalDecisionTime = DATEADD(HOUR, 8, SYSUTCDATETIME()), LastStatusTime = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
                         "WHERE ManuscriptId = ?";
@@ -1197,12 +1092,12 @@ public class ManuscriptDAO {
                     ps.executeUpdate();
                 }
                 
-                // 如果状态发生变化，记录时间戳
+                
                 if (oldStatus != null && !oldStatus.equals(newStatus)) {
                     stageTimestampsDAO.ensureAndUpdateStage(conn, manuscriptId, oldStatus);
                 }
 
-                // 终审录用：为前台论文详情页自动补全“可引用信息”（DOI、卷期页码等）
+                
                 if ("ACCEPTED".equalsIgnoreCase(newStatus)) {
                     ensurePublicationMetaIfMissing(conn, manuscriptId, null, null);
                 }
@@ -1217,13 +1112,7 @@ public class ManuscriptDAO {
         }
     }
 
-    /**
-     * 作者在 RETURNED / REVISION 状态下修改稿件并重新提交时，
-     * 同时更新基础字段以及状态流转。
-     *
-     * @param m           修改后的稿件对象（至少包含 ManuscriptId、Title 等）
-     * @param fromStatus  原始状态：RETURNED 或 REVISION
-     */
+    
     public void updateAndResubmit(Connection conn, Manuscript m, String fromStatus) throws SQLException {
         if (!"RETURNED".equals(fromStatus) && !"REVISION".equals(fromStatus)) {
             throw new IllegalArgumentException("不支持的 Resubmit 来源状态: " + fromStatus);
@@ -1239,10 +1128,10 @@ public class ManuscriptDAO {
         sql.append("JournalId = ?, ");
 
         if ("RETURNED".equals(fromStatus)) {
-            // 形式审查退回：重新提交后回到 SUBMITTED，由编辑部管理员再次形式审查
+            
             sql.append("Status = 'SUBMITTED', ");
         } else {
-            // 终审“修回”：重新提交后进入 WITH_EDITOR，由责任编辑继续处理
+            
             sql.append("Status = 'WITH_EDITOR', ");
             sql.append("CurrentRound = ISNULL(CurrentRound, 0) + 1, ");
             sql.append("Decision = NULL, ");
@@ -1271,18 +1160,11 @@ public class ManuscriptDAO {
             ps.executeUpdate();
         }
         
-        // 记录原状态的完成时间戳
+        
         stageTimestampsDAO.ensureAndUpdateStage(conn, m.getManuscriptId(), fromStatus);
     }
 
-/**
- * 作者在 RETURNED / REVISION 状态下点击“保存草稿”时更新稿件元数据：
- * <ul>
- *     <li>不改变 Status（仍保持 RETURNED / REVISION）</li>
- *     <li>不推进轮次、不清空决定</li>
- *     <li>仅更新元数据并写入 LastStatusTime（用于追踪最近编辑时间）</li>
- * </ul>
- */
+
 public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLException {
     String sql = "UPDATE dbo.Manuscripts SET " +
             "Title = ?, Abstract = ?, Keywords = ?, SubjectArea = ?, FundingInfo = ?, AuthorList = ?, JournalId = ?, " +
@@ -1309,19 +1191,14 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
     }
 }
 
-    /**
-     * 兼容旧调用：内部自建连接执行 Resubmit 更新。
-     */
+    
     public void updateAndResubmit(Manuscript m, String fromStatus) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             updateAndResubmit(conn, m, fromStatus);
         }
     }
 
-    /**
-     * 公共映射方法：用于多个 DAO/Servlet 复用。
-     * 兼容：如果 ResultSet 中包含 dbo.ArticleMetrics 的统计列，则一并映射。
-     */
+    
     public Manuscript mapRowPublic(ResultSet rs) throws SQLException {
         Manuscript m = new Manuscript();
         m.setManuscriptId(rs.getInt("ManuscriptId"));
@@ -1343,7 +1220,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
             m.setSubmitTime(ts.toLocalDateTime());
         }
 
-        // 终审相关字段
+        
         try {
             String decision = rs.getString("Decision");
             m.setDecision(decision);
@@ -1357,7 +1234,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
         } catch (SQLException ignored) {
         }
 
-        // 可选统计列（Articles 页面排序/展示）
+        
         try {
             if (hasColumn(rs, "ViewCount")) {
                 m.setViewCount((Integer) rs.getObject("ViewCount"));
@@ -1373,10 +1250,10 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
                 if (v != null) m.setPopularityScore(((Number) v).doubleValue());
             }
         } catch (SQLException ignored) {
-            // ignore
+            
         }
 
-        // 可选：论文可引用信息（终审录用后自动补全）
+        
         try {
             if (hasColumn(rs, "JournalName")) {
                 m.setJournalName(rs.getString("JournalName"));
@@ -1417,7 +1294,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
                 if (pt != null) m.setPublishedAt(pt.toLocalDateTime());
             }
         } catch (SQLException ignored) {
-            // ignore
+            
         }
 
         return m;
@@ -1438,9 +1315,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
         return false;
     }
 
-    /**
-     * 基于 dbo.ArticleMetrics 排序的“已发表论文”（用 ACCEPTED 近似）。
-     */
+    
     public List<Manuscript> findAcceptedByMetric(String type, int limit) throws SQLException {
         if (type == null) type = "popular";
         String metricCol;
@@ -1491,9 +1366,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
         return list;
     }
 
-    /**
-     * 文章详情页浏览计数（若不存在 metrics 记录则自动补一条）。
-     */
+    
     public void incrementViewCount(int manuscriptId) throws SQLException {
         String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
                 "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
@@ -1519,9 +1392,7 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
         }
     }
 
-    /**
-     * 下载计数（登录后的 /files/preview 也算一次下载）。
-     */
+    
     public void incrementDownloadCount(int manuscriptId) throws SQLException {
         String ensure = "IF NOT EXISTS(SELECT 1 FROM dbo.ArticleMetrics WHERE ManuscriptId=?) " +
                 "INSERT INTO dbo.ArticleMetrics(ManuscriptId) VALUES (?)";
@@ -1546,3 +1417,28 @@ public void updateResubmitDraft(Connection conn, Manuscript m) throws SQLExcepti
     }
 
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

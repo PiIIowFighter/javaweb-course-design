@@ -3,53 +3,50 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 形式审查结果数据模型
- * 用于记录稿件形式审查的各项检查结果
- */
+
 public class FormalCheckResult implements Serializable {
 
     private Integer checkId;
     private Integer manuscriptId;
     private Integer reviewerId;
 
-    /** 作者信息是否符合标准（系统自动检查） */
+    
     private Boolean authorInfoValid;
 
-    /** 摘要字数是否符合标准（系统自动检查） */
+    
     private Boolean abstractWordCountValid;
 
-    /** 正文字数是否符合标准（系统自动检查） */
+    
     private Boolean bodyWordCountValid;
 
-    /** 关键词是否符合标准（系统自动检查） */
+    
     private Boolean keywordsValid;
 
-    /** 注释编号是否符合标准（人工判断） */
+    
     private Boolean footnoteNumberingValid;
 
-    /** 图表格式是否符合标准（人工判断） */
+    
     private Boolean figureTableFormatValid;
 
-    /** 参考文献格式是否符合标准（人工判断） */
+    
     private Boolean referenceFormatValid;
 
-    /** 查重率（百分比，0-100） */
+    
     private Double similarityScore;
 
-    /** 是否高相似度（查重率>20%） */
+    
     private Boolean highSimilarity;
 
-    /** 查重报告URL */
+    
     private String plagiarismReportUrl;
 
-    /** 审查结果：PASS（通过）/ FAIL（失败） */
+    
     private String checkResult;
 
-    /** 反馈意见 */
+    
     private String feedback;
 
-    /** 审查时间 */
+    
     private LocalDateTime checkTime;
 
     public Integer getCheckId() {
@@ -202,3 +199,28 @@ public class FormalCheckResult implements Serializable {
                 '}';
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

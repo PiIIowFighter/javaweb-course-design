@@ -10,11 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/**
- * 编辑部管理员（EO_ADMIN）相关功能入口。
- *
- * URL 保持兼容：/editor/formalCheck/*
- */
+
 @WebServlet(name = "EditorialOfficeServlet", urlPatterns = {"/editor/formalCheck/*"})
 public class EditorialOfficeServlet extends EditorServlet {
 
@@ -68,7 +64,7 @@ public class EditorialOfficeServlet extends EditorServlet {
         if (requiredPerm != null && !MenuPermissionGuard.require(req, resp, requiredPerm)) return;
 
         try {
-            // 该模块所有 POST 都由 handleFormalCheckPost 统一处理，通过 op 参数区分（autoCheck/plagiarismCheck/submit/...）
+            
             handleFormalCheckPost(req, resp, current);
         } catch (SQLException e) {
             throw new ServletException("处理形式审查 POST 请求时访问数据库出错", e);
@@ -76,7 +72,7 @@ public class EditorialOfficeServlet extends EditorServlet {
     }
 
     private String buildOldStylePath(HttpServletRequest req) {
-        // /editor/formalCheck + /history -> /formalCheck/history
+        
         String sp = req.getServletPath();
         String pi = req.getPathInfo();
         if (pi == null) pi = "";
@@ -87,3 +83,28 @@ public class EditorialOfficeServlet extends EditorServlet {
         return sp + pi;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

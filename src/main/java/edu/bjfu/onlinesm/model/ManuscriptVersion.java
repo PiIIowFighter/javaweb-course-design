@@ -3,9 +3,7 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 稿件版本：对应 dbo.ManuscriptVersions。
- */
+
 public class ManuscriptVersion implements Serializable {
 
     private Integer versionId;
@@ -16,10 +14,7 @@ public class ManuscriptVersion implements Serializable {
     private String fileAnonymousPath;
     private String fileOriginalPath;
     private String coverLetterPath;
-    /**
-     * Cover Letter 富文本原文（可用于重新生成 PDF、或在 PDF 转换失败时回退显示）。
-     * 对应 dbo.ManuscriptVersions.CoverLetterHtml（若库中存在该列）。
-     */
+    
     private String coverLetterHtml;
     private String responseLetterPath;
 
@@ -123,3 +118,28 @@ public class ManuscriptVersion implements Serializable {
         this.remark = remark;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

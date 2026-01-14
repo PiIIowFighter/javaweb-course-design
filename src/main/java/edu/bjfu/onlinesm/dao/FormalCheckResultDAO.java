@@ -12,7 +12,7 @@ import java.util.List;
 public class FormalCheckResultDAO {
 
     private static final String TABLE = "dbo.FormalCheckResults";
-    /** 数据库脚本中主键列名为 CheckResultId（不是 CheckId） */
+    
     private static final String PK_COL = "CheckResultId";
 
     public FormalCheckResult save(FormalCheckResult result) throws SQLException {
@@ -192,7 +192,7 @@ public class FormalCheckResultDAO {
     private FormalCheckResult mapRow(ResultSet rs) throws SQLException {
         FormalCheckResult result = new FormalCheckResult();
 
-        // 注意：数据库列名为 CheckResultId
+        
         int id = rs.getInt(PK_COL);
         if (!rs.wasNull()) {
             result.setCheckId(id);
@@ -240,3 +240,28 @@ public class FormalCheckResultDAO {
         return rs.wasNull() ? null : v;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -2,19 +2,17 @@ package edu.bjfu.onlinesm.model;
 
 import java.time.LocalDateTime;
 
-/**
- * 编辑对稿件的处理建议（无最终决策权，需主编批准）。
- */
+
 public class EditorSuggestion {
 
     private int manuscriptId;
     private int editorId;
-    private String suggestion; // ACCEPT / MINOR_REVISION / MAJOR_REVISION / REJECT
-    private String summary;    // 总结报告
+    private String suggestion; 
+    private String summary;    
     private LocalDateTime submittedAt;
     private LocalDateTime updatedAt;
 
-    // 展示用（可选）
+    
     private String editorName;
 
     public int getManuscriptId() {
@@ -73,3 +71,28 @@ public class EditorSuggestion {
         this.editorName = editorName;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

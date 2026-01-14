@@ -111,7 +111,7 @@
         </c:if>
 
         <c:if test="${not empty reviewers}">
-            <!-- 多选邀请：后端已支持 reviewerIds[]，这里统一用 reviewerIds 传递多个值 -->
+            
             <form method="post" action="${ctx}/editor/review/invite" onsubmit="return window.__checkInviteSelected && window.__checkInviteSelected();">
                 <input type="hidden" name="manuscriptId" value="${manuscript.manuscriptId}"/>
                 <c:if test="${not empty backToUrl}">
@@ -210,7 +210,7 @@
             <c:if test="${not empty backToUrl}">
                 <a class="btn btn-quiet" href="${backToUrl}">返回详情</a>
             </c:if>
-            <!-- 注意：c:url 会自动拼接 contextPath，避免再手动拼 ${ctx} 导致 /ctx/ctx/... -->
+            
             <a class="btn btn-quiet" href="${externalUrl}">邀请外部审稿人</a>
         </div>
     </div>
@@ -218,3 +218,30 @@
 </c:if>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

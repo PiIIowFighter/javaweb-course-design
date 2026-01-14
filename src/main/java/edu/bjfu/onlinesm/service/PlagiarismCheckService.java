@@ -8,23 +8,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-/**
- * 模拟查重服务（不对接真实 Turnitin）。
- *
- * 需求（v2026-01）：
- * - 查重率：随机生成 < 20% 的数；
- * - 查重报告：生成一个“Turnitin 风格”的 PDF（数据合理随机）。
- *
- * 说明：本查重仅用于课程/演示，不代表真实 Turnitin 结果。
- */
+
 public class PlagiarismCheckService {
 
     private static final double HIGH_SIMILARITY_THRESHOLD = 20.0;
     private static final Random random = new Random();
 
-    /**
-     * 缓存：同一 manuscriptId 多次点击“查重”返回同一份报告（避免反复生成）。
-     */
+    
     private static final Map<Integer, PlagiarismReport> reportCache = new HashMap<>();
 
     public PlagiarismReport checkPlagiarism(int manuscriptId, String title, String abstractText, String bodyText) {
@@ -52,7 +42,7 @@ public class PlagiarismCheckService {
         String reportId = "SIM-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + "-" + String.format("%04d", random.nextInt(10000));
 
-        // similarity: [0.5, 19.9)
+        
         double similarity = Math.round((0.5 + random.nextDouble() * 19.4) * 10.0) / 10.0;
 
         report.setReportId(reportId);
@@ -61,25 +51,21 @@ public class PlagiarismCheckService {
         report.setHighSimilarity(similarity >= HIGH_SIMILARITY_THRESHOLD);
         report.setCheckTime(System.currentTimeMillis());
 
-        // 生成 PDF（存盘）
+        
         String relativeUrl = "/files/plagiarismReport?manuscriptId=" + manuscriptId + "&reportId=" + reportId;
         try {
             File pdf = buildReportPdf(manuscriptId, reportId, title, similarity, extractedBodyCount);
-            // 只返回 servlet 路径（由前端/servlet 加 ctx）
+            
             report.setReportUrl(relativeUrl);
         } catch (Exception e) {
-            // 即便生成失败，也返回可访问链接（servlet 会提示不存在）
+            
             report.setReportUrl(relativeUrl);
         }
 
         return report;
     }
 
-    /**
-     * 生成“Turnitin 风格”的两页查重报告 PDF。
-     *
-     * @param extractedBodyCount 若能从 PDF 提取到正文，则用于展示“字数”；否则使用合理随机值。
-     */
+    
     private File buildReportPdf(int manuscriptId, String reportId, String title, double similarity, int extractedBodyCount)
             throws Exception {
 
@@ -90,15 +76,15 @@ public class PlagiarismCheckService {
         String safeId = reportId.replaceAll("[^A-Za-z0-9\\-]", "_");
         File out = new File(dir, "turnitin_" + manuscriptId + "_" + safeId + ".pdf");
 
-        // —— 合理随机数据（尽量与“字数”匹配）
-        int bodyCount = extractedBodyCount > 0 ? extractedBodyCount : (3000 + random.nextInt(5001)); // 3000-8000
+        
+        int bodyCount = extractedBodyCount > 0 ? extractedBodyCount : (3000 + random.nextInt(5001)); 
         int pages = Math.max(3, (int) Math.ceil(bodyCount / 520.0));
         int characters = bodyCount + 1200 + random.nextInt(2500);
-        int excludedQuotes = random.nextInt(4);      // 0-3
-        int excludedBibliography = random.nextInt(2);// 0-1
-        int excludedSmallMatches = 5 + random.nextInt(10); // 5-14
+        int excludedQuotes = random.nextInt(4);      
+        int excludedBibliography = random.nextInt(2);
+        int excludedSmallMatches = 5 + random.nextInt(10); 
 
-        int sourceCount = 5; // 例图里是 5 条
+        int sourceCount = 5; 
         List<SourceItem> sources = generateSources(sourceCount, similarity);
 
         List<String> highlights = generateHighlights(sources);
@@ -112,9 +98,9 @@ public class PlagiarismCheckService {
         return out;
     }
 
-    // =========================
-    // 报告内容生成
-    // =========================
+    
+    
+    
 
     private String buildTurnitinStyleXhtml(String reportId,
                                           int manuscriptId,
@@ -133,7 +119,7 @@ public class PlagiarismCheckService {
         int simInt = (int) Math.round(similarity);
         String simText = String.format(Locale.US, "%.1f", similarity);
 
-        // 进度条宽度（0-100）
+        
         int bar = Math.max(0, Math.min(100, simInt));
 
         StringBuilder sourceRows = new StringBuilder();
@@ -150,7 +136,7 @@ public class PlagiarismCheckService {
             highlightHtml.append("<p class='para'>").append(escapeHtml(h)).append("</p>");
         }
 
-        // XHTML 1.0 Strict（Flying Saucer 更稳）
+        
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">" +
                 "<html xmlns=\"http://www.w3.org/1999/xhtml\">" +
@@ -162,7 +148,7 @@ public class PlagiarismCheckService {
                 ".page { page-break-after: always; }" +
                 ".page:last-child { page-break-after: auto; }" +
                 ".topbar { width: 100%; background: #1f3b65; color: #fff; padding: 16pt 18pt; }" +
-                // Flying Saucer 的表格宽度分配有时会导致右侧标题被挤出页面；固定布局并显式分配宽度
+                
                 ".topbar table{ width:100%; border-collapse:collapse; table-layout:fixed; }" +
                 ".topbar td{ vertical-align:middle; }" +
                 ".topbar .left{ font-size: 17pt; font-weight: bold; }" +
@@ -190,14 +176,14 @@ public class PlagiarismCheckService {
                 ".footer{ margin-top: 18pt; font-size: 9.5pt; color:#6b7280; }" +
                 ".footerTable{ width:100%; border-collapse:collapse; }" +
                 ".rightAlign{ text-align:right; }" +
-	                // Flying Saucer 对 position:absolute 的支持不稳定，易造成文字重叠；改为普通块级“水印”避免覆盖正文
+	                
 	                ".wm{ width:100%; text-align:center; opacity:0.08; font-size: 48pt; font-weight: bold; color:#6b7280; margin: 18pt 0 6pt 0; }" +
                 ".para{ margin: 6pt 0; line-height: 1.45; }" +
                 "</style>" +
                 "</head>" +
                 "<body>" +
 
-                // ======= PAGE 1 =======
+                
                 "<div class='page'>" +
                 "  <div class='topbar'>" +
                 "    <table><tr>" +
@@ -264,7 +250,7 @@ public class PlagiarismCheckService {
                 "  </div>" +
                 "</div>" +
 
-                // ======= PAGE 2 =======
+                
                 "<div class='page'>" +
                 "  <div class='topbar'>" +
                 "    <table><tr>" +
@@ -317,7 +303,7 @@ public class PlagiarismCheckService {
             hs.add("No significant overlaps detected in the sampled sections.");
             return hs;
         }
-        // 只展示前两条，和示例图一致
+        
         int limit = Math.min(2, sources.size());
         for (int i = 0; i < limit; i++) {
             SourceItem s = sources.get(i);
@@ -347,14 +333,14 @@ public class PlagiarismCheckService {
                 "openaccess.sample.org/paper/7788"
         };
 
-        // 让前 5 条加起来大致 <= similarity
+        
         double remaining = similarity;
         for (int i = 1; i <= n; i++) {
             double val;
             if (i == n) {
                 val = Math.max(0.0, remaining);
             } else {
-                // 每条 2-7 左右，最后一条兜底
+                
                 double maxThis = Math.max(2.0, Math.min(7.0, remaining - (n - i) * 2.0));
                 val = 2.0 + random.nextDouble() * Math.max(0.1, (maxThis - 2.0));
                 val = Math.min(val, remaining);
@@ -368,20 +354,20 @@ public class PlagiarismCheckService {
             if (remaining <= 0.0) break;
         }
 
-        // 若剩余为 0 但还没满 5 条，用 2/3% 的小来源补齐（不要求严格总和）
+        
         while (list.size() < n) {
             int idx = list.size() + 1;
             String src = pool[(idx - 1) % pool.length];
-            double val = 2 + random.nextInt(3); // 2-4
+            double val = 2 + random.nextInt(3); 
             list.add(new SourceItem(idx, val, src));
         }
 
         return list;
     }
 
-    // =========================
-    // “字数”统计（中文字符 + 英文单词）
-    // =========================
+    
+    
+    
 
     private int computeBodyCount(String bodyText) {
         if (bodyText == null || bodyText.trim().isEmpty()) return 0;
@@ -488,3 +474,28 @@ public class PlagiarismCheckService {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

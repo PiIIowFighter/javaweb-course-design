@@ -8,10 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
-/**
- * 统一的“菜单入口权限”校验工具。
- * 用于 Filter / Servlet 中快速判断：只要用户拥有入口权限，就允许访问功能页面。
- */
+
 public final class MenuPermissionGuard {
 
     private static final MenuPermissionService menuPermissionService = new MenuPermissionService();
@@ -29,7 +26,7 @@ public final class MenuPermissionGuard {
             return false;
         }
 
-        // SESSION 里没有权限时，兜底加载一次（避免“直接访问 URL”时菜单还没初始化）
+        
         if (session.getAttribute(MenuPermissionService.SESSION_MENU_PERMS) == null) {
             menuPermissionService.loadIntoSession(session, current);
         }
@@ -56,3 +53,28 @@ public final class MenuPermissionGuard {
         return menuPermissionService.hasPermission(session, current, permKey);
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

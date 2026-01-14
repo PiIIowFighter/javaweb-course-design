@@ -12,7 +12,7 @@
     <p>目前没有待评审的稿件。</p>
 </c:if>
 
-<!-- 全局拒绝理由模态框 -->
+
 <div id="rejectModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
      background:white; padding:20px; border:2px solid #ccc; border-radius:5px; z-index:1000; 
      box-shadow:0 0 20px rgba(0,0,0,0.3); min-width:400px;">
@@ -30,7 +30,7 @@
     </form>
 </div>
 
-<!-- 模态框背景遮罩 -->
+
 <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
      background:rgba(0,0,0,0.5); z-index:999;"></div>
 
@@ -102,7 +102,7 @@ document.getElementById('rejectModal').addEventListener('click', function(e) {
                             <button type="submit">接受邀请</button>
                         </form>
                         
-                        <!-- 修改拒绝按钮，触发全局模态框 -->
+                        
                         <button type="button" onclick="showRejectModal(${r.reviewId})">拒绝邀请</button>
                     </c:when>
                     <c:when test="${r.status == 'ACCEPTED'}">
@@ -126,3 +126,30 @@ document.getElementById('rejectModal').addEventListener('click', function(e) {
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

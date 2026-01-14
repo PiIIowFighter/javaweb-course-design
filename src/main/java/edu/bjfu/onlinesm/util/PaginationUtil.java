@@ -4,17 +4,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Simple in-memory pagination helper for list pages.
- *
- * Conventions:
- *  - request param: page (1-based), pageSize
- *  - request attributes (for JSP):
- *      page, pageSize, totalCount, pageCount, paginationPrefix
- *
- * paginationPrefix example:
- *   /app/admin/users/list?roleCode=EDITOR&page=
- */
+
 public class PaginationUtil {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
@@ -30,9 +20,7 @@ public class PaginationUtil {
         return parsePositiveInt(req.getParameter("pageSize"), 1, MAX_PAGE_SIZE, DEFAULT_PAGE_SIZE);
     }
 
-    /**
-     * Apply pagination to a full list and write both the paged list and metadata into request attributes.
-     */
+    
     public static <T> void apply(HttpServletRequest req, List<T> fullList, String listAttrName) {
         if (fullList == null) fullList = Collections.emptyList();
 
@@ -58,11 +46,11 @@ public class PaginationUtil {
     }
 
     private static String buildPaginationPrefix(HttpServletRequest req) {
-        String uri = req.getRequestURI(); // includes context path
+        String uri = req.getRequestURI(); 
         String qs = req.getQueryString();
 
         String cleaned = removeQueryParam(qs, "page");
-        // keep pageSize and other filters
+        
 
         if (cleaned == null || cleaned.isEmpty()) {
             return uri + "?page=";
@@ -82,12 +70,10 @@ public class PaginationUtil {
         }
     }
 
-    /**
-     * Remove a single query parameter from an existing query string.
-     */
+    
     private static String removeQueryParam(String queryString, String param) {
         if (queryString == null || queryString.isEmpty()) return queryString;
-        // split and rebuild to avoid regex edge cases
+        
         String[] parts = queryString.split("&");
         StringBuilder sb = new StringBuilder();
         for (String p : parts) {
@@ -101,3 +87,28 @@ public class PaginationUtil {
         return sb.toString();
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -5,17 +5,10 @@ import edu.bjfu.onlinesm.util.DbUtil;
 
 import java.sql.*;
 
-/**
- * 稿件阶段时间戳 DAO
- * 用于管理稿件各阶段完成时间的数据访问
- */
+
 public class ManuscriptStageTimestampsDAO {
 
-    /**
-     * 根据稿件ID查询时间戳记录
-     * @param manuscriptId 稿件ID
-     * @return 时间戳记录，如果不存在返回null
-     */
+    
     public ManuscriptStageTimestamps findByManuscriptId(int manuscriptId) throws SQLException {
         String sql = "SELECT ManuscriptId, DraftCompletedAt, SubmittedAt, FormalCheckCompletedAt, " +
                      "DeskReviewInitialCompletedAt, ToAssignCompletedAt, WithEditorCompletedAt, " +
@@ -34,11 +27,7 @@ public class ManuscriptStageTimestampsDAO {
         return null;
     }
 
-    /**
-     * 检查记录是否存在
-     * @param manuscriptId 稿件ID
-     * @return 是否存在
-     */
+    
     public boolean exists(int manuscriptId) throws SQLException {
         String sql = "SELECT 1 FROM dbo.ManuscriptStageTimestamps WHERE ManuscriptId = ?";
         try (Connection conn = DbUtil.getConnection();
@@ -50,9 +39,7 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 检查记录是否存在（事务版本）
-     */
+    
     public boolean exists(Connection conn, int manuscriptId) throws SQLException {
         String sql = "SELECT 1 FROM dbo.ManuscriptStageTimestamps WHERE ManuscriptId = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -63,10 +50,7 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 创建新记录（仅ManuscriptId，其他字段为NULL）
-     * @param manuscriptId 稿件ID
-     */
+    
     public void create(int manuscriptId) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptStageTimestamps (ManuscriptId) VALUES (?)";
         try (Connection conn = DbUtil.getConnection();
@@ -76,9 +60,7 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 创建新记录（事务版本）
-     */
+    
     public void create(Connection conn, int manuscriptId) throws SQLException {
         String sql = "INSERT INTO dbo.ManuscriptStageTimestamps (ManuscriptId) VALUES (?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -87,15 +69,11 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 更新指定阶段的完成时间为当前时间
-     * @param manuscriptId 稿件ID
-     * @param fromStatus 离开的状态（即完成的阶段）
-     */
+    
     public void updateStageCompletedAt(int manuscriptId, String fromStatus) throws SQLException {
         String columnName = getColumnNameByStatus(fromStatus);
         if (columnName == null) {
-            return; // 无效状态，静默忽略
+            return; 
         }
         
         String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
@@ -107,13 +85,11 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 更新指定阶段的完成时间（事务版本）
-     */
+    
     public void updateStageCompletedAt(Connection conn, int manuscriptId, String fromStatus) throws SQLException {
         String columnName = getColumnNameByStatus(fromStatus);
         if (columnName == null) {
-            return; // 无效状态，静默忽略
+            return; 
         }
         
         String sql = "UPDATE dbo.ManuscriptStageTimestamps SET " + columnName + " = DATEADD(HOUR, 8, SYSUTCDATETIME()) " +
@@ -124,11 +100,7 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 确保记录存在并更新时间戳（组合方法）
-     * @param manuscriptId 稿件ID
-     * @param fromStatus 离开的状态
-     */
+    
     public void ensureAndUpdateStage(int manuscriptId, String fromStatus) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -144,21 +116,17 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 确保记录存在并更新时间戳（事务版本）
-     */
+    
     public void ensureAndUpdateStage(Connection conn, int manuscriptId, String fromStatus) throws SQLException {
-        // 先检查记录是否存在
+        
         if (!exists(conn, manuscriptId)) {
             create(conn, manuscriptId);
         }
-        // 更新对应阶段的完成时间
+        
         updateStageCompletedAt(conn, manuscriptId, fromStatus);
     }
 
-    /**
-     * 根据状态码获取对应的数据库列名
-     */
+    
     private String getColumnNameByStatus(String statusCode) {
         if (statusCode == null) return null;
         switch (statusCode) {
@@ -185,10 +153,7 @@ public class ManuscriptStageTimestampsDAO {
         }
     }
 
-    /**
-     * 映射结果集到实体对象
-     * 数据库中存储为北京时间（UTC+8），直接映射为 LocalDateTime
-     */
+    
     private ManuscriptStageTimestamps mapRow(ResultSet rs) throws SQLException {
         ManuscriptStageTimestamps mst = new ManuscriptStageTimestamps();
         mst.setManuscriptId(rs.getInt("ManuscriptId"));
@@ -225,3 +190,28 @@ public class ManuscriptStageTimestampsDAO {
         return mst;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

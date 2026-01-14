@@ -7,12 +7,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 权限校验服务：
- *  - SUPER_ADMIN 默认拥有全部权限；
- *  - 其他角色权限从 dbo.RolePermissions 读取；
- *  - 若数据库缺表/查询异常，则退回到内置默认权限集合（保证系统可用）。
- */
+
 public class PermissionService {
 
     private final PermissionDAO permissionDAO = new PermissionDAO();
@@ -30,7 +25,7 @@ public class PermissionService {
             Set<String> set = permissionDAO.findPermissionsByRole(rc);
             return set.contains(pk);
         } catch (SQLException e) {
-            // 回退默认权限
+            
             return defaultPermissions(rc).contains(pk);
         }
     }
@@ -45,9 +40,7 @@ public class PermissionService {
         }
     }
 
-    /**
-     * 内置默认权限：用于首次运行或缺表情况下的兜底。
-     */
+    
     private Set<String> defaultPermissions(String roleCode) {
         Set<String> set = new HashSet<>();
         switch (roleCode) {
@@ -70,3 +63,28 @@ public class PermissionService {
         return set;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

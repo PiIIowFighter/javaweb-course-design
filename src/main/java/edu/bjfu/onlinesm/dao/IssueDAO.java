@@ -9,14 +9,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Issues DAO（dbo.Issues / dbo.IssueManuscripts）。
- *
- * 兼容：如果旧库里 Issues 表缺列 GuestEditors / CoverImagePath / AttachmentPath，会自动退化为不读/不写该列，避免页面 500。
- */
+
 public class IssueDAO {
 
-    // -------------------- 前台读取 --------------------
+    
 
     public List<Issue> listLatestPublished(int journalId, int limit) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
@@ -42,10 +38,7 @@ public class IssueDAO {
         }
     }
 
-    /**
-     * 列出所有期刊下已发布的专刊（IssueType='SPECIAL' 且 IsPublished=1）。
-     * 用于作者投稿时的“选择专刊”下拉框，确保所有已发布专刊都可见。
-     */
+    
     public List<Issue> listSpecialPublishedAll(int limit) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             ColFlags f = detectColumns(conn);
@@ -57,10 +50,7 @@ public class IssueDAO {
             return runList(conn, sql, f);
         }
     }
-/**
-     * 前台统一入口：根据 type 返回已发布的 issues 列表。
-     * type 支持：latest / special / all（默认 all）。
-     */
+
     public List<Issue> listPublished(Integer journalId, String type, int limit) throws SQLException {
         if (journalId == null) return new ArrayList<>();
         String t = type == null ? "all" : type.trim().toLowerCase();
@@ -104,9 +94,9 @@ public class IssueDAO {
     }
 
     public List<Manuscript> listIssueArticles(int issueId) throws SQLException {
-        // 关联表 IssueManuscripts + Manuscripts
-        // 注意：dbo.Manuscripts 在本项目中并不存在 ResearchTopic / ManuscriptFilePath / CoverLetterPath 等列，
-        // 这里仅选择实际存在并页面会用到的字段，避免“列名无效”导致页面 500。
+        
+        
+        
         String sql = "SELECT m.ManuscriptId, m.JournalId, m.SubmitterId, m.Title, m.Abstract, m.Keywords, " +
                 "m.SubjectArea, m.FundingInfo, m.AuthorList, m.Status, m.SubmitTime, m.Decision, m.FinalDecisionTime " +
                 "FROM dbo.IssueManuscripts im " +
@@ -151,7 +141,7 @@ public class IssueDAO {
         return list;
     }
 
-// -------------------- 后台维护（admin） --------------------
+
 
     public List<Issue> listAllByJournal(int journalId) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
@@ -243,7 +233,7 @@ public class IssueDAO {
         }
     }
 
-    // -------------------- internals --------------------
+    
 
     private static final class ColFlags {
         boolean hasGuest;
@@ -333,9 +323,7 @@ public class IssueDAO {
         return false;
     }
 
-    /**
-     * 根据稿件ID查询其关联的专刊/卷期（dbo.IssueManuscripts -> dbo.Issues），取第一个关联。
-     */
+    
     public Issue findLinkedIssueByManuscriptId(int manuscriptId) throws SQLException {
         String sql = "SELECT TOP 1 i.IssueId, i.JournalId, i.IssueType, i.Title, i.Year, i.PublishDate " +
                 "FROM dbo.IssueManuscripts im " +
@@ -366,10 +354,7 @@ public class IssueDAO {
         return null;
     }
 
-    /**
-     * 在事务连接内获取某期刊的默认 IssueId：
-     * 优先取已发布 SPECIAL；若不存在则取任一已发布 Issue；仍不存在则返回 null。
-     */
+    
     public Integer findDefaultPublishedIssueId(Connection conn, int journalId) throws SQLException {
         String sql = "SELECT TOP 1 IssueId FROM dbo.Issues " +
                 "WHERE JournalId=? AND IsPublished=1 " +
@@ -395,3 +380,28 @@ public class IssueDAO {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

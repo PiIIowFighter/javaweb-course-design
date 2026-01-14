@@ -8,12 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 站内通知 DAO。
- *
- * 说明：本项目把“与作者沟通历史”也复用到 Notifications 表中，
- * 通过 Category + RelatedManuscriptId 来做过滤即可。
- */
+
 public class NotificationDAO {
 
     private void ensureTable() throws SQLException {
@@ -58,7 +53,7 @@ public class NotificationDAO {
         ensureTable();
         if (limit <= 0) limit = 50;
 
-        // SQL Server 的 TOP 参数化在不同驱动上兼容性不一，因此这里直接拼接 limit（由代码固定传入，非用户输入）
+        
         String sql = "SELECT TOP " + limit + " NotificationId, RecipientUserId, CreatedByUserId, Type, Category, Title, Content, RelatedManuscriptId, IsRead, ReadAt, CreatedAt " +
                 "FROM dbo.Notifications WHERE RecipientUserId=? " +
                 "ORDER BY IsRead ASC, CreatedAt DESC, NotificationId DESC";
@@ -76,10 +71,7 @@ public class NotificationDAO {
     }
 
 
-    /**
-     * 详情：按通知 ID 查。
-     * 用于通知详情页展示、权限校验、标记已读等。
-     */
+    
     public Notification findById(int notificationId) throws SQLException {
         ensureTable();
 
@@ -96,18 +88,14 @@ public class NotificationDAO {
         return null;
     }
 
-    /**
-     * 兼容调用方可能传入 Integer（例如 Servlet 参数解析）。
-     */
+    
     public Notification findById(Integer notificationId) throws SQLException {
         if (notificationId == null) return null;
         return findById(notificationId.intValue());
     }
 
 
-    /**
-     * 我发送的通知（用于“已发送”列表）。
-     */
+    
     public List<Notification> listByCreator(int createdByUserId, int limit) throws SQLException {
         ensureTable();
         if (limit <= 0) limit = 50;
@@ -128,15 +116,7 @@ public class NotificationDAO {
         return list;
     }
 
-    /**
-     * 按“关联稿件 + 分类”拉取通知（可用于“与作者沟通历史”时间线）。
-     *
-     * @param manuscriptId      稿件 ID（RelatedManuscriptId）
-     * @param category          分类（例如 AUTHOR_MESSAGE）
-     * @param recipientUserId   可选：只取某个收件人的记录（作者侧查看历史时用）
-     * @param limit             最多返回条数
-     * @param ascendingByTime   true=按时间正序（时间线），false=倒序
-     */
+    
     public List<Notification> listByManuscriptAndCategory(int manuscriptId,
                                                          String category,
                                                          Integer recipientUserId,
@@ -180,7 +160,7 @@ public class NotificationDAO {
         return list;
     }
 
-    /** 统计某稿件某分类下的通知数量（用于列表页展示）。 */
+    
     public int countByManuscriptAndCategory(int manuscriptId, String category) throws SQLException {
         ensureTable();
         String sql = "SELECT COUNT(1) AS Cnt FROM dbo.Notifications WHERE RelatedManuscriptId=? AND Category=?";
@@ -251,3 +231,28 @@ public class NotificationDAO {
         return n;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

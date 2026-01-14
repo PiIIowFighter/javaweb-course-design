@@ -4,6 +4,8 @@ import edu.bjfu.onlinesm.dao.NewsDAO;
 import edu.bjfu.onlinesm.model.News;
 import edu.bjfu.onlinesm.model.User;
 import edu.bjfu.onlinesm.util.UploadPathUtil;
+import edu.bjfu.onlinesm.util.MenuPermissionGuard;
+import edu.bjfu.onlinesm.util.PermissionCatalog;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.Part;
@@ -20,18 +22,7 @@ import java.sql.SQLException;
 import java.util.List;
 import edu.bjfu.onlinesm.util.PaginationUtil;
 
-/**
- * 新闻 / 公告管理模块控制器。
- *
- * URL 约定：
- *   GET  /admin/news/list        列表
- *   GET  /admin/news/edit        新建或编辑表单（带 id 为编辑）
- *
- *   POST /admin/news/save        保存（新增 / 修改）
- *   POST /admin/news/delete      删除
- *
- * 允许角色：SUPER_ADMIN / SYSTEM_ADMIN / EDITOR_IN_CHIEF / EO_ADMIN
- */
+
 @WebServlet(name = "NewsAdminServlet", urlPatterns = {"/admin/news/*"})
 @MultipartConfig
 public class NewsAdminServlet extends HttpServlet {
@@ -43,12 +34,11 @@ public class NewsAdminServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User current = getCurrentUser(req);
-        if (!isNewsAdmin(current)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有有权限的管理员才能管理新闻/公告。");
+        if (!MenuPermissionGuard.require(req, resp, PermissionCatalog.ADMIN_NEWS)) {
             return;
         }
 
-        String path = req.getPathInfo();
+String path = req.getPathInfo();
         if (path == null || "/".equals(path) || "/list".equals(path)) {
             try {
                 String keyword = req.getParameter("keyword");
@@ -86,12 +76,11 @@ public class NewsAdminServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User current = getCurrentUser(req);
-        if (!isNewsAdmin(current)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "只有有权限的管理员才能管理新闻/公告。");
+        if (!MenuPermissionGuard.require(req, resp, PermissionCatalog.ADMIN_NEWS)) {
             return;
         }
 
-        String path = req.getPathInfo();
+String path = req.getPathInfo();
         if (path == null || "/".equals(path)) {
             path = "/save";
         }
@@ -124,7 +113,7 @@ public class NewsAdminServlet extends HttpServlet {
                 int id = Integer.parseInt(idStr);
                 news = newsDAO.findById(id);
             } catch (NumberFormatException ignore) {
-                // 保持 news = null，走“新增”逻辑
+                
             } catch (SQLException e) {
                 throw new ServletException("按 ID 查询新闻失败", e);
             }
@@ -132,7 +121,7 @@ public class NewsAdminServlet extends HttpServlet {
 
         if (news == null) {
             news = new News();
-            news.setPublished(true); // 新建默认“已发布”
+            news.setPublished(true); 
         }
 
         req.setAttribute("news", news);
@@ -147,7 +136,7 @@ public class NewsAdminServlet extends HttpServlet {
         String publishDateStr = req.getParameter("publishDate");
 
         boolean isPublished = "true".equalsIgnoreCase(publishedParam)
-                || "on".equalsIgnoreCase(publishedParam); // checkbox 提交时可能是 on
+                || "on".equalsIgnoreCase(publishedParam); 
 
         Integer id = null;
         if (idStr != null && !idStr.isEmpty()) {
@@ -163,7 +152,7 @@ public class NewsAdminServlet extends HttpServlet {
             existing = newsDAO.findById(id);
         }
 
-        // 解析发布日期：用于“定时发布”
+        
         LocalDateTime publishDateTime = null;
         if (publishDateStr != null && !publishDateStr.isEmpty()) {
             try {
@@ -173,13 +162,13 @@ public class NewsAdminServlet extends HttpServlet {
             }
         }
 
-        // 处理附件上传：支持 PDF 等指南文件
+        
         String attachmentPath = (existing != null) ? existing.getAttachmentPath() : null;
         Part attachmentPart = null;
         try {
             attachmentPart = req.getPart("attachment");
         } catch (IllegalStateException ex) {
-            // 上传超出限制等异常，直接忽略附件，避免影响主体保存
+            
         }
 
         if (attachmentPart != null && attachmentPart.getSize() > 0) {
@@ -213,30 +202,30 @@ public class NewsAdminServlet extends HttpServlet {
         news.setAuthorId(current.getUserId());
         news.setAttachmentPath(attachmentPath);
 
-        // 处理发布时间与可见性：
-        // - 已发布：若表单指定了发布日期，则使用表单值；
-        //           否则沿用原有发布时间；若原来也没有，则交给 DAO 默认当前时间；
-        // - 未发布（不可见）：仍然保留已有发布时间，便于以后重新发布或做记录。
+        
+        
+        
+        
         if (isPublished) {
             if (publishDateTime != null) {
-                // 表单显式指定发布日期：支持“定时发布”
+                
                 news.setPublishedAt(publishDateTime);
             } else if (existing != null && existing.getPublishedAt() != null) {
-                // 未修改发布日期，则沿用原值
+                
                 news.setPublishedAt(existing.getPublishedAt());
             } else {
-                // 新发布且未指定时间，交给 DAO 使用当前时间
+                
                 news.setPublishedAt(null);
             }
         } else {
             if (publishDateTime != null) {
-                // 管理员在不可见状态下手动调整了发布日期，也予以保留
+                
                 news.setPublishedAt(publishDateTime);
             } else if (existing != null && existing.getPublishedAt() != null) {
-                // 从“可见”切换为“不可见”时，保留之前的发布时间
+                
                 news.setPublishedAt(existing.getPublishedAt());
             } else {
-                // 从未发布过的草稿且没有指定时间：保持为 null
+                
                 news.setPublishedAt(null);
             }
         }
@@ -258,7 +247,7 @@ public class NewsAdminServlet extends HttpServlet {
             int id = Integer.parseInt(idStr);
             newsDAO.delete(id);
         } catch (NumberFormatException ignore) {
-            // id 非法，忽略
+            
         }
     }
 
@@ -266,15 +255,29 @@ public class NewsAdminServlet extends HttpServlet {
         HttpSession session = req.getSession(false);
         return session != null ? (User) session.getAttribute("currentUser") : null;
     }
-
-    private boolean isNewsAdmin(User user) {
-        if (user == null || user.getRoleCode() == null) {
-            return false;
-        }
-        String rc = user.getRoleCode();
-        return "SUPER_ADMIN".equals(rc)
-                || "SYSTEM_ADMIN".equals(rc)
-                || "EDITOR_IN_CHIEF".equals(rc)
-                || "EO_ADMIN".equals(rc);   // 编辑部管理员
-    }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

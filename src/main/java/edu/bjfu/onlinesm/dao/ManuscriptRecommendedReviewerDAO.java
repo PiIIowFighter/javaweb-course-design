@@ -7,9 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 推荐审稿人 DAO：对应 dbo.ManuscriptRecommendedReviewers。
- */
+
 public class ManuscriptRecommendedReviewerDAO {
 
     public void deleteByManuscriptId(Connection conn, int manuscriptId) throws SQLException {
@@ -27,8 +25,8 @@ public class ManuscriptRecommendedReviewerDAO {
         String sql = "INSERT INTO dbo.ManuscriptRecommendedReviewers (ManuscriptId, FullName, Email, Reason) VALUES (?,?,?,?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             for (ManuscriptRecommendedReviewer r : list) {
-                // 数据库约束：FullName/Email NOT NULL。
-                // 防御性处理：若前端传入不完整行（例如只填了姓名/理由但没填邮箱），则跳过，避免 500。
+                
+                
                 String fullName = r == null ? null : r.getFullName();
                 String email = r == null ? null : r.getEmail();
                 if (fullName == null || fullName.trim().isEmpty() || email == null || email.trim().isEmpty()) {
@@ -65,3 +63,28 @@ public class ManuscriptRecommendedReviewerDAO {
         return list;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

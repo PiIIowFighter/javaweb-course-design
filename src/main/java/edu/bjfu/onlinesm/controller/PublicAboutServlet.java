@@ -19,17 +19,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 前台 - 关于期刊
- *
- * URL：
- *   GET /about             -> aims（默认）
- *   GET /about/aims
- *   GET /about/board
- *   GET /about/insights
- *   GET /about/news
- *   GET /about/policies
- */
+
 @WebServlet(name = "PublicAboutServlet", urlPatterns = {"/about/*"})
 public class PublicAboutServlet extends HttpServlet {
 
@@ -43,19 +33,19 @@ public class PublicAboutServlet extends HttpServlet {
         String tab = normalizeTab(req.getPathInfo());
         req.setAttribute("activeAboutTab", tab);
 
-        // 期刊信息（主期刊）
+        
         Journal journal = null;
         try {
             journal = journalDAO.findPrimary();
         } catch (SQLException e) {
-            // ignore, fall back to null
+            
         }
         req.setAttribute("journal", journal);
 
         Integer journalId = (journal == null) ? null : journal.getJournalId();
 
-        // 单页 Tab：一次性加载所有板块数据，前端仅切换展示（不跳转页面）
-        // aims
+        
+        
         try {
             JournalPage aimsPage = (journalId != null)
                     ? journalPageDAO.findByJournalAndKey(journalId, "aims")
@@ -68,7 +58,7 @@ public class PublicAboutServlet extends HttpServlet {
             req.setAttribute("aimsLoadError", e.getMessage());
         }
 
-        // policies
+        
         try {
             JournalPage policiesPage = (journalId != null)
                     ? journalPageDAO.findByJournalAndKey(journalId, "policies")
@@ -81,7 +71,7 @@ public class PublicAboutServlet extends HttpServlet {
             req.setAttribute("policiesLoadError", e.getMessage());
         }
 
-        // 编委会
+        
         List<EditorialBoardMember> members = Collections.emptyList();
         if (journalId != null) {
             try {
@@ -93,7 +83,7 @@ public class PublicAboutServlet extends HttpServlet {
         }
         req.setAttribute("boardMembers", members);
 
-        // 新闻
+        
         try {
             List<News> newsList = newsDAO.findPublishedAll();
             req.setAttribute("newsList", newsList);
@@ -124,3 +114,28 @@ public class PublicAboutServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

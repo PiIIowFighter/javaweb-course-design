@@ -3,14 +3,12 @@ package edu.bjfu.onlinesm.model;
 import java.io.Serializable;
 import java.time.LocalDate;
 
-/**
- * 期刊卷期 / 专刊（dbo.Issues）。
- */
+
 public class Issue implements Serializable {
 
     private Integer issueId;
     private Integer journalId;
-    private String issueType; // LATEST / SPECIAL
+    private String issueType; 
 
     private String title;
     private Integer volume;
@@ -18,9 +16,9 @@ public class Issue implements Serializable {
     private Integer year;
 
     private String guestEditors;
-    private String description; // HTML allowed
+    private String description; 
 
-    // 资源（可选）：封面图 / 附件（存储文件名，实际文件在 D:/upload/journal/issues/ 下）
+    
     private String coverImagePath;
     private String attachmentPath;
 
@@ -131,3 +129,28 @@ public class Issue implements Serializable {
         this.publishDate = publishDate;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

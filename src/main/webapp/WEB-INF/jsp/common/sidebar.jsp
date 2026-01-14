@@ -7,11 +7,7 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 <c:set var="uri" value="${pageContext.request.requestURI}"/>
 
-<%--
-  侧边栏中：我的稿件二级菜单需要识别当前分组（group=incomplete/processing/revision/decision）。
-  说明：有些页面/表单可能会产生多个 group 参数（例如重复的 hidden/input），request.getParameter(...) 取“第一个”，
-  导致高亮不准。这里取“最后一个非空”的 group 作为最终值，更稳。
---%>
+
 <%
     // 1) 优先取参数 group（可能重复出现，取最后一个非空）
     String __msGroup = null;
@@ -50,7 +46,7 @@
 <c:set var="isManuscriptArea" value="${fn:contains(uri, '/manuscripts/list') or fn:contains(uri, '/manuscripts/detail') or fn:contains(uri, '/manuscripts/track') or fn:contains(uri, '/manuscripts/edit') or fn:contains(uri, '/manuscripts/resubmit')}"/>
 
 <aside class="sidebar">
-    <!-- 顶部用户卡片 -->
+    
     <div class="card mini sidebar-user">
         <div class="media">
             <div class="avatar">
@@ -78,7 +74,7 @@
     <h3 class="side-title">功能菜单</h3>
     <nav class="side-nav" aria-label="登录后功能菜单">
 
-        <!-- 投稿 / 作者 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_MY_MANUSCRIPTS'] or sessionScope.menuPermMap['MENU_AUTHOR_SUBMIT']}">
             <div class="muted" style="padding: 10px 12px;">投稿 / 作者</div>
             <c:if test="${sessionScope.menuPermMap['MENU_AUTHOR_MY_MANUSCRIPTS']}">
@@ -111,7 +107,7 @@
             </c:if>
         </c:if>
 
-        <!-- 审稿人 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_REVIEWER_ASSIGNED'] or sessionScope.menuPermMap['MENU_REVIEWER_HISTORY']}">
             <div class="muted" style="padding: 10px 12px;">外审 / 审稿人</div>
             <c:if test="${sessionScope.menuPermMap['MENU_REVIEWER_ASSIGNED']}">
@@ -126,7 +122,7 @@
             </c:if>
         </c:if>
 
-        <!-- 编辑 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_EDITOR_TODO'] or sessionScope.menuPermMap['MENU_EDITOR_UNDER_REVIEW']
             or sessionScope.menuPermMap['MENU_EDITOR_RECOMMEND'] or sessionScope.menuPermMap['MENU_EDITOR_REVIEW_MONITOR']
             or sessionScope.menuPermMap['MENU_EDITOR_AUTHOR_COMM']}">
@@ -158,7 +154,7 @@
             </c:if>
         </c:if>
 
-        <!-- 主编 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_EIC_OVERVIEW'] or sessionScope.menuPermMap['MENU_EIC_DESK']
             or sessionScope.menuPermMap['MENU_EIC_TO_ASSIGN'] or sessionScope.menuPermMap['MENU_EIC_REVIEWERS']
             or sessionScope.menuPermMap['MENU_EIC_FINAL_DECISION'] or sessionScope.menuPermMap['MENU_EIC_SPECIAL']}">
@@ -195,7 +191,7 @@
             </c:if>
         </c:if>
 
-        <!-- 编辑部管理员 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK'] or sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY'] or sessionScope.menuPermMap['ADMIN_JOURNALS'] or sessionScope.menuPermMap['ADMIN_NEWS']}">
             <div class="muted" style="padding: 10px 12px;">编辑部管理</div>
             <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
@@ -223,7 +219,7 @@
 
         </c:if>
 
-        <!-- 后台管理 -->
+        
         <c:if test="${sessionScope.menuPermMap['ADMIN_USERS'] or sessionScope.menuPermMap['ADMIN_PERMISSIONS'] or sessionScope.menuPermMap['ADMIN_LOGS']
             or sessionScope.menuPermMap['ADMIN_SYSTEM'] or sessionScope.menuPermMap['ADMIN_DB_MAINTENANCE']
             or sessionScope.menuPermMap['ADMIN_EDITORIAL']}">
@@ -263,3 +259,30 @@
     </nav>
 </aside>
 
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

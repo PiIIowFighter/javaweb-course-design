@@ -17,12 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Properties;
 
-/**
- * JavaMail 版本的邮件发送器。
- *
- * <p>保留原类名 SmtpMailer，避免业务层改动（MailNotifications 仍可直接 new SmtpMailer(cfg)）。
- * <p>依赖：WEB-INF/lib 下的 javax.mail.jar 与 activation.jar（或 activation-*.jar）。
- */
+
 public class SmtpMailer {
 
     private final MailConfig cfg;
@@ -34,7 +29,7 @@ public class SmtpMailer {
     public void send(MailMessage msg) throws MessagingException {
         if (msg == null) return;
 
-        // 关闭时直接跳过（不影响业务流程）
+        
         if (!cfg.enabled()) return;
 
         if (isEmpty(cfg.host())) {
@@ -47,7 +42,7 @@ public class SmtpMailer {
         Session session = buildSession();
         MimeMessage mm = new MimeMessage(session);
 
-        // From
+        
         String fromAddr = cfg.getFrom();
         try {
             if (!isEmpty(cfg.getFromName())) {
@@ -59,7 +54,7 @@ public class SmtpMailer {
             mm.setFrom(new InternetAddress(fromAddr));
         }
 
-        // To / Cc
+        
         for (String to : msg.getTo()) {
             if (!isEmpty(to)) {
                 mm.addRecipient(Message.RecipientType.TO, new InternetAddress(to.trim()));
@@ -73,26 +68,26 @@ public class SmtpMailer {
             }
         }
 
-        // Subject / Date
+        
         mm.setSubject(nullToEmpty(msg.getSubject()), StandardCharsets.UTF_8.name());
         mm.setSentDate(new Date());
 
-        // Body (+ optional attachments)
+        
         boolean hasAtt = msg.getAttachments() != null && !msg.getAttachments().isEmpty();
 
         if (!hasAtt) {
-            // 只发 HTML（当前业务模板就是 HTML）
+            
             String html = nullToEmpty(msg.getHtmlBody());
             mm.setContent(html, "text/html; charset=UTF-8");
         } else {
             MimeMultipart mixed = new MimeMultipart("mixed");
 
-            // HTML 正文
+            
             MimeBodyPart body = new MimeBodyPart();
             body.setContent(nullToEmpty(msg.getHtmlBody()), "text/html; charset=UTF-8");
             mixed.addBodyPart(body);
 
-            // 附件（byte[]）
+            
             for (MailAttachment a : msg.getAttachments()) {
                 if (a == null || a.getBytes() == null) continue;
 
@@ -120,30 +115,30 @@ public class SmtpMailer {
     private Session buildSession() {
         Properties p = new Properties();
 
-        // JavaMail 统一使用 mail.smtp.*
+        
         p.put("mail.smtp.host", cfg.host());
         p.put("mail.smtp.port", String.valueOf(cfg.port()));
 
-        // 调试输出（会打印 SMTP 交互到控制台）
+        
         if (cfg.debug()) {
             p.put("mail.debug", "true");
         }
 
-        // 认证
+        
         boolean auth = !isEmpty(cfg.username());
         p.put("mail.smtp.auth", auth ? "true" : "false");
 
-        // SSL / STARTTLS
+        
         if (cfg.ssl()) {
             p.put("mail.smtp.ssl.enable", "true");
-            // 避免部分环境证书校验导致握手失败（课程设计环境常见）
+            
             p.put("mail.smtp.ssl.trust", cfg.host());
         } else if (cfg.startTls()) {
             p.put("mail.smtp.starttls.enable", "true");
             p.put("mail.smtp.starttls.required", "true");
         }
 
-        // 一些合理的超时（避免卡死）
+        
         p.put("mail.smtp.connectiontimeout", "10000");
         p.put("mail.smtp.timeout", "20000");
         p.put("mail.smtp.writetimeout", "20000");
@@ -171,3 +166,28 @@ public class SmtpMailer {
         return s == null ? "" : s;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

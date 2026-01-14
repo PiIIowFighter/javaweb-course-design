@@ -10,20 +10,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 表：dbo.News(NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath)
- *
- *
- * ✅ 适配：News.publishedAt 为 LocalDateTime
- * ✅ 修复：不再调用 News.getPublished()（你项目里没有这个方法），改用反射兼容不同 getter 命名
- */
+
 public class NewsDAO {
 
-    /* =========================
-       前台：已发布新闻
-       ========================= */
+    
 
-    /** 首页：已发布新闻 TOP N */
+    
     public List<News> findPublishedTopN(int n) throws SQLException {
         if (n <= 0) return new ArrayList<>();
 
@@ -45,12 +37,12 @@ public class NewsDAO {
         return list;
     }
 
-    /** ✅ 解决你报错：PublicAboutServlet / PublicNewsServlet 调用 findPublishedAll() */
+    
     public List<News> findPublishedAll() throws SQLException {
         return findPublished();
     }
 
-    /** 已发布新闻（不限制条数） */
+    
     public List<News> findPublished() throws SQLException {
         String sql =
                 "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
@@ -70,7 +62,7 @@ public class NewsDAO {
         return list;
     }
 
-    /** 详情：按ID查 */
+    
     public News findById(int newsId) throws SQLException {
         String sql =
                 "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
@@ -87,16 +79,14 @@ public class NewsDAO {
         return null;
     }
 
-    /* =========================
-       后台：管理端 CRUD
-       ========================= */
+    
 
-    /** 后台列表：全部新闻（含未发布，可与搜索共用） */
+    
     public List<News> findAll() throws SQLException {
         return search(null, null, null);
     }
 
-    /** 按关键词与发布日期区间搜索新闻（后台列表用） */
+    
     public List<News> search(String keyword, LocalDate fromDate, LocalDate toDate) throws SQLException {
         StringBuilder sql = new StringBuilder(
                 "SELECT NewsId, Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath " +
@@ -147,13 +137,7 @@ public class NewsDAO {
 
 
 
-    /**
-     * ✅ 解决你报错：NewsAdminServlet 调用 insert(news)
-     * 规则：
-     * - 若显式设置了 PublishedAt，则直接写入（无论是否已发布）；
-     * - 若未设置 PublishedAt 且 isPublished=true，则默认当前时间；
-     * - 若未设置 PublishedAt 且 isPublished=false，则写 NULL。
-     */
+    
     public int insert(News news) throws SQLException {
         String sql =
                 "INSERT INTO dbo.News(Title, Content, PublishedAt, AuthorId, IsPublished, AttachmentPath) " +
@@ -162,10 +146,10 @@ public class NewsDAO {
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
 
-        // 发布时间策略：
-        // - 若调用方显式设置了 news.getPublishedAt()，无论是否已发布，都写入该时间；
-        // - 若未设置发布时间但勾选了“已发布”，则默认使用当前时间；
-        // - 若未设置发布时间且未发布，则写入 NULL。
+        
+        
+        
+        
         Timestamp publishedAt;
         LocalDateTime ldt = news.getPublishedAt();
         if (ldt != null) {
@@ -206,13 +190,7 @@ public class NewsDAO {
     }
 
 
-    /**
-     * ✅ 解决你报错：NewsAdminServlet 调用 update(news)
-     * 规则（与 insert 保持一致）：
-     * - 若显式设置了 PublishedAt，则写入该时间；
-     * - 若未设置且 isPublished=true，则默认当前时间；
-     * - 若未设置且 isPublished=false，则写 NULL（通常用于从未发布过的草稿）。
-     */
+    
     public void update(News news) throws SQLException {
         if (news.getNewsId() == null) {
             throw new SQLException("NewsId 不能为空，无法更新");
@@ -226,10 +204,10 @@ public class NewsDAO {
         boolean isPublished = getIsPublishedSafe(news);
         Timestamp nowTs = Timestamp.valueOf(LocalDateTime.now());
 
-        // 发布时间策略：
-        // - 若调用方显式设置了 news.getPublishedAt()，无论是否已发布，都写入该时间；
-        // - 若未设置发布时间但勾选了“已发布”，则默认使用当前时间；
-        // - 若未设置发布时间且未发布，则写入 NULL。
+        
+        
+        
+        
         Timestamp publishedAt;
         LocalDateTime ldt = news.getPublishedAt();
         if (ldt != null) {
@@ -268,9 +246,7 @@ public class NewsDAO {
         }
     }
 
-    /* =========================
-       映射 & 兼容 getter
-       ========================= */
+    
 
     private News mapRow(ResultSet rs) throws SQLException {
         News n = new News();
@@ -285,20 +261,14 @@ public class NewsDAO {
         LocalDateTime ldt = (ts == null) ? null : ts.toLocalDateTime();
         n.setPublishedAt(ldt);
 
-        // 你后台 servlet 用的是 setPublished(boolean)，这里也按这个来
+        
         n.setPublished(rs.getBoolean("IsPublished"));
 
         return n;
     }
 
 
-    /**
-     * ✅ 关键修复：用反射兼容不同命名（不会再出现“方法不存在”的编译报错）
-     * 尝试顺序：
-     * 1) isPublished()
-     * 2) getIsPublished()
-     * 3) isIsPublished()
-     */
+    
     private boolean getIsPublishedSafe(News news) {
         if (news == null) return false;
 
@@ -313,7 +283,7 @@ public class NewsDAO {
         r = invokeBooleanGetter(news, "isIsPublished");
         if (r != null) return r;
 
-        // 如果你 News 只有 setPublished(...) 但没有 getter，这里兜底 false
+        
         return false;
     }
 
@@ -327,3 +297,28 @@ public class NewsDAO {
         return null;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

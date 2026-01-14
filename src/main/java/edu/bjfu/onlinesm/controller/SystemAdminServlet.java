@@ -16,11 +16,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * 系统维护模块：
- *  - 查看系统运行状态（JVM、内存、数据库连通性等）；
- *  - 方便系统管理员快速排查。
- */
+
 @WebServlet(name = "SystemAdminServlet", urlPatterns = {"/admin/system/*"})
 public class SystemAdminServlet extends HttpServlet {
 
@@ -41,7 +37,7 @@ public class SystemAdminServlet extends HttpServlet {
     }
 
     private void handleStatus(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // JVM/系统状态
+        
         Runtime rt = Runtime.getRuntime();
         req.setAttribute("now", LocalDateTime.now());
         req.setAttribute("javaVersion", System.getProperty("java.version"));
@@ -52,7 +48,7 @@ public class SystemAdminServlet extends HttpServlet {
         req.setAttribute("freeMemory", rt.freeMemory());
         req.setAttribute("processors", rt.availableProcessors());
 
-        // DB 连通性
+        
         boolean dbOk = false;
         String dbError = null;
         try (Connection conn = DbUtil.getConnection()) {
@@ -64,30 +60,26 @@ public class SystemAdminServlet extends HttpServlet {
         req.setAttribute("dbOk", dbOk);
         req.setAttribute("dbError", dbError);
 
-        // 最近操作日志（用于快速排查）
+        
         try {
             List<OperationLog> recent = logDAO.findRecent(30, null);
             req.setAttribute("recentLogs", recent);
         } catch (SQLException e) {
-            // ignore
+            
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/admin/system/system_status.jsp").forward(req, resp);
     }
 
-        /**
-     * 数据库维护：简单的数据浏览 / 修改工具。
-     * 需求：可以看到所有表的名称，点击进入展示所有数据，并且可以对数据进行修改。
-     * 仅系统管理员/超级管理员可通过权限点访问。
-     */
+        
     private void handleDbMaintenance(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // 基本的 DB 连通性检查
+        
         boolean dbOk = false;
         String dbError = null;
 
-        // 数据浏览所需的属性
+        
         java.util.List<String> tableNames = new java.util.ArrayList<>();
         String selectedTable = req.getParameter("table");
         java.util.List<String> columnNames = new java.util.ArrayList<>();
@@ -103,10 +95,10 @@ public class SystemAdminServlet extends HttpServlet {
             if (dbOk) {
                 java.sql.DatabaseMetaData meta = conn.getMetaData();
                 String catalog = conn.getCatalog();
-                // SQL Server 中常用的 schema 为 dbo
+                
                 String schema = "dbo";
 
-                // 读取当前数据库下的所有用户表名称
+                
                 try (java.sql.ResultSet rs = meta.getTables(catalog, schema, "%", new String[]{"TABLE"})) {
                     while (rs.next()) {
                         String tName = rs.getString("TABLE_NAME");
@@ -117,7 +109,7 @@ public class SystemAdminServlet extends HttpServlet {
                 }
 
                 
-                // 处理维护操作（POST + action=updateRow/deleteRow/insertRow）
+                
                 if ("POST".equalsIgnoreCase(req.getMethod())) {
                     String action = req.getParameter("action");
                     selectedTable = req.getParameter("table");
@@ -126,7 +118,7 @@ public class SystemAdminServlet extends HttpServlet {
                         error = "非法的表名或表不存在。";
                     } else if (action != null) {
 
-                        // 获取主键列
+                        
                         pkColumns.clear();
                         try (java.sql.ResultSet pkRs = meta.getPrimaryKeys(catalog, schema, selectedTable)) {
                             while (pkRs.next()) {
@@ -136,7 +128,7 @@ public class SystemAdminServlet extends HttpServlet {
                                 }
                             }
                         }
-                        // 若没有配置主键，则退化为使用第一列作为“主键”
+                        
                         if (pkColumns.isEmpty()) {
                             try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
                                 if (colRs.next()) {
@@ -148,7 +140,7 @@ public class SystemAdminServlet extends HttpServlet {
                             }
                         }
 
-                        // 读取列信息：列名 + 是否自增（IDENTITY）
+                        
                         columnNames.clear();
                         java.util.Set<String> autoIncSet = new java.util.HashSet<>();
                         try (java.sql.ResultSet colRs = meta.getColumns(catalog, schema, selectedTable, "%")) {
@@ -161,7 +153,7 @@ public class SystemAdminServlet extends HttpServlet {
                                 try {
                                     isAuto = colRs.getString("IS_AUTOINCREMENT");
                                 } catch (Exception ignore) {
-                                    // 某些驱动可能不支持该字段，忽略即可
+                                    
                                 }
                                 if (isAuto != null && "YES".equalsIgnoreCase(isAuto)) {
                                     autoIncSet.add(col);
@@ -171,7 +163,7 @@ public class SystemAdminServlet extends HttpServlet {
 
                         if (!pkColumns.isEmpty()) {
                             if ("updateRow".equals(action)) {
-                                // UPDATE：不允许更新主键列与自增列（否则会触发 SQL Server 的 identity 更新错误）
+                                
                                 java.util.List<String> updatableCols = new java.util.ArrayList<>();
                                 for (String col : columnNames) {
                                     if (pkColumns.contains(col)) continue;
@@ -196,7 +188,7 @@ public class SystemAdminServlet extends HttpServlet {
                                         }
                                         sql.append("[").append(col).append("] = ?");
 
-                                        // 空串视为 NULL（便于清空字段；如需保留空串，可自行调整）
+                                        
                                         if (value != null && value.trim().isEmpty()) {
                                             value = null;
                                         }
@@ -234,7 +226,7 @@ public class SystemAdminServlet extends HttpServlet {
                                     }
                                 }
                             } else if ("deleteRow".equals(action)) {
-                                // DELETE：按主键删除
+                                
                                 StringBuilder sql = new StringBuilder();
                                 sql.append("DELETE FROM ").append("[").append(selectedTable).append("]").append(" WHERE ");
                                 java.util.List<Object> params = new java.util.ArrayList<>();
@@ -267,7 +259,7 @@ public class SystemAdminServlet extends HttpServlet {
                                     error = "删除失败： " + e.getMessage();
                                 }
                             } else if ("insertRow".equals(action)) {
-                                // INSERT：跳过自增列（IDENTITY）
+                                
                                 java.util.List<String> insertCols = new java.util.ArrayList<>();
                                 for (String col : columnNames) {
                                     if (autoIncSet.contains(col)) continue;
@@ -325,9 +317,9 @@ public class SystemAdminServlet extends HttpServlet {
                     }
                 }
 
-// 重新读取选中表的数据（GET 或 更新之后）
+
                 if (selectedTable != null && tableNames.contains(selectedTable)) {
-                    // 列名
+                    
                     
                     columnNames.clear();
                     autoIncColumns.clear();
@@ -343,7 +335,7 @@ public class SystemAdminServlet extends HttpServlet {
                             try {
                                 isAuto = colRs.getString("IS_AUTOINCREMENT");
                             } catch (Exception ignore) {
-                                // ignore
+                                
                             }
                             if (isAuto != null && "YES".equalsIgnoreCase(isAuto)) {
                                 autoIncColumns.add(col);
@@ -351,7 +343,7 @@ public class SystemAdminServlet extends HttpServlet {
                         }
                     }
 
-// 主键列
+
                     pkColumns.clear();
                     try (java.sql.ResultSet pkRs = meta.getPrimaryKeys(catalog, schema, selectedTable)) {
                         while (pkRs.next()) {
@@ -365,7 +357,7 @@ public class SystemAdminServlet extends HttpServlet {
                         pkColumns.add(columnNames.get(0));
                     }
 
-                    // 实际数据
+                    
                     try (java.sql.Statement st = conn.createStatement();
                          java.sql.ResultSet rs = st.executeQuery("SELECT * FROM [" + selectedTable + "]")) {
                         while (rs.next()) {
@@ -408,3 +400,28 @@ public class SystemAdminServlet extends HttpServlet {
     }
 
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

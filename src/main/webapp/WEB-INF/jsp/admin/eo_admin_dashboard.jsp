@@ -16,7 +16,7 @@
 
     <div class="grid grid-3">
 
-        <!-- 形式审查 / 格式检查 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_CHECK']}">
             <a class="card" style="text-decoration:none;" href="${ctx}/editor/formalCheck">
                 <h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> 形式审查 / 格式检查</h3>
@@ -28,7 +28,7 @@
             </a>
         </c:if>
 
-        <!-- 审查历史 -->
+        
         <c:if test="${sessionScope.menuPermMap['MENU_EO_FORMAL_HISTORY']}">
             <a class="card" style="text-decoration:none;" href="${ctx}/editor/formalCheck/history">
                 <h3><i class="bi bi-clock-history" aria-hidden="true"></i> 审查历史</h3>
@@ -40,7 +40,7 @@
             </a>
         </c:if>
 
-        <!-- 公告 / 新闻管理 -->
+        
         <c:if test="${sessionScope.menuPermMap['ADMIN_NEWS']}">
             <a class="card" style="text-decoration:none;" href="${ctx}/admin/news/list">
                 <h3><i class="bi bi-megaphone" aria-hidden="true"></i> 公告 / 新闻管理</h3>
@@ -52,7 +52,7 @@
             </a>
         </c:if>
 
-        <!-- 期刊管理 -->
+        
         <c:if test="${sessionScope.menuPermMap['ADMIN_JOURNALS']}">
             <a class="card" style="text-decoration:none;" href="${ctx}/admin/journals/list">
                 <h3><i class="bi bi-journals" aria-hidden="true"></i> 期刊管理</h3>
@@ -73,3 +73,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

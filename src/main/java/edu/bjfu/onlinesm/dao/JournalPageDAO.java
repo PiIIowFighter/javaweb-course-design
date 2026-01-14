@@ -8,10 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JournalPageDAO：读取/维护“关于期刊”等可配置页面内容。
- * 表：dbo.JournalPages(PageId, JournalId, PageKey, Title, Content, UpdatedAt, CoverImagePath?, AttachmentPath?)
- */
+
 public class JournalPageDAO {
 
     public JournalPage findByJournalAndKey(int journalId, String pageKey) throws SQLException {
@@ -33,9 +30,7 @@ public class JournalPageDAO {
         return null;
     }
 
-    /**
-     * 若没有期刊ID时，允许按 key 取“第一个期刊”的页面（用于系统初始化的兜底显示）。
-     */
+    
     public JournalPage findFirstJournalByKey(String pageKey) throws SQLException {
         try (Connection conn = DbUtil.getConnection()) {
             boolean hasCover = hasColumn(conn, "JournalPages", "CoverImagePath");
@@ -196,3 +191,28 @@ public class JournalPageDAO {
         return false;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -27,11 +27,20 @@
 </table>
 
 <h3 style="margin-top:20px;">最近操作日志</h3>
+<style>
+    /* page-only: keep recent logs within viewport */
+    .status-log-wrap{max-width:100%; overflow-x:auto;}
+    .status-log-wrap::-webkit-scrollbar{height:8px;}
+    .status-log-table{min-width:980px; width:100%;}
+    .status-log-detail{max-width:520px;}
+    .status-log-detail .clamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; white-space:normal;}
+</style>
 <c:if test="${empty recentLogs}">
     <p>暂无操作日志。</p>
 </c:if>
 <c:if test="${not empty recentLogs}">
-    <table border="1" cellpadding="6" cellspacing="0">
+    <div class="status-log-wrap">
+    <table border="1" cellpadding="6" cellspacing="0" class="status-log-table">
         <thead>
         <tr>
             <th>时间</th>
@@ -49,12 +58,13 @@
                 <td>${l.actorUsername}</td>
                 <td>${l.module}</td>
                 <td>${l.action}</td>
-                <td>${l.detail}</td>
+                <td class="status-log-detail" title="${l.detail}"><div class="clamp">${l.detail}</div></td>
                 <td>${l.ip}</td>
             </tr>
         </c:forEach>
         </tbody>
     </table>
+</div>
 </c:if>
 
 <p style="margin-top:12px;">
@@ -64,3 +74,30 @@
 </p>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

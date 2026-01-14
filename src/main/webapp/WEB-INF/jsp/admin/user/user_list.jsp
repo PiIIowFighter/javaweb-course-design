@@ -7,7 +7,7 @@
 <div class="page-head">
         <h2 class="page-title">用户列表</h2>
         <div class="chips">
-            <span class="chip">此页面展示系统用户信息，并支持按角色筛选、编辑、删除、禁用等操作。</span>
+            
             <span class="chip"><a href="${pageContext.request.contextPath}/admin/users/add">+ 新增用户</a></span>
         </div>
     </div><form action="${pageContext.request.contextPath}/admin/users/list" method="get" style="margin: 12px 0;">
@@ -57,7 +57,7 @@
 	                        <a href="${pageContext.request.contextPath}/admin/users/edit?userId=${u.userId}">编辑</a>
 	                        <span style="color:#999"> | </span>
 
-	                        <!-- 封禁 / 解封 -->
+	                        
 	                        <c:choose>
 	                            <c:when test="${u.status == 'ACTIVE'}">
 	                                <form action="${pageContext.request.contextPath}/admin/users/status" method="post" style="display:inline;">
@@ -75,14 +75,14 @@
 	                            </c:otherwise>
 	                        </c:choose>
 
-	                        <!-- 重置密码 -->
+	                        
 	                        <form action="${pageContext.request.contextPath}/admin/users/resetPassword" method="post" style="display:inline;margin-left:4px;">
 	                            <input type="hidden" name="userId" value="${u.userId}"/>
 	                            <button type="submit">重置密码为 123456</button>
 	                        </form>
 
 	                        <span style="color:#999"> | </span>
-	                        <!-- 删除（不建议频繁使用，课程设计阶段提供） -->
+	                        
 	                        <form action="${pageContext.request.contextPath}/admin/users/delete" method="post" style="display:inline;" onsubmit="return confirm('确定删除该用户吗？此操作不可恢复');">
 	                            <input type="hidden" name="userId" value="${u.userId}"/>
 	                            <button type="submit">删除</button>
@@ -100,3 +100,30 @@
 
 <%@ include file="/WEB-INF/jsp/common/pagination.jspf" %>
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

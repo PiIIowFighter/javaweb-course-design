@@ -13,7 +13,7 @@
     </div>
 
     <div class="grid grid-2">
-        <!-- 系统全览 -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/overview">
             <h3><i class="bi bi-eye" aria-hidden="true"></i> 系统全览</h3>
@@ -26,7 +26,7 @@
             </small>
         </a>
 
-        <!-- 案头初审（Desk Review） -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/desk">
             <h3><i class="bi bi-search" aria-hidden="true"></i> 案头审查（Desk Review）</h3>
@@ -39,7 +39,7 @@
             </small>
         </a>
 
-        <!-- 分配编辑 -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/toAssign">
             <h3><i class="bi bi-diagram-3" aria-hidden="true"></i> 分配编辑</h3>
@@ -52,7 +52,7 @@
             </small>
         </a>
 
-        <!-- 终审决策（Final Decision） -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/finalDecision">
             <h3><i class="bi bi-check2-circle" aria-hidden="true"></i> 终审决策（Final Decision）</h3>
@@ -65,7 +65,7 @@
             </small>
         </a>
 
-        <!-- 审稿人库管理 -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/reviewers">
             <h3><i class="bi bi-people" aria-hidden="true"></i> 审稿人库管理</h3>
@@ -78,7 +78,7 @@
             </small>
         </a>
 
-        <!-- 特殊权限操作（如果后端有 /editor/special 对应实现） -->
+        
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/special">
             <h3><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> 特殊权限操作</h3>
@@ -102,3 +102,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

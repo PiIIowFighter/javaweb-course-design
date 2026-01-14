@@ -1,15 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Context>
-  <!--
-    Workaround for Tomcat 9 annotation/pluggability scanning StackOverflowError
-    caused by conflicting BouncyCastle classes (bcprov/bcpkix/bcutil) on the classpath.
-
-    We skip scanning those jars. This does NOT remove them from runtime classpath,
-    it only prevents Tomcat's startup scanner from parsing their class hierarchy.
-  -->
+  
   <JarScanner>
     <JarScanFilter className="org.apache.tomcat.util.scan.StandardJarScanFilter"
                    pluggabilitySkip="bcprov-*.jar,bcpkix-*.jar,bcutil-*.jar"
                    tldSkip="bcprov-*.jar,bcpkix-*.jar,bcutil-*.jar"/>
   </JarScanner>
 </Context>
+
+<!--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+-->

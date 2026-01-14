@@ -9,13 +9,13 @@
     <title><c:out value="${pageTitle != null ? pageTitle : '科研论文在线投稿及管理系统'}"/></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Icons (Bootstrap Icons) -->
-    <!-- 升级版本：避免部分图标类在旧版中不存在导致空白 -->
+    
+    
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/main.css"/>
-    <!-- Quill Snow theme (for rich-text rendering, read-only & editor) -->
+    
     <link rel="stylesheet" href="${pageContext.request.contextPath}/static/css/quill.snow.css"/>
 
 </head>
@@ -83,7 +83,7 @@
                             </a>
                         </c:if>
 
-                        <!-- 消息中心（通知中心）：小铃铛 + 未读红点数字 -->
+                        
                         <a class="nav-icon" href="${pageContext.request.contextPath}/notifications" aria-label="消息中心">
                             <span class="notif-icon" aria-hidden="true">
                                 <i class="bi bi-bell" aria-hidden="true"></i>
@@ -136,3 +136,30 @@
                 <section class="content">
                     <div class="content-inner">
         </c:if>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

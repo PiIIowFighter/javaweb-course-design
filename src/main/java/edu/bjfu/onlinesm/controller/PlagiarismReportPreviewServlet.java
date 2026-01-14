@@ -13,14 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.sql.SQLException;
 
-/**
- * 查重报告预览/下载（PDF）
- *
- * URL: /files/plagiarismReport?manuscriptId=1&reportId=SIM-...
- *
- * 说明：报告文件由 PlagiarismCheckService 生成并保存在 upload 目录下：
- *   {baseDir}/plagiarism_reports/turnitin_{manuscriptId}_{reportId}.pdf
- */
+
 @WebServlet(urlPatterns = {"/files/plagiarismReport"})
 public class PlagiarismReportPreviewServlet extends HttpServlet {
 
@@ -29,7 +22,7 @@ public class PlagiarismReportPreviewServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        // 登录校验
+        
         User currentUser = (User) req.getSession().getAttribute("currentUser");
         if (currentUser == null) {
             resp.sendRedirect(req.getContextPath() + "/auth/login");
@@ -44,7 +37,7 @@ public class PlagiarismReportPreviewServlet extends HttpServlet {
             return;
         }
 
-        // 权限：作者只能看自己的；审稿人禁止；其他角色默认允许
+        
         try {
             Manuscript m = manuscriptDAO.findById(manuscriptId);
             if (m == null) {
@@ -101,3 +94,28 @@ public class PlagiarismReportPreviewServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

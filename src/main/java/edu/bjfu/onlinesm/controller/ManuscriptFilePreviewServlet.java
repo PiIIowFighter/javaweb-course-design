@@ -19,14 +19,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.Objects;
 
-/**
- * 文件预览/下载：读取 dbo.ManuscriptVersions 中“当前版本”的文件路径并进行输出。
- *
- * URL 示例：
- *  /files/preview?manuscriptId=1&type=manuscript
- *  /files/preview?manuscriptId=1&type=cover
- *
- */
+
 @WebServlet(name = "ManuscriptFilePreviewServlet", urlPatterns = {"/files/preview"})
 public class ManuscriptFilePreviewServlet extends HttpServlet {
 
@@ -35,9 +28,9 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
     private final FileDAO fileDAO = new FileDAO();
 
 
-    // 用于审稿人权限校验（只能查看分配给自己的稿件）
+    
     private boolean reviewerHasAccess(int reviewerId, int manuscriptId) throws Exception {
-        // 结构图要求：审稿人仅在“接受邀请”后（ACCEPTED / SUBMITTED）才允许下载/查看稿件文件
+        
         String sql = "SELECT TOP 1 1 FROM dbo.Reviews WHERE ManuscriptId=? AND ReviewerId=? AND Status IN ('ACCEPTED','SUBMITTED')";
         try (java.sql.Connection conn = edu.bjfu.onlinesm.util.DbUtil.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -75,13 +68,13 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
 
             String role = current.getRoleCode();
 
-            // 1) 作者：只能查看自己的
+            
             if ("AUTHOR".equals(role) && !Objects.equals(current.getUserId(), m.getSubmitterId())) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看他人稿件文件。");
                 return;
             }
 
-            // 2) 审稿人：只能查看分配给自己的稿件；且默认不允许查看 Cover Letter
+            
             if ("REVIEWER".equals(role)) {
                 if (!reviewerHasAccess(current.getUserId(), manuscriptId)) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "无权查看未分配给您的稿件文件。");
@@ -99,7 +92,7 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人无权查看投稿附件。");
                     return;
                 }
-                // 需求：审稿过程中仅允许查看脱密稿，不允许下载原稿
+                
                 if ("original".equalsIgnoreCase(type)) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "审稿人仅允许查看脱密稿（匿名稿）。");
                     return;
@@ -132,7 +125,7 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "不支持的附件类型。");
                     return;
                 }
-                // 默认只允许访问“当前版本”的附件（避免旧版本附件被意外暴露）
+                
                 if (sf.getVersionId() != null && v.getVersionId() != null && !Objects.equals(sf.getVersionId(), v.getVersionId())) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN, "仅允许查看当前版本附件。");
                     return;
@@ -140,7 +133,7 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                 filePath = sf.getFilePath();
                 downloadName = sf.getFileName();
             } else if ("manuscript".equalsIgnoreCase(type)) {
-                // 审稿人：只能看匿名稿（不允许回退到原稿）
+                
                 if ("REVIEWER".equals(role)) {
                     filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
                             ? v.getFileAnonymousPath()
@@ -149,12 +142,12 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                     filePath = v.getFileOriginalPath();
                 }
             } else if ("anonymous".equalsIgnoreCase(type)) {
-                // anonymous：若不存在匿名稿则返回缺失（避免审稿人误看原稿）
+                
                 filePath = (v.getFileAnonymousPath() != null && !v.getFileAnonymousPath().trim().isEmpty())
                         ? v.getFileAnonymousPath()
                         : null;
             } else if ("original".equalsIgnoreCase(type)) {
-                // 明确下载原稿（审稿人也可下载，但仍需满足 reviewerHasAccess 的状态校验）
+                
                 filePath = v.getFileOriginalPath();
             } else if ("cover".equalsIgnoreCase(type)) {
                 filePath = v.getCoverLetterPath();
@@ -176,24 +169,24 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
                 return;
             }
 
-            // 修复：历史 Cover Letter PDF 可能因未注册中文/日文字体导致“PDF 打开为空白”。
-            // 若检测到 PDF 无文本内容，且数据库保存了 CoverLetterHtml，则在预览时自动重生成一次。
+            
+            
             if ("cover".equalsIgnoreCase(type) && file.getName().toLowerCase().endsWith(".pdf")) {
                 try {
                     String html = v.getCoverLetterHtml();
                     if (html != null && !html.trim().isEmpty() && !HtmlToPdfConverter.isEmptyHtml(html)) {
-                        // 控制成本：只对较小文件做文本检测（Cover Letter 一般不会很大）
+                        
                         long size = file.length();
                         if (size > 0 && size <= 2L * 1024 * 1024) {
                             String text = PdfTextUtil.extractText(file);
                             if (text == null || text.trim().isEmpty()) {
-                                // 直接覆盖原文件，确保后续预览/下载也正常
+                                
                                 HtmlToPdfConverter.convert(html, file);
                             }
                         }
                     }
                 } catch (Throwable ignore) {
-                    // 预览不应因自动修复失败而中断
+                    
                 }
             }
 
@@ -256,3 +249,28 @@ public class ManuscriptFilePreviewServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

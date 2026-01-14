@@ -57,7 +57,7 @@
                         <span style="margin:0 6px; color:#bbb;">|</span>
                         状态：<strong><c:out value="${focusManuscript.currentStatus}"/></strong>
                         <span style="margin:0 6px; color:#bbb;">|</span>
-                        <%-- 需求：审稿监控面板查看稿件，应跳转到“编辑处理中的稿件详情（withEditor/underReview 合并页）”，与“提出建议”模块的稿件详情页区分 --%>
+                        
                         <a href="${pageContext.request.contextPath}/editor/underReview/detail?manuscriptId=${focusManuscript.manuscriptId}" target="_blank">打开稿件详情</a>
                     </p>
                 </div>
@@ -167,3 +167,30 @@
 </div>
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp" %>
+
+<%--
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
+--%>

@@ -11,19 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/**
- * 责任编辑（EDITOR）相关功能入口。
 
- *
- * URL：
- *  - /editor/withEditor
- *  - /editor/underReview
- *  - /editor/recommend
- *  - /editor/recommend/detail
- *  - /editor/review/*
- *  - /editor/authorComm
- *  - /editor/author/message
- */
 @WebServlet(
         name = "EditorWorkServlet",
         urlPatterns = {
@@ -45,11 +33,11 @@ public class EditorWorkServlet extends EditorServlet {
             return;
         }
 
-        // 兼容旧的 requiredMenuPermission(pathInfo) 规则：拼回旧风格 path（以 / 开头）
+        
         String oldPath = buildOldStylePath(req);
         String requiredPerm = requiredMenuPermission(oldPath);
-        // 主编在“终审/决策”模块中需要查看编辑建议与审稿汇总，但这些页面复用了 /editor/recommend... 路由。
-        // 因此当主编访问 recommend 页面时，使用终审入口权限放行（只读由 JSP 控制）。
+        
+        
         if (requiredPerm != null
                 && PermissionCatalog.MENU_EDITOR_RECOMMEND.equals(requiredPerm)
                 && "EDITOR_IN_CHIEF".equals(current.getRoleCode())) {
@@ -160,7 +148,7 @@ public class EditorWorkServlet extends EditorServlet {
         try {
             switch (sp) {
                 case "/editor/recommend":
-                    // 提交编辑建议
+                    
                     handleEditorRecommendPost(req, resp, current);
                     return;
 
@@ -205,15 +193,12 @@ public class EditorWorkServlet extends EditorServlet {
         }
     }
 
-    /**
-     * 将“当前模块化映射”的 servletPath/pathInfo 拼回旧的 /editor/* pathInfo 形态，
-     * 复用基类中既有的 requiredMenuPermission(...) 规则。
-     */
+    
     private String buildOldStylePath(HttpServletRequest req) {
         String sp = req.getServletPath();
         String pi = req.getPathInfo();
         if (pi == null) pi = "";
-        // /editor/withEditor -> /withEditor
+        
         if (sp != null && sp.startsWith("/editor")) {
             sp = sp.substring("/editor".length());
         }
@@ -221,3 +206,28 @@ public class EditorWorkServlet extends EditorServlet {
         return sp + pi;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

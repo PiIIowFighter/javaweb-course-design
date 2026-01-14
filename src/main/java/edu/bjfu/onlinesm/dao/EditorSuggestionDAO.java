@@ -8,12 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 编辑建议 DAO：dbo.EditorSuggestions
- */
+
 public class EditorSuggestionDAO {
 
-        /** 需要时自动建表（便于本地跑起来；正式环境仍建议先跑 sqlserver.sql）。 */
+        
     private void ensureTable() throws SQLException {
         String ddl = ""
                 + "IF OBJECT_ID('dbo.EditorSuggestions', 'U') IS NULL\n"
@@ -53,9 +51,7 @@ public class EditorSuggestionDAO {
         return null;
     }
 
-    /**
-     * 批量查询：按稿件ID映射成 Map<ManuscriptId, EditorSuggestion>。
-     */
+    
     public Map<Integer, EditorSuggestion> findByManuscriptIds(List<Integer> manuscriptIds) throws SQLException {
         ensureTable();
         Map<Integer, EditorSuggestion> map = new HashMap<>();
@@ -87,9 +83,7 @@ public class EditorSuggestionDAO {
         return map;
     }
 
-    /**
-     * 插入或更新（按 ManuscriptId 唯一）。
-     */
+    
     public void upsert(EditorSuggestion s) throws SQLException {
         ensureTable();
         if (s == null) throw new IllegalArgumentException("EditorSuggestion 不能为空");
@@ -147,3 +141,28 @@ public class EditorSuggestionDAO {
         return s;
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+

@@ -16,7 +16,7 @@ public class NewsAttachmentServlet extends HttpServlet {
 
     private final NewsDAO newsDAO = new NewsDAO();
 
-    // 与 NewsAdminServlet 中保持一致
+    
     private static final String BASE_UPLOAD_DIR = UploadPathUtil.getBaseDirPath();
     private static final String NEWS_SUB_DIR = "news";
 
@@ -50,7 +50,7 @@ public class NewsAttachmentServlet extends HttpServlet {
             return;
         }
 
-        // 仅允许已发布新闻的附件被前台访问
+        
         if (!news.isPublished()) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "未发布的新闻附件不允许访问");
             return;
@@ -70,7 +70,7 @@ public class NewsAttachmentServlet extends HttpServlet {
             resp.setContentType("application/octet-stream");
         }
 
-        // 处理下载文件名（避免中文乱码）
+        
         String encodedName = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
         resp.setHeader("Content-Disposition",
                 "attachment; filename=\"" + encodedName + "\"");
@@ -86,3 +86,28 @@ public class NewsAttachmentServlet extends HttpServlet {
         }
     }
 }
+
+/**
+ *　　　　　　　　┏┓　　　┏┓+ +
+ *　　　　　　　┏┛┻━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　　┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 ████━████ ┃+
+ *　　　　　　　┃　　　　　　　┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　　┃ + +
+ *　　　　　　　┗━┓　　　┏━┛
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃ + + + +
+ *　　　　　　　　　┃　　　┃　　　　Code is far away from bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　　┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━┳┓┏┛ + + + +
+ *　　　　　　　　　　┃┫┫　┃┫┫
+ *　　　　　　　　　　┗┻┛　┗┻┛+ + + +
+ */
+
