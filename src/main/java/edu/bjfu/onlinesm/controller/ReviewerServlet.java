@@ -2,6 +2,7 @@ package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.dao.ReviewDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptDAO;
+import edu.bjfu.onlinesm.dao.ManuscriptFundingDAO;
 import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.model.Manuscript;
 import edu.bjfu.onlinesm.model.Review;
@@ -31,6 +32,7 @@ public class ReviewerServlet extends HttpServlet {
 
     private final ReviewDAO reviewDAO = new ReviewDAO();
     private final ManuscriptDAO manuscriptDAO = new ManuscriptDAO();
+    private final ManuscriptFundingDAO fundingDAO = new ManuscriptFundingDAO();
     private final UserDAO userDAO = new UserDAO();
 
     // 通知（邮件/站内）。注意：通知发送失败不应影响主流程。
@@ -261,6 +263,8 @@ public class ReviewerServlet extends HttpServlet {
 
             req.setAttribute("review", review);
             req.setAttribute("manuscript", m);
+            req.setAttribute("fundings", fundingDAO.findByManuscriptId(m.getManuscriptId()));
+            req.setAttribute("fundings", fundingDAO.findByManuscriptId(m.getManuscriptId()));
             req.getRequestDispatcher("/WEB-INF/jsp/reviewer/invitation_detail.jsp")
                     .forward(req, resp);
         } catch (NumberFormatException e) {

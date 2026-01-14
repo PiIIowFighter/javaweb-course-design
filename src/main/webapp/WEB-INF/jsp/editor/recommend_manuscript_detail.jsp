@@ -24,7 +24,24 @@
             <table border="1" cellpadding="6" cellspacing="0" style="width:100%;">
                 <tr><th style="width:160px;">标题</th><td><c:out value="${manuscript.title}"/></td></tr>
 <tr><th>关键词</th><td><c:out value="${manuscript.subjectArea}"/></td></tr>
-                <tr><th>资助信息</th><td><c:out value="${manuscript.fundingInfo}"/></td></tr>
+                <tr><th>项目资助</th><td>
+                    <c:choose>
+                        <c:when test="${not empty fundings}">
+                            <ul style="margin: 0; padding-left: 18px;">
+                                <c:forEach var="f" items="${fundings}">
+                                    <li>
+                                        <c:out value="${f.fundingName}"/>
+                                        <c:if test="${not empty f.fundingLevel}">（<c:out value="${f.fundingLevel}"/>）</c:if>
+                                        <c:if test="${not empty f.fundingAmount}">，金额：<c:out value="${f.fundingAmount}"/></c:if>
+                                    </li>
+                                </c:forEach>
+                            </ul>
+                        </c:when>
+                        <c:otherwise>
+                            <c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/>
+                        </c:otherwise>
+                    </c:choose>
+                </td></tr>
                 <tr><th>投稿时间</th><td><c:out value="${manuscript.submitTime}"/></td></tr>
                 <tr><th>决策</th><td><c:out value="${manuscript.decision}"/></td></tr>
                 <tr>

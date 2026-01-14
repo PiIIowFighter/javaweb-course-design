@@ -56,7 +56,24 @@
                 </tr>
 <tr>
                     <th>项目资助</th>
-                    <td><c:out value="${manuscript.fundingInfo}"/></td>
+                    <td>
+                <c:choose>
+                    <c:when test="${not empty fundings}">
+                        <ul style="margin: 0; padding-left: 18px;">
+                            <c:forEach var="f" items="${fundings}">
+                                <li>
+                                    <c:out value="${f.fundingName}"/>
+                                    <c:if test="${not empty f.fundingLevel}">（<c:out value="${f.fundingLevel}"/>）</c:if>
+                                    <c:if test="${not empty f.fundingAmount}">，金额：<c:out value="${f.fundingAmount}"/></c:if>
+                                </li>
+                            </c:forEach>
+                        </ul>
+                    </c:when>
+                    <c:otherwise>
+                        <c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/>
+                    </c:otherwise>
+                </c:choose>
+            </td>
                 </tr>
                 </tbody>
             </table>

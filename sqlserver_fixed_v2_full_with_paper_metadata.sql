@@ -1928,3 +1928,22 @@ BEGIN
 END;
 GO
 
+IF OBJECT_ID(N'dbo.ManuscriptFundings', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ManuscriptFundings (
+        FundingId      INT IDENTITY(1,1) PRIMARY KEY,
+        ManuscriptId   INT NOT NULL,
+        FundingName    NVARCHAR(200) NOT NULL,
+        FundingLevel   NVARCHAR(50)  NULL,
+        FundingAmount  DECIMAL(18,2) NULL,
+        CreatedAt      DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
+
+        CONSTRAINT FK_ManuscriptFundings_Manuscript
+            FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId)
+            ON DELETE CASCADE
+    );
+
+    CREATE INDEX IX_ManuscriptFundings_ManuscriptId
+        ON dbo.ManuscriptFundings(ManuscriptId);
+END;
+GO

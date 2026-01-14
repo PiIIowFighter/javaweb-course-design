@@ -74,9 +74,62 @@
             </div>
 
             <div class="form-row">
-                <label for="fundingInfo">项目资助情况</label>
-                <textarea id="fundingInfo" name="fundingInfo" rows="3"
-                          placeholder="如：国家自然科学基金(编号xxxx)、校级大创项目等"><c:out value="${manuscript.fundingInfo}"/></textarea>
+                <label>项目资助（可多条）</label>
+                <div>
+                    <div style="overflow-x:auto;">
+                        <table id="fundingsTable">
+                            <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>名称 <span style="color: #be123c;">*</span></th>
+                                <th>级别</th>
+                                <th>资助金额</th>
+                                <th>操作</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <c:choose>
+                                <c:when test="${not empty fundings}">
+                                    <c:forEach var="f" items="${fundings}" varStatus="st">
+                                        <tr>
+                                            <td><c:out value="${st.index + 1}"/></td>
+                                            <td><input type="text" name="fundingName" value="${f.fundingName}" placeholder="如：国家自然科学基金"/></td>
+                                            <td><input type="text" name="fundingLevel" value="${f.fundingLevel}" placeholder="如：国家级/省部级/校级"/></td>
+                                            <td><input type="text" name="fundingAmount" value="${f.fundingAmount}" placeholder="如：100000"/></td>
+                                            <td style="text-align:center;">
+                                                <button type="button" class="btn-quiet" onclick="removeRow(this)">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </c:when>
+                                <c:otherwise>
+                                    <tr>
+                                        <td>1</td>
+                                        <td><input type="text" name="fundingName" placeholder="如：国家自然科学基金"/></td>
+                                        <td><input type="text" name="fundingLevel" placeholder="如：国家级/省部级/校级"/></td>
+                                        <td><input type="text" name="fundingAmount" placeholder="如：100000"/></td>
+                                        <td style="text-align:center;">
+                                            <button type="button" class="btn-quiet" onclick="removeRow(this)">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </c:otherwise>
+                            </c:choose>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="actions">
+                        <button type="button" onclick="addFundingRow()">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                            添加资助
+                        </button>
+                    </div>
+                    <div class="help">支持添加多条项目资助。若填写某一行任意字段，则“名称”为必填；金额可为空，填写时请使用数字（允许 1,000.00）。</div>
+                </div>
             </div>
         </fieldset>
 
@@ -451,7 +504,26 @@
         tbody.appendChild(tr);
     }
 
-    function addReviewerRow() {
+    
+    function addFundingRow() {
+        var tbody = document.querySelector('#fundingsTable tbody');
+        var index = tbody.querySelectorAll('tr').length;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td><input type="text" name="fundingName" placeholder="如：国家自然科学基金"></td>' +
+            '<td><input type="text" name="fundingLevel" placeholder="如：国家级/省部级/校级"></td>' +
+            '<td><input type="text" name="fundingAmount" placeholder="如：100000"></td>' +
+            '<td style="text-align:center;">' +
+                '<button type="button" class="btn-quiet" onclick="removeRow(this)">' +
+                    '<i class="bi bi-trash" aria-hidden="true"></i>' +
+                '</button>' +
+            '</td>';
+        tbody.appendChild(tr);
+        renumberTables();
+    }
+
+function addReviewerRow() {
         var tbody = document.querySelector('#reviewersTable tbody');
         var index = tbody.querySelectorAll('tr').length;
         var tr = document.createElement('tr');
@@ -480,6 +552,12 @@
         reviewerRows.forEach(function(tr, idx) {
             tr.children[0].innerText = (idx + 1);
         });
+
+        var fundingRows = document.querySelectorAll('#fundingsTable tbody tr');
+        fundingRows.forEach(function(tr, idx) {
+            tr.children[0].innerText = (idx + 1);
+        });
+
     }
 
     document.getElementById('submitForm').addEventListener('submit', function() {

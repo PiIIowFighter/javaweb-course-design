@@ -54,6 +54,7 @@ public class ManuscriptServlet extends HttpServlet {
     private final JournalDAO journalDAO = new JournalDAO();
     private final ManuscriptAuthorDAO authorDAO = new ManuscriptAuthorDAO();
     private final ManuscriptRecommendedReviewerDAO recommendedReviewerDAO = new ManuscriptRecommendedReviewerDAO();
+    private final ManuscriptFundingDAO fundingDAO = new ManuscriptFundingDAO();
     private final ManuscriptVersionDAO versionDAO = new ManuscriptVersionDAO();
     private final FileDAO fileDAO = new FileDAO();
     private final ManuscriptAssignmentDAO assignmentDAO = new ManuscriptAssignmentDAO();
@@ -168,6 +169,8 @@ public class ManuscriptServlet extends HttpServlet {
             req.setAttribute("authors", authorDAO.findByManuscriptId(draft.getManuscriptId()));
             // 推荐审稿人
             req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(draft.getManuscriptId()));
+            // 项目资助（多条）
+            req.setAttribute("fundings", fundingDAO.findByManuscriptId(draft.getManuscriptId()));
             // 当前版本
             ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(draft.getManuscriptId());
             req.setAttribute("currentVersion", cv);
@@ -181,6 +184,11 @@ public class ManuscriptServlet extends HttpServlet {
             } catch (Exception ignore) {
                 // 不影响主流程
             }
+        }
+
+        // 新建投稿：默认空资助列表（避免 JSP 空指针）
+        if (draft == null) {
+            req.setAttribute("fundings", java.util.Collections.emptyList());
         }
 
         req.getRequestDispatcher("/WEB-INF/jsp/author/manuscript_submit.jsp").forward(req, resp);
@@ -236,6 +244,8 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", m);
         req.setAttribute("authors", authorDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recommendedReviewerDAO.findByManuscriptId(manuscriptId));
+        // 项目资助（多条）
+        req.setAttribute("fundings", fundingDAO.findByManuscriptId(manuscriptId));
         ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscriptId);
         req.setAttribute("currentVersion", cv);
         try {
@@ -270,6 +280,19 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", manuscript);
         req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
+        // 项目资助（多条）：优先使用 request 中已有的回显值（表单校验失败时）
+        if (req.getAttribute("fundings") == null) {
+            if (manuscript != null && manuscript.getManuscriptId() != null) {
+                try {
+                    req.setAttribute("fundings", fundingDAO.findByManuscriptId(manuscript.getManuscriptId()));
+                } catch (Exception ignore) {
+                    req.setAttribute("fundings", Collections.emptyList());
+                }
+            } else {
+                req.setAttribute("fundings", Collections.emptyList());
+            }
+        }
+
         // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
             ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId());
@@ -300,6 +323,19 @@ public class ManuscriptServlet extends HttpServlet {
         req.setAttribute("manuscript", manuscript);
         req.setAttribute("authors", authors == null ? Collections.emptyList() : authors);
         req.setAttribute("recommendedReviewers", recommendedReviewers == null ? Collections.emptyList() : recommendedReviewers);
+        // 项目资助（多条）：优先使用 request 中已有的回显值（表单校验失败时）
+        if (req.getAttribute("fundings") == null) {
+            if (manuscript != null && manuscript.getManuscriptId() != null) {
+                try {
+                    req.setAttribute("fundings", fundingDAO.findByManuscriptId(manuscript.getManuscriptId()));
+                } catch (Exception ignore) {
+                    req.setAttribute("fundings", Collections.emptyList());
+                }
+            } else {
+                req.setAttribute("fundings", Collections.emptyList());
+            }
+        }
+
         // 版本信息
         if (manuscript != null && manuscript.getManuscriptId() != null) {
             ManuscriptVersion cv = versionDAO.findCurrentByManuscriptId(manuscript.getManuscriptId());
@@ -881,6 +917,28 @@ public class ManuscriptServlet extends HttpServlet {
             List<ManuscriptAuthor> authors = buildAuthorsFromRequest(req);
             List<ManuscriptRecommendedReviewer> recs = buildRecommendedReviewersFromRequest(req);
 
+            // 项目资助（多条）：名称 / 级别 / 资助金额
+            List<String> fundingErrors = new ArrayList<>();
+            List<ManuscriptFunding> fundings = buildFundingsFromRequest(req, fundingErrors);
+            // 回显用
+            req.setAttribute("fundings", fundings);
+            if (!fundingErrors.isEmpty()) {
+                req.setAttribute("error", String.join("；", fundingErrors));
+                forwardSubmitFormWithTempData(req, resp, m, authors, recs);
+                return;
+            }
+            // 兼容旧字段（Manuscripts.FundingInfo）：存汇总字符串
+            String fundingSummary = buildFundingInfoSummary(fundings);
+            if (fundingSummary != null && !fundingSummary.isEmpty()) {
+                m.setFundingInfo(fundingSummary);
+            } else {
+                // 若完全未填写新表单，则保留旧参数 fundingInfo（兼容老页面）
+                if (m.getFundingInfo() == null || m.getFundingInfo().trim().isEmpty()) {
+                    m.setFundingInfo(null);
+                }
+            }
+
+
             // 推荐审稿人：任意一行如果被填写了（姓名/邮箱/理由任一不为空），则必须同时提供“姓名 + 邮箱”。
             // 数据库表 ManuscriptRecommendedReviewers 约束 FullName/Email NOT NULL。
             String recRowError = findFirstIncompleteRecommendedReviewerRow(req);
@@ -965,6 +1023,19 @@ public class ManuscriptServlet extends HttpServlet {
 
                 recommendedReviewerDAO.deleteByManuscriptId(conn, manuscriptId);
                 recommendedReviewerDAO.insertBatch(conn, manuscriptId, recs);
+
+                // 项目资助（多条）：全量覆盖保存
+                try {
+                    fundingDAO.replaceByManuscriptId(conn, manuscriptId, fundings);
+                } catch (SQLException e) {
+                    // 若尚未执行建表脚本，避免整个投稿流程挂掉（但建议尽快执行 SQL Patch）
+                    String msg = e.getMessage();
+                    if (msg == null) throw e;
+                    String lower = msg.toLowerCase();
+                    if (!(lower.contains("invalid object name") && lower.contains("manuscriptfundings"))) {
+                        throw e;
+                    }
+                }
 
                 // 版本：每次保存草稿/提交都生成一个“当前版本”
                 int nextVersionNumber = getNextVersionNumber(conn, manuscriptId);
@@ -1157,6 +1228,25 @@ public class ManuscriptServlet extends HttpServlet {
 
             List<ManuscriptAuthor> authors = buildAuthorsFromRequest(req);
             List<ManuscriptRecommendedReviewer> recs = buildRecommendedReviewersFromRequest(req);
+
+            // 项目资助（多条）：名称 / 级别 / 资助金额
+            List<String> fundingErrors = new ArrayList<>();
+            List<ManuscriptFunding> fundings = buildFundingsFromRequest(req, fundingErrors);
+            req.setAttribute("fundings", fundings);
+            if (!fundingErrors.isEmpty()) {
+                req.setAttribute("error", String.join("；", fundingErrors));
+                forwardResubmitFormWithTempData(req, resp, toUpdate, authors, recs);
+                return;
+            }
+            String fundingSummary = buildFundingInfoSummary(fundings);
+            if (fundingSummary != null && !fundingSummary.isEmpty()) {
+                toUpdate.setFundingInfo(fundingSummary);
+            } else {
+                if (toUpdate.getFundingInfo() == null || toUpdate.getFundingInfo().trim().isEmpty()) {
+                    toUpdate.setFundingInfo(null);
+                }
+            }
+
             toUpdate.setAuthorList(joinAuthorNames(authors));
 
             // submit 模式：若填写了推荐审稿人，则必须姓名+邮箱齐全（草稿模式下允许先不完整地填写）
@@ -1202,6 +1292,18 @@ public class ManuscriptServlet extends HttpServlet {
 
                 recommendedReviewerDAO.deleteByManuscriptId(conn, manuscriptId);
                 recommendedReviewerDAO.insertBatch(conn, manuscriptId, recs);
+
+                // 项目资助（多条）：全量覆盖保存
+                try {
+                    fundingDAO.replaceByManuscriptId(conn, manuscriptId, fundings);
+                } catch (SQLException e) {
+                    String msg = e.getMessage();
+                    if (msg == null) throw e;
+                    String lower = msg.toLowerCase();
+                    if (!(lower.contains("invalid object name") && lower.contains("manuscriptfundings"))) {
+                        throw e;
+                    }
+                }
 
                 int nextVersionNumber = getNextVersionNumber(conn, manuscriptId);
 
@@ -1692,7 +1794,84 @@ public class ManuscriptServlet extends HttpServlet {
         return m;
     }
 
-    private List<ManuscriptAuthor> buildAuthorsFromRequest(HttpServletRequest req) {
+    
+    private List<ManuscriptFunding> buildFundingsFromRequest(HttpServletRequest req, List<String> errors) {
+        String[] names = req.getParameterValues("fundingName");
+        String[] levels = req.getParameterValues("fundingLevel");
+        String[] amounts = req.getParameterValues("fundingAmount");
+
+        int max = 0;
+        if (names != null) max = Math.max(max, names.length);
+        if (levels != null) max = Math.max(max, levels.length);
+        if (amounts != null) max = Math.max(max, amounts.length);
+
+        List<ManuscriptFunding> list = new ArrayList<>();
+        for (int i = 0; i < max; i++) {
+            String n = getArrayValue(names, i);
+            String lv = getArrayValue(levels, i);
+            String amtStr = getArrayValue(amounts, i);
+
+            boolean anyFilled = (n != null && !n.isEmpty())
+                    || (lv != null && !lv.isEmpty())
+                    || (amtStr != null && !amtStr.isEmpty());
+
+            if (!anyFilled) continue;
+
+            // 名称必填（只要这一行填写了任意字段）
+            if (n == null || n.isEmpty()) {
+                if (errors != null) {
+                    errors.add("第 " + (i + 1) + " 行项目资助：名称不能为空。");
+                }
+                continue;
+            }
+
+            ManuscriptFunding f = new ManuscriptFunding();
+            f.setFundingName(n);
+            f.setFundingLevel(lv);
+
+            if (amtStr != null && !amtStr.isEmpty()) {
+                try {
+                    // 允许输入 1,000.00 这种格式
+                    String normalized = amtStr.replace(",", "");
+                    f.setFundingAmount(new java.math.BigDecimal(normalized));
+                } catch (Exception ex) {
+                    if (errors != null) {
+                        errors.add("第 " + (i + 1) + " 行项目资助：资助金额格式不正确。");
+                    }
+                    // 解析失败则不加入列表，避免数据库报错
+                    continue;
+                }
+            }
+
+            list.add(f);
+        }
+        return list;
+    }
+
+    /**
+     * 为兼容旧字段 Manuscript.FundingInfo（TEXT/NVARCHAR），将多条资助汇总成可读字符串。
+     * 真实结构化数据以 ManuscriptFundings 表为准。
+     */
+    private String buildFundingInfoSummary(List<ManuscriptFunding> fundings) {
+        if (fundings == null || fundings.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < fundings.size(); i++) {
+            ManuscriptFunding f = fundings.get(i);
+            if (f == null) continue;
+            if (i > 0) sb.append("；");
+            sb.append(f.getFundingName() == null ? "" : f.getFundingName());
+            if (f.getFundingLevel() != null && !f.getFundingLevel().trim().isEmpty()) {
+                sb.append("（").append(f.getFundingLevel().trim()).append("）");
+            }
+            if (f.getFundingAmount() != null) {
+                sb.append(" 金额=").append(f.getFundingAmount().toPlainString());
+            }
+        }
+        String s = sb.toString().trim();
+        return s.isEmpty() ? null : s;
+    }
+
+private List<ManuscriptAuthor> buildAuthorsFromRequest(HttpServletRequest req) {
         String[] names = req.getParameterValues("authorName");
         String[] affiliations = req.getParameterValues("authorAffiliation");
         String[] degrees = req.getParameterValues("authorDegree");

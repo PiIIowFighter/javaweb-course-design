@@ -18,6 +18,7 @@ import edu.bjfu.onlinesm.service.PlagiarismCheckService;
 import edu.bjfu.onlinesm.util.OperationLogger;
 import edu.bjfu.onlinesm.dao.ManuscriptAssignmentDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptRecommendedReviewerDAO;
+import edu.bjfu.onlinesm.dao.ManuscriptFundingDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptAuthorDAO;
 import edu.bjfu.onlinesm.dao.ManuscriptVersionDAO;
 import edu.bjfu.onlinesm.model.ManuscriptRecommendedReviewer;
@@ -791,6 +792,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
         req.setAttribute("formalCheckResult", formalCheckResult);
         req.setAttribute("reviews", reviews);
         req.setAttribute("recommendedReviewers", recommendedReviewers);
+        req.setAttribute("fundings", fundingDAO.findByManuscriptId(manuscriptId));
 
         req.getRequestDispatcher("/WEB-INF/jsp/editor/recommend_manuscript_detail.jsp")
                 .forward(req, resp);
@@ -863,6 +865,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
 
         req.setAttribute("manuscript", m);
         req.setAttribute("authors", authors);
+        req.setAttribute("fundings", fundingDAO.findByManuscriptId(manuscriptId));
         req.setAttribute("recommendedReviewers", recReviewers);
         req.setAttribute("reviews", reviews);
         req.setAttribute("reviewerMap", reviewerMap);
