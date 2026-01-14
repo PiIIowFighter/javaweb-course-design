@@ -39,16 +39,16 @@
             </small>
         </a>
 
-        <!-- 待分配队列 -->
+        <!-- 分配编辑 -->
         <a class="card" style="text-decoration:none;"
            href="${pageContext.request.contextPath}/editor/toAssign">
-            <h3><i class="bi bi-diagram-3" aria-hidden="true"></i> 待分配队列</h3>
+            <h3><i class="bi bi-diagram-3" aria-hidden="true"></i> 分配编辑</h3>
             <p>
                 处理 TO_ASSIGN：为稿件指派具体责任编辑，并可一并协调后续外审人选，
                 推动稿件正式进入外审流程。
             </p>
             <small>
-                <i class="bi bi-arrow-right" aria-hidden="true"></i> 打开待分配列表
+                <i class="bi bi-arrow-right" aria-hidden="true"></i> 打开分配编辑列表
             </small>
         </a>
 
