@@ -1,6 +1,8 @@
 package edu.bjfu.onlinesm.controller;
 
 import edu.bjfu.onlinesm.util.DbUtil;
+import edu.bjfu.onlinesm.dao.ManuscriptFundingDAO;
+
 import edu.bjfu.onlinesm.dao.ManuscriptDAO;
 import edu.bjfu.onlinesm.dao.UserDAO;
 import edu.bjfu.onlinesm.dao.ReviewDAO;
@@ -82,6 +84,7 @@ public abstract class EditorServlet extends HttpServlet {
     protected final FormalCheckService formalCheckService = new FormalCheckService();
     protected final MailNotifications mailNotifications = new MailNotifications(userDAO, manuscriptDAO, reviewDAO);
     protected final InAppNotifications inAppNotifications = new InAppNotifications(userDAO, manuscriptDAO, reviewDAO);
+    private final ManuscriptFundingDAO fundingDAO = new ManuscriptFundingDAO();
 
     
     @Override
@@ -742,7 +745,7 @@ protected void handleFinalDecisionList(HttpServletRequest req, HttpServletRespon
      */
     protected void handleRecommendManuscriptDetailPage(HttpServletRequest req, HttpServletResponse resp, User current)
             throws ServletException, IOException, SQLException {
-
+    	
         String midStr = req.getParameter("manuscriptId");
         if (midStr == null || midStr.trim().isEmpty()) {
             midStr = req.getParameter("id");
