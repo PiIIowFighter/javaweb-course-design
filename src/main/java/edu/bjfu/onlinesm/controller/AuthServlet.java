@@ -95,7 +95,7 @@ public class AuthServlet extends HttpServlet {
      *  1. 校验用户名和密码非空；
      *  2. 从 SQL Server 按用户名查询用户；
      *  3. 校验密码是否匹配，以及账号状态（ACTIVE 才能登录）；
-     *  4. 成功则将 User 放入 sessionScope.currentUser，并跳转 /dashboard。
+     *  4. 成功则将 User 放入 sessionScope.currentUser，并跳转首页 / 。
      */
     private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String username = trim(req.getParameter("username"));
@@ -128,7 +128,8 @@ public class AuthServlet extends HttpServlet {
             session.setAttribute("currentUser", user);
             // 初始化菜单入口权限（供 header/sidebar/拦截器使用）
             menuPermissionService.loadIntoSession(session, user);
-            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            // 需求：登录后直接返回首页，不进入工作台
+            resp.sendRedirect(req.getContextPath() + "/");
         } catch (SQLException e) {
             throw new ServletException("登录时访问数据库出错", e);
         }

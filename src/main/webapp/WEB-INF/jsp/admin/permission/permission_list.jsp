@@ -12,10 +12,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">权限管理（按用户 / 菜单入口）</h2>
-        <div class="chips">
-            <span class="chip">勾选后：对应入口才会在该用户的工作台和侧边栏显示，并允许访问该功能页面（跨角色授予）。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <!--

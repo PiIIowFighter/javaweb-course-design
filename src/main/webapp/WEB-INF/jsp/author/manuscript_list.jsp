@@ -16,16 +16,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">我的稿件</h2>
-        <div class="chips">
-            <span class="chip">按不同处理状态分类展示投稿记录，便于跟踪稿件在编辑部与审稿流程中的进展。</span>
-        </div>
-    </div></div>
-        <div class="actions">
-            <a class="btn-primary" href="${ctx}/manuscripts/submit">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                新建投稿
-            </a>
-        </div>
+</div></div>
     </div>
 
     <%-- 顶部分组 Tab 已移除：分组入口改为侧边栏二级菜单 --%>
@@ -33,8 +24,8 @@
     <!-- 筛选区域：状态 + 日期范围 -->
     <form method="get" action="${ctx}/manuscripts/list" class="card">
         <input type="hidden" name="group" value="${group}"/>
-        <div class="toolbar">
-            <div class="grow">
+        <div class="toolbar filter-toolbar">
+            <div class="grow filter-status">
                 <label style="display:block; margin-bottom:6px;">状态</label>
                 <select name="status">
         <option value="">全部状态</option>
@@ -69,12 +60,12 @@
                 </select>
             </div>
 
-            <div>
+            <div class="filter-date">
                 <label style="display:block; margin-bottom:6px;">提交日期</label>
-                <div class="toolbar">
-                    <input type="date" name="fromDate" value="${fromDate}"/>
-                    <span style="color: var(--muted);">至</span>
-                    <input type="date" name="toDate" value="${toDate}"/>
+                <div class="date-range">
+                    <input class="date-input" type="date" name="fromDate" value="${fromDate}"/>
+                    <span class="date-sep">至</span>
+                    <input class="date-input" type="date" name="toDate" value="${toDate}"/>
                 </div>
             </div>
 

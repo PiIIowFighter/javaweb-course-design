@@ -9,10 +9,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">修改密码</h2>
-        <div class="chips">
-            <span class="chip">请输入旧密码，并设置新密码。修改成功后需要重新登录。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="stack">

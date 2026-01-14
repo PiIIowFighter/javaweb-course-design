@@ -13,10 +13,7 @@
             <div>
                 <div class="page-head">
         <h2 class="page-title">文章与专刊 (Issues)</h2>
-        <div class="chips">
-            <span class="chip">Latest Issues · Special Issues · All Issues</span>
-        </div>
-    </div></div>
+</div></div>
             <a style="text-decoration:none;" href="${ctx}/guide">用户指南 →</a>
         </div>
     </div>

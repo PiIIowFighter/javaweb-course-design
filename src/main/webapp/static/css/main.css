@@ -450,6 +450,192 @@ a.link-muted:hover {
     color: inherit;
 }
 .chip a:hover { text-decoration: underline; }
+
+/* ------------------------------
+   Public About (single page tabs)
+   ------------------------------ */
+.about-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.about-tab {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform .05s ease, background .15s ease, border-color .15s ease;
+}
+
+.about-tab:hover { background: var(--surface-2); }
+.about-tab:active { transform: translateY(1px); }
+
+.about-tab.active {
+    background: var(--primary-ghost);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.about-panels { margin-top: var(--space-4); }
+.about-panel { display: none; }
+
+/* ------------------------------
+   Public Editorial Board
+   ------------------------------ */
+.eb-page-wrap {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 10px);
+    padding: var(--space-6);
+}
+
+/* 期刊编委会页：顶部 Hero 卡片略小一点（不影响首页等其他 hero） */
+.eb-page-wrap .hero {
+    padding: var(--space-8) var(--space-6);
+}
+
+
+.eb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-5);
+}
+
+/* 第一层：淡色背景外框（用于区分页面背景与卡片本体），并固定尺寸 */
+.eb-card-wrap {
+    background: color-mix(in srgb, var(--surface-2) 70%, var(--primary-ghost));
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: calc(var(--radius) + 6px);
+    padding: var(--space-3);
+    height: 240px;
+}
+
+/* 第二层：卡片本体（统一排版） */
+.eb-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.eb-card .badge {
+    align-self: flex-start;
+    display: inline-flex;
+    margin-top: var(--space-2);
+}
+
+.eb-name {
+    font-weight: 800;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.eb-meta {
+    color: var(--muted);
+    font-size: .92rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    line-height: 1.45;
+}
+
+.eb-bio {
+    color: var(--muted);
+    font-size: .92rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    line-height: 1.45;
+}
+
+/* ------------------------------
+   Home page editorial-board preview (fixed square tiles, one row)
+   ------------------------------ */
+.eb-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-3);
+    overflow: hidden; /* 超出不展示 */
+}
+
+.eb-tile {
+    width: 150px;
+    height: 150px;
+    flex: 0 0 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text);
+}
+
+.eb-tile:hover { background: var(--surface-2); }
+
+.eb-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    display: block;
+}
+
+.eb-info {
+    min-width: 0;
+    width: 100%;
+    text-align: center;
+}
+
+.eb-role {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .88rem;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    .eb-tile { width: 132px; height: 132px; flex-basis: 132px; }
+    .eb-avatar { width: 64px; height: 64px; }
+}
+
+.eb-card .badge {
+    align-self: flex-start;
+    display: inline-flex;
+    margin-top: var(--space-2);
+}
 .page-actions {
     display: flex;
     flex-wrap: wrap;
@@ -545,6 +731,45 @@ a.link-muted:hover {
 }
 .toolbar > * { flex: 0 0 auto; }
 .toolbar .grow { flex: 1 1 auto; }
+
+/* Manuscript list – filter layout */
+.filter-toolbar {
+    justify-content: flex-start;
+    gap: var(--space-6);
+}
+.filter-toolbar .filter-status {
+    max-width: 260px;
+    flex: 0 0 260px;
+}
+.filter-toolbar .filter-date {
+    flex: 1 1 520px;
+    min-width: 520px;
+}
+.date-range {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: nowrap; /* 强制：起止日期 + “至” 同一行 */
+}
+.date-range .date-input {
+    width: 210px;
+    min-width: 0; /* 允许在窄屏下收缩而不是换行 */
+    flex: 1 1 210px;
+}
+.date-range .date-sep {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    color: var(--muted);
+}
+
+@media (max-width: 980px) {
+    .filter-toolbar .filter-status,
+    .filter-toolbar .filter-date {
+        max-width: none;
+        min-width: 0;
+        flex: 1 1 100%;
+    }
+}
 
 /* Typography */
 h1, h2, h3 {

@@ -1,18 +1,25 @@
 <%@ page pageEncoding="UTF-8" %>
 
-<c:if test="${not empty pageCount and pageCount > 1}">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:14px;">
-        <div class="chips">
-            <span class="chip">共 ${totalCount} 条</span>
-            <span class="chip">第 ${page} / ${pageCount} 页</span>
-        </div>
+<%--
+  始终显示分页区（即使只有 1 页 / 0 条），以体现分页功能存在。
+  相关变量由 Controller 传入，做一次防御性默认值兜底。
+--%>
+<c:set var="pc" value="${empty pageCount ? 1 : pageCount}" />
+<c:set var="pg" value="${empty page ? 1 : page}" />
+<c:set var="tc" value="${empty totalCount ? 0 : totalCount}" />
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:14px;">
+    <div class="chips">
+        <span class="chip">共 ${tc} 条</span>
+        <span class="chip">第 ${pg} / ${pc} 页</span>
+    </div>
 
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <!-- First / Prev -->
             <c:choose>
-                <c:when test="${page > 1}">
-                    <a class="btn" href="${paginationPrefix}1">首页</a>
-                    <a class="btn" href="${paginationPrefix}${page-1}">上一页</a>
+            <c:when test="${pg > 1}">
+                <a class="btn" href="${paginationPrefix}1">首页</a>
+                <a class="btn" href="${paginationPrefix}${pg-1}">上一页</a>
                 </c:when>
                 <c:otherwise>
                     <span class="btn" style="opacity:.45; cursor:not-allowed;">首页</span>
@@ -21,14 +28,14 @@
             </c:choose>
 
             <!-- Windowed page numbers -->
-            <c:set var="start" value="${page-2}" />
-            <c:set var="end" value="${page+2}" />
+            <c:set var="start" value="${pg-2}" />
+            <c:set var="end" value="${pg+2}" />
             <c:if test="${start < 1}"><c:set var="start" value="1"/></c:if>
-            <c:if test="${end > pageCount}"><c:set var="end" value="${pageCount}"/></c:if>
+            <c:if test="${end > pc}"><c:set var="end" value="${pc}"/></c:if>
 
             <c:forEach var="p" begin="${start}" end="${end}">
                 <c:choose>
-                    <c:when test="${p == page}">
+                <c:when test="${p == pg}">
                         <span class="btn" style="pointer-events:none; border-color:rgba(30,64,175,.55); background:rgba(30,64,175,.08);">
                             ${p}
                         </span>
@@ -41,15 +48,14 @@
 
             <!-- Next / Last -->
             <c:choose>
-                <c:when test="${page < pageCount}">
-                    <a class="btn" href="${paginationPrefix}${page+1}">下一页</a>
-                    <a class="btn" href="${paginationPrefix}${pageCount}">末页</a>
+            <c:when test="${pg < pc}">
+                <a class="btn" href="${paginationPrefix}${pg+1}">下一页</a>
+                <a class="btn" href="${paginationPrefix}${pc}">末页</a>
                 </c:when>
                 <c:otherwise>
                     <span class="btn" style="opacity:.45; cursor:not-allowed;">下一页</span>
                     <span class="btn" style="opacity:.45; cursor:not-allowed;">末页</span>
                 </c:otherwise>
             </c:choose>
-        </div>
-    </div>
-</c:if>
+</div>
+</div>

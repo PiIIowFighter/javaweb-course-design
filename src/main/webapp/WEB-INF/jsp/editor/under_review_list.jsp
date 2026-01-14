@@ -5,15 +5,12 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <div class="page-head">
-        <h2 class="page-title">外审阶段稿件列表</h2>
-        <div class="chips">
-            <span class="chip">此页面仅展示 <strong>UNDER_REVIEW</strong>（外审进行中）的稿件。 已完成外审并进入 <strong>EDITOR_RECOMMENDATION</strong> 的稿件请到“提出建议”模块查看。</span>
-        </div>
-    </div><h3>外审进行中（UNDER_REVIEW）</h3>
+        <h2 class="page-title">审稿中</h2>
+</div><h3>外审进行中稿件列表</h3>
 
 <p style="margin:8px 0;">
     <a class="btn btn-quiet" href="${pageContext.request.contextPath}/editor/review/monitor">进入全局催审/逾期监控</a>
-    <span style="margin-left:8px; color:#666;">（用于查看所有稿件的逾期审稿与批量催审；单篇稿件的邀请/撤回/催审请点击下方“查看详细信息”。）</span>
+    <span style="margin-left:8px; color:#666;">（用于查看所有稿件的逾期审稿与批量催审。）</span>
 </p>
 
 <c:if test="${empty underReviewList}">

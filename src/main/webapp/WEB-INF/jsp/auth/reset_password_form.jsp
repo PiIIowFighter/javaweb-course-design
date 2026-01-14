@@ -7,10 +7,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">设置新密码</h2>
-        <div class="chips">
-            <span class="chip">邮箱验证码已验证，请为账号设置一个新的登录密码。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="stack">

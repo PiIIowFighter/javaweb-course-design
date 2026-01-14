@@ -6,10 +6,7 @@
 
 <div class="page-head">
         <h2 class="page-title">数据库维护</h2>
-        <div class="chips">
-            <span class="chip">本页面用于<strong>系统管理员/超级管理员</strong>手动检查并修复课程设计中用到的关键表结构， 例如角色权限表 <code>RolePermissions</code>、编委会表 <code>EditorialBoard</code>、 操作日志表 <code>OperationLogs</code> 等。所有操作都会记录到“操作日志”中。</span>
-        </div>
-    </div><table border="1" cellpadding="6" cellspacing="0">
+</div><table border="1" cellpadding="6" cellspacing="0">
     <tr>
         <th>数据库连通性</th>
         <td>

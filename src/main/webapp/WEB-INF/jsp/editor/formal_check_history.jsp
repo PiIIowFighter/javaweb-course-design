@@ -55,10 +55,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">审查历史</h2>
-        <div class="chips">
-            <span class="chip">展示你历史提交的形式审查记录（最新在前）。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <c:if test="${empty history}">

@@ -7,11 +7,8 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <div class="page-head">
-        <h2 class="page-title">提出建议（编辑）</h2>
-        <div class="chips">
-            <span class="chip">当稿件状态进入 <strong>EDITOR_RECOMMENDATION</strong> 后，责任编辑可查看审稿意见汇总并向主编提交处理建议（无最终决策权）。</span>
-        </div>
-    </div><c:if test="${param.ok == '1'}">
+        <h2 class="page-title">编辑推荐</h2>
+</div><c:if test="${param.ok == '1'}">
     <div class="alert" style="max-width: 1100px; padding: 12px; border: 1px solid #d0f0d0; background: #f3fff3; border-radius: 10px; margin: 10px 0;">
         已成功提交编辑建议，等待主编终审。
     </div>

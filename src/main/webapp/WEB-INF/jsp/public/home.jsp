@@ -56,10 +56,7 @@
             <div>
                 <div class="page-head">
         <h2 class="page-title">期刊编委会</h2>
-        <div class="chips">
-            <span class="chip">了解本刊编委会成员与研究方向。</span>
-        </div>
-    </div></div>
+</div></div>
             <a class="link-muted" href="${ctx}/editorial-board" style="margin-left:auto; white-space:nowrap;">
                 查看全部 <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
@@ -69,36 +66,39 @@
             <p>编委会信息将陆续更新，敬请关注。</p>
         </c:if>
         <c:if test="${not empty boardMembers}">
-            <ul class="list">
-                <c:forEach var="m" items="${boardMembers}" begin="0" end="5">
-                    <li class="list-item">
-                        <!-- 公开头像：根据 userId 读取 /uploads/avatars 下的头像文件，找不到则返回默认头像 -->
-                        <span class="avatar" aria-hidden="true" style="overflow:hidden;">
+            <!-- 首页预览：统一方块尺寸，横向一行，不换行，超出隐藏 -->
+            <div class="eb-strip" aria-label="editorial-board-preview">
+                <!-- 首页仅展示前 5 位编委，完整名单见“查看全部” -->
+                <c:forEach var="m" items="${boardMembers}" begin="0" end="4">
+                    <div class="eb-tile">
+                        <span class="eb-avatar" aria-hidden="true" style="overflow:hidden;">
                             <img src="${ctx}/public/avatar?userId=${m.userId}"
                                  alt="avatar"
                                  style="width:100%;height:100%;object-fit:cover;display:block;"/>
                         </span>
-                        <div>
-                            <div class="list-title">
+
+                        <div class="eb-info">
+                            <div class="eb-name">
                                 <c:out value="${m.fullName}"/>
-                                <c:if test="${not empty m.position}">
-                                    <span class="badge" style="margin-left:10px;"><c:out value="${m.position}"/></span>
-                                </c:if>
                             </div>
-                            <div class="list-meta">
-                                <c:out value="${m.affiliation}"/>
-                                <c:if test="${not empty m.section}"> · <c:out value="${m.section}"/></c:if>
+
+                            <div class="eb-role">
+                                <c:choose>
+                                    <c:when test="${not empty m.position}">
+                                        <c:out value="${m.position}"/>
+                                    </c:when>
+                                    <c:when test="${not empty m.section}">
+                                        <c:out value="${m.section}"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        编委
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
-                            <c:if test="${not empty m.bio}">
-                                <div class="list-meta" style="margin-top:4px;">
-                                    <c:out value="${fn:length(m.bio) > 80 ? fn:substring(m.bio, 0, 80) : m.bio}"/>
-                                    <c:if test="${fn:length(m.bio) > 80}">...</c:if>
-                                </div>
-                            </c:if>
                         </div>
-                    </li>
+                    </div>
                 </c:forEach>
-            </ul>
+            </div>
         </c:if>
     </div>
 
@@ -134,7 +134,8 @@
         </c:if>
         <c:if test="${not empty latestPublished}">
             <ul class="list">
-                <c:forEach var="a" items="${latestPublished}">
+                <!-- 首页仅展示前 3 篇论文，完整列表见“查看全部” -->
+                <c:forEach var="a" items="${latestPublished}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
                         <div>
@@ -190,7 +191,8 @@
         </c:if>
         <c:if test="${not empty newsList}">
             <ul class="list">
-                <c:forEach var="n" items="${newsList}" begin="0" end="5">
+                <!-- 首页仅展示前 3 条新闻，完整列表见“查看全部” -->
+                <c:forEach var="n" items="${newsList}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true"><i class="bi bi-newspaper"></i></span>
                         <div>
@@ -227,7 +229,8 @@
 
         <c:if test="${not empty callForPapers}">
             <ul class="list">
-                <c:forEach var="c" items="${callForPapers}" begin="0" end="5">
+                <!-- 首页仅展示前 3 条征稿通知，完整列表见“查看全部” -->
+                <c:forEach var="c" items="${callForPapers}" begin="0" end="2">
                     <li class="list-item">
                         <span class="avatar" aria-hidden="true" style="overflow:hidden;">
                             <c:choose>
@@ -261,14 +264,7 @@
             </ul>
         </c:if>
 
-        <div class="actions" style="margin-top: var(--space-3);">
-            <a class="btn-primary" style="text-decoration:none;" href="${ctx}/manuscripts/submit">
-                <i class="bi bi-upload" aria-hidden="true"></i> Submit your article
-            </a>
-            <a style="text-decoration:none;" href="${ctx}/guide">
-                <i class="bi bi-book" aria-hidden="true"></i> Guide for authors
-            </a>
-        </div>
+        <%-- 征稿通知模块下方按钮已按需求移除 --%>
     </div>
 
 </div>

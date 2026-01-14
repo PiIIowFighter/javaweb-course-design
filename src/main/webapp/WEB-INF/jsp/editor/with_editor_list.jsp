@@ -7,13 +7,10 @@
 <c:choose>
     <c:when test="${sessionScope.currentUser.roleCode == 'EDITOR'}">
         <div class="page-head">
-        <h2 class="page-title">我的稿件（主编指派给我的稿件）</h2>
-        <div class="chips">
-            <span class="chip">此页面仅展示当前登录编辑被主编指派负责的稿件（状态：WITH_EDITOR）。</span>
-        </div>
-    </div></c:when>
+        <h2 class="page-title">编辑待办</h2>
+</div></c:when>
     <c:otherwise>
-        <h2>在编辑处处理中的稿件列表（所有编辑）</h2>
+        <h2>在编辑处理中的稿件列表</h2>
         <p>此页面展示所有处于 WITH_EDITOR 状态、正在由责任编辑处理的稿件，方便主编监控进度并催办。</p>
     </c:otherwise>
 </c:choose>

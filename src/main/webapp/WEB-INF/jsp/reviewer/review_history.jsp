@@ -10,10 +10,7 @@
 
 <div class="page-head">
         <h2 class="page-title">历史评审记录</h2>
-        <div class="chips">
-            <span class="chip">以下为您已经完成的所有评审记录。</span>
-        </div>
-    </div><c:if test="${empty reviews}">
+</div><c:if test="${empty reviews}">
     <div style="padding: 20px; background-color: #f9f9f9; border: 1px solid #ddd;">
         <p>目前还没有完成的评审记录。</p>
     </div>

@@ -6,10 +6,7 @@
 
 <div class="page-head">
         <h2 class="page-title">审稿人库管理</h2>
-        <div class="chips">
-            <span class="chip">主编在此维护期刊审稿人库：<b>邀请</b>、<b>审核资格</b>、<b>移除/禁用</b>、<b>重新启用</b>。</span>
-        </div>
-    </div><c:if test="${not empty msg}">
+</div><c:if test="${not empty msg}">
     <div style="padding:10px;border:1px solid #b6e3b6;background:#eef9ee;margin:10px 0;">
         <c:out value="${msg}"/>
     </div>
@@ -148,6 +145,6 @@
 </c:if>
 
 <hr/>
-<p><a href="${ctx}/editor/index">返回主编工作台</a></p>
+
 
 <%@ include file="/WEB-INF/jsp/common/footer.jsp"%>

@@ -11,10 +11,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">编辑部管理员工作台</h2>
-        <div class="chips">
-            <span class="chip">负责投稿的形式审查和日常运营支持（如新闻 / 公告维护）。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="grid grid-3">

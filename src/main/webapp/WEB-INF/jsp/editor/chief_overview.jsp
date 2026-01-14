@@ -11,11 +11,8 @@
     <div class="card-header" style="margin-bottom: 12px;">
         <div style="min-width: 0;">
             <div class="page-head">
-        <h2 class="page-title">主编全览</h2>
-        <div class="chips">
-            <span class="chip">查看系统内全部稿件的当前状态。点击“查看详情”进入稿件详情页，查看<strong>审稿流程 / 评审记录 / 版本与附件</strong>。</span>
-        </div>
-    </div></div>
+        <h2 class="page-title">系统全览</h2>
+</div></div>
     </div>
 
     <c:if test="${not empty manuscripts}">

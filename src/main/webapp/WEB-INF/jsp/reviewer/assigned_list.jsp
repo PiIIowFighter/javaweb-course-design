@@ -6,10 +6,7 @@
 
 <div class="page-head">
         <h2 class="page-title">待评审稿件列表</h2>
-        <div class="chips">
-            <span class="chip">以下为当前分配给您的、需要在外审截止日期前完成评审的稿件。</span>
-        </div>
-    </div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
+</div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <c:if test="${empty reviews}">
     <p>目前没有待评审的稿件。</p>

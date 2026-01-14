@@ -9,11 +9,8 @@
     <div class="card-header">
         <div>
             <div class="page-head">
-        <h2 class="page-title">投稿</h2>
-        <div class="chips">
-            <span class="chip">你可以先保存草稿（DRAFT），稍后继续编辑；也可以直接最终提交（SUBMITTED）。</span>
-        </div>
-    </div></div>
+        <h2 class="page-title">提交稿件</h2>
+</div></div>
     </div>
 
     <c:if test="${not empty error}">

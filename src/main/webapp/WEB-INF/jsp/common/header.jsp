@@ -99,11 +99,6 @@
                             <span>消息</span>
                         </a>
 
-                        <a href="${pageContext.request.contextPath}/profile">
-                            <i class="bi bi-person" aria-hidden="true"></i>
-                            <span>个人信息</span>
-                        </a>
-
 
                         <a href="${pageContext.request.contextPath}/auth/logout">
                             <i class="bi bi-box-arrow-right" aria-hidden="true"></i>

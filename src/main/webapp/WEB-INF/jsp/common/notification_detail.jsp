@@ -11,10 +11,7 @@
         <div style="flex:1;">
             <div class="page-head">
         <h2 class="page-title">通知详情</h2>
-        <div class="chips">
-            <span class="chip"><c:choose> <c:when test="${n.read}"> <span class="badge">已读</span> </c:when> <c:otherwise> <span class="badge badge-warn">未读</span> </c:otherwise> </c:choose> <span class="muted" style="margin-left:10px;">发送时间：<c:out value="${n.createdAt}"/></span></span>
-        </div>
-    </div></div>
+</div></div>
 
         <div class="actions" style="margin:0; display:flex; gap:10px;">
             <a class="btn" href="${ctx}/notifications?box=${box}">

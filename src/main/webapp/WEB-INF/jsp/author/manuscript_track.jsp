@@ -457,10 +457,7 @@
             <div class="page-head">
         <h2 class="page-title"><i class="bi bi-clock-history" aria-hidden="true"></i>
                 稿件状态追踪</h2>
-        <div class="chips">
-            <span class="chip">标题：<c:out value="${manuscript.title}"/></span>
-        </div>
-    </div></div>
+</div></div>
         <div class="actions">
             <a class="btn-quiet" href="${ctx}/manuscripts/list">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i>

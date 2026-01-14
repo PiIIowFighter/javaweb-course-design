@@ -9,10 +9,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">修改稿件并重新提交</h2>
-        <div class="chips">
-            <span class="chip">当前稿件处于待修改状态，请在此页面按新建投稿表单的逻辑完成修改后重新提交（Resubmit）。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <!-- 退回后：展示编辑部给出的修改意见（形式审查反馈） -->

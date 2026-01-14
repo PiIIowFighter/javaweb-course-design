@@ -5,14 +5,11 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <div class="page-head">
-    <h2 class="page-title">待分配审稿人稿件列表（TO_ASSIGN）</h2>
-    <div class="chips">
-        <span class="chip">此页面展示已经通过案头处理、等待主编/编辑分配外审专家的稿件（状态：TO_ASSIGN）。</span>
-    </div>
+    <h2 class="page-title">待分配队列（TO_ASSIGN）</h2>
 </div>
 
 <c:if test="${empty manuscripts}">
-    <p>当前没有等待分配审稿人的稿件。</p>
+    <p>当前没有等待分配编辑的稿件。</p>
 </c:if>
 
 <c:if test="${not empty manuscripts}">

@@ -7,10 +7,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">密码重置</h2>
-        <div class="chips">
-            <span class="chip">通过邮箱验证码重置账号密码。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="stack">

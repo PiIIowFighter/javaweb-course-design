@@ -11,10 +11,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">关于期刊 (About the journal)</h2>
-        <div class="chips">
-            <span class="chip">期刊介绍、编委会信息与基本指标</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <h3>期刊介绍</h3>

@@ -55,15 +55,7 @@
                 </div>
             </div>
             <div class="card-content">
-                <div class="grid grid-3">
-                    <div>
-                        <div class="kicker">提交时间</div>
-                        <div><c:out value="${empty manuscript.submitTime ? '—' : manuscript.submitTime}"/></div>
-                    </div>
-                    <div>
-                        <div class="kicker">终审时间</div>
-                        <div><c:out value="${empty manuscript.finalDecisionTime ? '—' : manuscript.finalDecisionTime}"/></div>
-                    </div>
+                <div class="grid grid-2">
                     <div>
                         <div class="kicker">研究方向</div>
                         <div><c:out value="${empty manuscript.subjectArea ? '—' : manuscript.subjectArea}"/></div>
@@ -72,26 +64,7 @@
                         <div class="kicker">关键词</div>
                         <div><c:out value="${empty manuscript.keywords ? '—' : manuscript.keywords}"/></div>
                     </div>
-                    <div>
-                        <div class="kicker">资助信息</div>
-                        <c:choose>
-                            <c:when test="${not empty fundings}">
-                                <ul style="margin: 0; padding-left: 18px;">
-                                    <c:forEach var="f" items="${fundings}">
-                                        <li>
-                                            <c:out value="${f.fundingName}"/>
-                                            <c:if test="${not empty f.fundingLevel}">（<c:out value="${f.fundingLevel}"/>）</c:if>
-                                            <c:if test="${not empty f.fundingAmount}">，金额：<c:out value="${f.fundingAmount}"/></c:if>
-                                        </li>
-                                    </c:forEach>
-                                </ul>
-                            </c:when>
-                            <c:otherwise>
-                                <div><c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/></div>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
-</div>
+                </div>
 
                 <!-- 作者视角：稿件被退回后，展示编辑部给出的修改意见（形式审查反馈） -->
                 <c:if test="${roleCode == 'AUTHOR' and manuscript.currentStatus == 'RETURNED' and not empty formalCheckResult and not empty formalCheckResult.feedback}">
@@ -108,6 +81,40 @@
                         <div style="white-space: pre-wrap; line-height: 1.6;"><c:out value="${deskRejectReason}"/></div>
                     </div>
                 </c:if>
+            </div>
+        </div>
+
+        <!-- 资助信息：单独一栏展示（与下方作者列表同风格） -->
+        <div class="card">
+            <div class="card-header"><div class="card-title">资助信息</div></div>
+            <div class="card-content">
+                <c:choose>
+                    <c:when test="${not empty fundings}">
+                        <table class="table" style="width:100%;">
+                            <thead>
+                            <tr>
+                                <th style="width:60px;">#</th>
+                                <th>资助名称</th>
+                                <th style="width:160px;">资助级别</th>
+                                <th style="width:160px;">资助金额</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <c:forEach var="f" items="${fundings}" varStatus="st">
+                                <tr>
+                                    <td><c:out value="${st.index + 1}"/></td>
+                                    <td><c:out value="${f.fundingName}"/></td>
+                                    <td><c:out value="${empty f.fundingLevel ? '—' : f.fundingLevel}"/></td>
+                                    <td><c:out value="${empty f.fundingAmount ? '—' : f.fundingAmount}"/></td>
+                                </tr>
+                            </c:forEach>
+                            </tbody>
+                        </table>
+                    </c:when>
+                    <c:otherwise>
+                        <div><c:out value="${empty manuscript.fundingInfo ? '—' : manuscript.fundingInfo}"/></div>
+                    </c:otherwise>
+                </c:choose>
             </div>
         </div>
 

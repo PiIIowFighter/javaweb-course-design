@@ -54,52 +54,51 @@ public class PublicAboutServlet extends HttpServlet {
 
         Integer journalId = (journal == null) ? null : journal.getJournalId();
 
-        // aims / policies：读取页面内容
-        if ("aims".equals(tab) || "policies".equals(tab)) {
-            try {
-                JournalPage page;
-                if (journalId != null) {
-                    page = journalPageDAO.findByJournalAndKey(journalId, tab);
-                } else {
-                    page = journalPageDAO.findFirstJournalByKey(tab);
-                }
-
-                if ("aims".equals(tab)) {
-                    req.setAttribute("aimsPage", page);
-                } else {
-                    req.setAttribute("policiesPage", page);
-                }
-
-                if (page == null) {
-                    req.setAttribute("pageLoadError", "暂无内容。");
-}
-            } catch (SQLException e) {
-                req.setAttribute("pageLoadError", e.getMessage());
+        // 单页 Tab：一次性加载所有板块数据，前端仅切换展示（不跳转页面）
+        // aims
+        try {
+            JournalPage aimsPage = (journalId != null)
+                    ? journalPageDAO.findByJournalAndKey(journalId, "aims")
+                    : journalPageDAO.findFirstJournalByKey("aims");
+            req.setAttribute("aimsPage", aimsPage);
+            if (aimsPage == null) {
+                req.setAttribute("aimsLoadError", "暂无内容。");
             }
+        } catch (SQLException e) {
+            req.setAttribute("aimsLoadError", e.getMessage());
+        }
+
+        // policies
+        try {
+            JournalPage policiesPage = (journalId != null)
+                    ? journalPageDAO.findByJournalAndKey(journalId, "policies")
+                    : journalPageDAO.findFirstJournalByKey("policies");
+            req.setAttribute("policiesPage", policiesPage);
+            if (policiesPage == null) {
+                req.setAttribute("policiesLoadError", "暂无内容。");
+            }
+        } catch (SQLException e) {
+            req.setAttribute("policiesLoadError", e.getMessage());
         }
 
         // 编委会
-        if ("board".equals(tab)) {
-            List<EditorialBoardMember> members = Collections.emptyList();
-            if (journalId != null) {
-                try {
-                    members = boardDAO.findByJournal(journalId);
-                } catch (SQLException e) {
-                    members = Collections.emptyList();
-                    req.setAttribute("boardLoadError", e.getMessage());
-                }
+        List<EditorialBoardMember> members = Collections.emptyList();
+        if (journalId != null) {
+            try {
+                members = boardDAO.findByJournal(journalId);
+            } catch (SQLException e) {
+                members = Collections.emptyList();
+                req.setAttribute("boardLoadError", e.getMessage());
             }
-            req.setAttribute("boardMembers", members);
         }
+        req.setAttribute("boardMembers", members);
 
         // 新闻
-        if ("news".equals(tab)) {
-            try {
-                List<News> newsList = newsDAO.findPublishedAll();
-                req.setAttribute("newsList", newsList);
-            } catch (SQLException e) {
-                req.setAttribute("newsLoadError", e.getMessage());
-            }
+        try {
+            List<News> newsList = newsDAO.findPublishedAll();
+            req.setAttribute("newsList", newsList);
+        } catch (SQLException e) {
+            req.setAttribute("newsLoadError", e.getMessage());
         }
 
         req.setAttribute("pageTitle", "关于期刊");

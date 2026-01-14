@@ -17,10 +17,7 @@
             <div>
                 <div class="page-head">
         <h2 class="page-title"><c:out value="${article.title}"/></h2>
-        <div class="chips">
-            <span class="chip"><c:if test="${article.finalDecisionTime != null}"> 录用时间：<c:out value="${fn:substring(article.finalDecisionTime, 0, 10)}"/> </c:if></span>
-        </div>
-    </div></div>
+</div></div>
         </div>
 
         <c:if test="${not empty article.authorList}">

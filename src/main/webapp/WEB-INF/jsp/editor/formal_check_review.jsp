@@ -7,7 +7,7 @@
 <c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <div class="page-head">
-        <h2 class="page-title">形式审查 / 格式检查</h2>
+        <h2 class="page-title">形式审查</h2>
     </div><c:if test="${empty manuscript}">
     <p>未找到稿件信息。</p>
 </c:if>

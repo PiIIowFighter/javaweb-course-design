@@ -9,10 +9,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">主编工作台</h2>
-        <div class="chips">
-            <span class="chip">期刊的最高学术负责人，从全局视角统筹稿件流转，负责初审、分配编辑、终审决策与审稿人库管理。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="grid grid-2">

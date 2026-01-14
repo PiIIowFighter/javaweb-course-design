@@ -5,11 +5,8 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <div class="page-head">
-        <h2 class="page-title">案头稿件列表（FORMAL_CHECK 之后、待进一步处理）</h2>
-        <div class="chips">
-            <span class="chip">此页面展示已经通过形式审查、进入编辑部案头阶段（状态：DESK_REVIEW_INITIAL）的稿件。</span>
-        </div>
-    </div><!--
+        <h2 class="page-title">案头审查</h2>
+</div><!--
   响应式优化：
   - 表格外层使用 table-wrap，窄屏可横向滚动；
   - 操作区按钮使用 flex-wrap，避免挤压导致大片空白/错位。
@@ -34,7 +31,7 @@
 </style>
 
 <c:if test="${empty manuscripts}">
-    <p>当前没有需要处理的案头稿件。</p>
+    <p>当前没有需要案头审查的稿件。</p>
 </c:if>
 <c:if test="${not empty manuscripts}">
 <div class="table-wrap">

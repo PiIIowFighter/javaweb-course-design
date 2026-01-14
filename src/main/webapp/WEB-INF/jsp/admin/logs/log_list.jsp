@@ -9,10 +9,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">系统日志查询</h2>
-        <div class="chips">
-            <span class="chip">展示系统的操作日志，支持按时间范围、用户、模块等条件检索。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <form action="${pageContext.request.contextPath}/admin/logs/list" method="get" class="stack">

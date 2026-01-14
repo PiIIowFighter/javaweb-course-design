@@ -8,11 +8,8 @@
     <div class="card-header">
         <div>
             <div class="page-head">
-        <h2 class="page-title">审稿监控 / 催审面板</h2>
-        <div class="chips">
-            <span class="chip">查看逾期审稿任务，并手动或自动发送催审提醒邮件。</span>
-        </div>
-    </div></div>
+        <h2 class="page-title">审稿监控 / 催审</h2>
+</div></div>
     </div>
 
     <div class="stack">

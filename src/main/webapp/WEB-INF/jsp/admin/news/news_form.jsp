@@ -13,10 +13,7 @@
             新增新闻 / 公告
         </c:otherwise>
     </c:choose></h2>
-        <div class="chips">
-            <span class="chip">通过此表单维护期刊公告、投稿须知等内容。</span>
-        </div>
-    </div><form id="newsForm" action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
+</div><form id="newsForm" action="${pageContext.request.contextPath}/admin/news/save" method="post" enctype="multipart/form-data">
     <input type="hidden" name="id" value="${news.newsId}"/>
 
     <p>

@@ -5,13 +5,8 @@
 <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
 <div class="page-head">
-        <h2 class="page-title">形式审查 / 格式检查工作台</h2>
-        <div class="chips">
-            <span class="chip">此页面用于编辑部管理员对作者新提交的稿件进行形式审查和格式检查：</span>
-            <span class="chip">SUBMITTED：作者刚提交的稿件，尚未开始形式审查；</span>
-            <span class="chip">FORMAL_CHECK：正在形式审查 / 格式检查阶段的稿件。</span>
-        </div>
-    </div><c:if test="${empty manuscripts}">
+        <h2 class="page-title">形式审查</h2>
+</div><c:if test="${empty manuscripts}">
     <p>当前没有需要形式审查或格式检查的稿件。</p>
 </c:if>
 <c:if test="${not empty manuscripts}">

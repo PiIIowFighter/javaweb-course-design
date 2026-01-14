@@ -7,10 +7,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">创建账号</h2>
-        <div class="chips">
-            <span class="chip">注册成功后账号状态将直接为 ACTIVE，可立即登录。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="stack">

@@ -6,10 +6,7 @@
 
 <div class="page-head">
         <h2 class="page-title">编辑委员会管理</h2>
-        <div class="chips">
-            <span class="chip">维护期刊的主编、副主编、编委等成员信息。</span>
-        </div>
-    </div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
+</div><c:set var="ctx" value="${pageContext.request.contextPath}"/>
 
 <div style="margin: 12px 0;">
     <div style="margin-bottom: 8px;">

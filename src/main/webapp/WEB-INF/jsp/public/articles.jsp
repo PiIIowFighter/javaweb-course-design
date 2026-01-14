@@ -12,10 +12,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">文章与专刊 (Articles & Issues)</h2>
-        <div class="chips">
-            <span class="chip">Latest published · Top cited · Most downloaded · Most popular</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <div class="tabs">

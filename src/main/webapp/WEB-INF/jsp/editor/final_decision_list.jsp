@@ -10,11 +10,8 @@
     <div class="card-header">
         <div>
             <div class="page-head">
-        <h2 class="page-title">终审 / 录用与退稿决策列表</h2>
-        <div class="chips">
-            <span class="chip">展示已完成外审、进入编辑推荐或主编终审阶段的稿件，并在此完成终审决策。</span>
-        </div>
-    </div></div>
+        <h2 class="page-title">终审决策</h2>
+</div></div>
     </div>
 
     <div class="grid grid-2">

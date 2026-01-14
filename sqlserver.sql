@@ -1,29 +1,4 @@
--- ============================================================
--- 合并脚本：sqlserver_patched.sql + sync_formal_check_database.sql
--- 生成时间: 2026-01-02
--- 说明：先执行主建库/补丁脚本，再执行形式审查同步脚本（已包含存在性判断）。
--- ============================================================
 
-/* ============================================================
-   Online_SMSystem4SP 课程设计 - 重整版 SQL Server 建库脚本（v2025-12-21）
-   目标：
-   1) 与当前 src.zip 代码一致（尤其是 dbo.OperationLogs / dbo.RolePermissions）；
-   2) 修复“日志管理 500 / 列名 LogId 无效”等由表结构不一致导致的问题；
-   3) 给出默认角色、默认账号、默认权限映射，保证后台可直接登录演示。
-   ------------------------------------------------------------
-   说明：
-   - 若你希望“全量重建数据库”，请先取消下面 DROP DATABASE 的注释；
-   - 若你希望“在现有库上修复 OperationLogs / RolePermissions”，脚本也提供了
-     “检测列是否存在 -> DROP & 重新创建”的兼容逻辑（不会自动迁移旧日志数据）。
-   ============================================================ */
-
-/* ========= 可选：全量重建数据库（会清空所有数据，请谨慎） =========
-IF DB_ID(N'Online_SMSystem4SP') IS NOT NULL
-    DROP DATABASE [Online_SMSystem4SP];
-GO
-================================================================ */
-
--- 若数据库不存在则创建
 IF DB_ID(N'Online_SMSystem4SP') IS NULL
     CREATE DATABASE [Online_SMSystem4SP];
 GO
@@ -31,11 +6,17 @@ GO
 USE [Online_SMSystem4SP];
 GO
 
-/* ============================================================
-   0. 兼容修复：如果旧表存在但缺少关键列，则删除旧表（避免 500）
-   ============================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+GO
 
--- 0.1 OperationLogs：若存在但没有 LogId 列，则删除后重建（不迁移旧数据）
+
 IF OBJECT_ID(N'dbo.OperationLogs', N'U') IS NOT NULL
 AND COL_LENGTH(N'dbo.OperationLogs', N'LogId') IS NULL
 BEGIN
@@ -43,7 +24,6 @@ BEGIN
 END
 GO
 
--- 0.2 RolePermissions：若存在但列名不一致，则删除后重建
 IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
 AND (COL_LENGTH(N'dbo.RolePermissions', N'RoleCode') IS NULL OR COL_LENGTH(N'dbo.RolePermissions', N'PermissionKey') IS NULL)
 BEGIN
@@ -51,14 +31,11 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   1. 角色表 Roles（7 种角色）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Roles', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Roles (
         RoleId      INT IDENTITY(1,1) PRIMARY KEY,
-        RoleCode    NVARCHAR(50)  NOT NULL UNIQUE,  -- SUPER_ADMIN / SYSTEM_ADMIN / AUTHOR / REVIEWER / EDITOR_IN_CHIEF / EDITOR / EO_ADMIN
+        RoleCode    NVARCHAR(50)  NOT NULL UNIQUE,
         RoleName    NVARCHAR(100) NOT NULL,
         Description NVARCHAR(200) NULL
     );
@@ -74,36 +51,23 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   2. 用户表 Users
-   - 代码中注册用户默认 Status=PENDING，需管理员激活（SystemAdminServlet）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Users', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Users (
         UserId         INT IDENTITY(1,1) PRIMARY KEY,
         Username       NVARCHAR(50)  NOT NULL UNIQUE,
-        PasswordHash   NVARCHAR(255) NOT NULL,          -- 课程设计阶段：明文（后续可换哈希）
+        PasswordHash   NVARCHAR(255) NOT NULL,
         Email          NVARCHAR(100) NULL,
         FullName       NVARCHAR(100) NULL,
         Affiliation    NVARCHAR(200) NULL,
         ResearchArea   NVARCHAR(200) NULL,
         RoleId         INT NOT NULL,
         RegisterTime   DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
-        Status         NVARCHAR(20)  NOT NULL DEFAULT N'ACTIVE',  -- ACTIVE / DISABLED / LOCKED / PENDING
+        Status         NVARCHAR(20)  NOT NULL DEFAULT N'ACTIVE',
         CONSTRAINT FK_Users_Roles FOREIGN KEY(RoleId) REFERENCES dbo.Roles(RoleId),
         CONSTRAINT CK_Users_Status CHECK (Status IN (N'ACTIVE', N'DISABLED', N'LOCKED', N'PENDING'))
     );
 
-    /* 默认账号（可按需改密码）
-       - admin / 123        ：超级管理员
-       - sysadmin / password123 ：系统管理员
-       - eoadmin / password123  ：编辑部管理员
-       - eic / password123      ：主编
-       - editor1 / password123  ：编辑
-       - reviewer1 / password123：审稿人
-       - author1 / password123  ：作者
-    */
     INSERT dbo.Users (Username, PasswordHash, Email, FullName, Affiliation, ResearchArea, RoleId, Status)
     SELECT N'admin', N'123', N'admin@example.com', N'超级管理员', N'系统内置', NULL, RoleId, N'ACTIVE'
       FROM dbo.Roles WHERE RoleCode = N'SUPER_ADMIN';
@@ -134,11 +98,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   3. 权限映射表 RolePermissions（给后台模块做 URL 级授权）
-   - 代码读取：dbo.RolePermissions(RoleCode, PermissionKey)
-   - SUPER_ADMIN 在代码中直接放行，不需要写入此表也行
-   ============================================================ */
 IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.RolePermissions(
@@ -150,7 +109,6 @@ BEGIN
 END;
 GO
 
--- 初始化默认权限：SYSTEM_ADMIN 拥有全部后台权限；EO_ADMIN 仅新闻管理（可按需增减）
 IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions)
 BEGIN
     INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES
@@ -166,26 +124,20 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   Patch: 为新稿件流程相关角色追加默认权限（保持原有数据不变，只在缺失时补齐）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
 BEGIN
-    -- 作者：提交新稿件
+
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'AUTHOR' AND PermissionKey = N'MANUSCRIPT_SUBMIT_NEW')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'AUTHOR', N'MANUSCRIPT_SUBMIT_NEW');
 
-    -- 审稿人：填写审稿意见
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'REVIEWER' AND PermissionKey = N'REVIEW_WRITE_OPINION')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'REVIEWER', N'REVIEW_WRITE_OPINION');
 
-    -- 编辑：邀请/指派审稿人 + 查看审稿人身份
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR', N'MANUSCRIPT_INVITE_ASSIGN');
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR' AND PermissionKey = N'MANUSCRIPT_VIEW_REVIEWER_ID')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR', N'MANUSCRIPT_VIEW_REVIEWER_ID');
 
-    -- 主编（EIC）：查看所有稿件 + 邀请/指派 + 查看审稿人身份 + 做出录用/拒稿决定
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'MANUSCRIPT_VIEW_ALL')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'MANUSCRIPT_VIEW_ALL');
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
@@ -195,7 +147,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EDITOR_IN_CHIEF' AND PermissionKey = N'DECISION_MAKE_ACCEPT_REJECT')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EDITOR_IN_CHIEF', N'DECISION_MAKE_ACCEPT_REJECT');
 
-    -- 编务部管理员：查看所有稿件 + 邀请/指派 + 查看审稿人身份 + 修改系统配置
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_VIEW_ALL')
         INSERT dbo.RolePermissions(RoleCode, PermissionKey) VALUES (N'EO_ADMIN', N'MANUSCRIPT_VIEW_ALL');
     IF NOT EXISTS (SELECT 1 FROM dbo.RolePermissions WHERE RoleCode = N'EO_ADMIN' AND PermissionKey = N'MANUSCRIPT_INVITE_ASSIGN')
@@ -207,9 +158,6 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   4. 期刊表 Journals
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Journals', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Journals (
@@ -224,7 +172,6 @@ BEGIN
         CONSTRAINT FK_Journals_CreatedBy FOREIGN KEY(CreatedBy) REFERENCES dbo.Users(UserId)
     );
 
-    -- 任务书示例期刊
     INSERT dbo.Journals(Name, Description, ImpactFactor, Timeline, ISSN, CreatedBy)
     SELECT N'International Artificial Intelligence Research',
            N'课程设计示例期刊：国际人工智能研究',
@@ -233,9 +180,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   5. 稿件表 Manuscripts（含状态机字段）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Manuscripts (
@@ -250,7 +194,7 @@ BEGIN
         FundingInfo        NVARCHAR(500)  NULL,
         AuthorList         NVARCHAR(500)  NULL,
         Status             NVARCHAR(30)   NOT NULL DEFAULT N'DRAFT',
-        Decision           NVARCHAR(30)   NULL,          -- ACCEPT / REJECT / REVISION
+        Decision           NVARCHAR(30)   NULL,
         CurrentRound       INT NOT NULL DEFAULT 1,
         SubmitTime         DATETIME2(0) NULL,
         LastStatusTime     DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
@@ -282,9 +226,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   6. 稿件版本表 ManuscriptVersions
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ManuscriptVersions', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptVersions (
@@ -308,40 +249,33 @@ BEGIN
 END;
 GO
 
-/* -- Patch: add CoverLetterHtml column for ManuscriptVersions (if missing) -- */
 IF COL_LENGTH(N'dbo.ManuscriptVersions', N'CoverLetterHtml') IS NULL
 BEGIN
     ALTER TABLE dbo.ManuscriptVersions ADD CoverLetterHtml NVARCHAR(MAX) NULL;
 END;
 GO
 
-/* ============================================================
-   6.x 稿件编辑指派记录表 ManuscriptAssignments
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ManuscriptAssignments', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptAssignments (
-        AssignmentId       INT IDENTITY(1,1) PRIMARY KEY,  -- 主键
-        ManuscriptId       INT NOT NULL,                   -- 对应稿件
-        EditorId           INT NOT NULL,                   -- 被指派的编辑
-        AssignedByChiefId  INT NOT NULL,                   -- 指派的主编
-        ChiefComment       NVARCHAR(1000) NULL,            -- 主编给编辑的文字建议
-        AssignedTime       DATETIME2(0) NOT NULL 
-                          DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),        -- 指派时间（北京时间）
+        AssignmentId       INT IDENTITY(1,1) PRIMARY KEY,
+        ManuscriptId       INT NOT NULL,
+        EditorId           INT NOT NULL,
+        AssignedByChiefId  INT NOT NULL,
+        ChiefComment       NVARCHAR(1000) NULL,
+        AssignedTime       DATETIME2(0) NOT NULL
+                          DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
 
-        CONSTRAINT FK_MA_Manuscript 
+        CONSTRAINT FK_MA_Manuscript
             FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId),
-        CONSTRAINT FK_MA_Editor 
+        CONSTRAINT FK_MA_Editor
             FOREIGN KEY(EditorId) REFERENCES dbo.Users(UserId),
-        CONSTRAINT FK_MA_AssignedByChief 
+        CONSTRAINT FK_MA_AssignedByChief
             FOREIGN KEY(AssignedByChiefId) REFERENCES dbo.Users(UserId)
     );
 END;
 GO
 
-/* ============================================================
-   7. 稿件作者表 ManuscriptAuthors
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ManuscriptAuthors', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptAuthors (
@@ -360,9 +294,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   8. 推荐审稿人表 ManuscriptRecommendedReviewers
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ManuscriptRecommendedReviewers', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptRecommendedReviewers (
@@ -376,9 +307,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   9. 审稿表 Reviews
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Reviews', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Reviews (
@@ -395,7 +323,7 @@ BEGIN
         ScorePresentation DECIMAL(4,2) NULL,
         Score          DECIMAL(4,2) NULL,
         Recommendation NVARCHAR(50) NULL,
-        Status         NVARCHAR(30) NOT NULL DEFAULT N'INVITED', -- INVITED/ACCEPTED/DECLINED/SUBMITTED/EXPIRED
+        Status         NVARCHAR(30) NOT NULL DEFAULT N'INVITED',
         InvitedAt      DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
         AcceptedAt     DATETIME2(0) NULL,
         DeclinedAt     DATETIME2(0) NULL,
@@ -413,14 +341,9 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   ★ 升级补丁：审稿人评审结构图字段（V2）
-   - 解决 reviewer 提交评审时报错：列名 'ConfidentialToEditor' 无效
-   - 可安全重复执行（按列是否存在判断）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Reviews', N'U') IS NOT NULL
 BEGIN
-    /* 保证拒绝邀请状态可用（DECLINED）以及拒绝原因字段存在 */
+
     IF COL_LENGTH('dbo.Reviews','DeclinedAt') IS NULL
         ALTER TABLE dbo.Reviews ADD DeclinedAt DATETIME2(0) NULL;
 
@@ -453,9 +376,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   10. 编委会表 EditorialBoard
-   ============================================================ */
 IF OBJECT_ID(N'dbo.EditorialBoard', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.EditorialBoard (
@@ -471,9 +391,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   11. 新闻公告表 News
-   ============================================================ */
 IF OBJECT_ID(N'dbo.News', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.News (
@@ -488,11 +405,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   12. 操作日志表 OperationLogs（★与代码一致）
-   - 访问路径：/admin/logs/list
-   - 关键字段：LogId / CreatedAt（排序用）
-   ============================================================ */
 IF OBJECT_ID(N'dbo.OperationLogs', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.OperationLogs(
@@ -506,22 +418,18 @@ BEGIN
         CreatedAt     DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME())
     );
 
-    -- 可选索引：提升日志列表查询性能
     CREATE INDEX IX_OperationLogs_CreatedAt ON dbo.OperationLogs(CreatedAt DESC, LogId DESC);
     CREATE INDEX IX_OperationLogs_ActorUsername ON dbo.OperationLogs(ActorUsername);
 END;
 GO
 
-/* ============================================================
-   13. 其他可选表：若你还在沿用旧脚本的 Files / 状态历史表，可继续保留
-   - 当前 src.zip 代码未强依赖 dbo.Files / dbo.ManuscriptStatusHistory
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Files', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Files (
         FileId       INT IDENTITY(1,1) PRIMARY KEY,
         FileName     NVARCHAR(260) NOT NULL,
-        FilePath     NVARCHAR(260) NOT NULL,
+
+        FilePath     NVARCHAR(512) NOT NULL,
         FileType     NVARCHAR(50)  NULL,
         FileSize     BIGINT        NULL,
         UploadTime   DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
@@ -556,9 +464,6 @@ BEGIN
 END;
 GO
 
-/* ============================================================
-   14. 常用索引（提升列表查询）
-   ============================================================ */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Users_Username' AND object_id = OBJECT_ID(N'dbo.Users'))
     CREATE INDEX IX_Users_Username ON dbo.Users(Username);
 GO
@@ -571,27 +476,18 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Manuscripts_Submitter
     CREATE INDEX IX_Manuscripts_SubmitterId ON dbo.Manuscripts(SubmitterId, ManuscriptId DESC);
 GO
 
-PRINT '✅ Online_SMSystem4SP schema initialized (v2025-12-21).';
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Files_Manuscript_Version_Type' AND object_id = OBJECT_ID(N'dbo.Files'))
+    CREATE INDEX IX_Files_Manuscript_Version_Type ON dbo.Files(ManuscriptId, VersionId, FileType);
 GO
 
-/* ============================================================
-   99. About Journal - Pages & Seed (Aims / Policies / News seed)
-   说明：
-   - 关于期刊页面的 Aims and scope、Policies and Guidelines 通过 dbo.JournalPages 配置；
-   - 若已存在记录则更新（MERGE），便于重复执行；
-   - 如 News 表为空，插入 3 条已发布新闻（便于前台展示）。
-   ============================================================ */
+GO
 
 USE [Online_SMSystem4SP];
 GO
 
-
-/* ======== MERGED: JournalPages seed from journalpages_seed_currentdb.sql (2026-01-05) ======== */
-
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
--- 开启常见 SQL Server 行为开关（兼容索引/计算列/过滤索引等）
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_PADDING ON;
@@ -600,17 +496,6 @@ SET CONCAT_NULL_YIELDS_NULL ON;
 SET ARITHABORT ON;
 GO
 
-/* ============================================================
-   JournalPages Seed (Current DB)
-   解决：/guide /publish /about/aims /about/policies 提示
-         “JournalPages 中没有对应记录”
-   特点：
-   - 不硬编码 USE 数据库：对【当前连接的数据库】生效
-   - 自动识别 JournalPages 是否含 CoverImagePath / AttachmentPath 列
-   - 记录存在则更新，不存在则插入（MERGE），可重复执行
-   ============================================================ */
-
-PRINT N'当前数据库：' + DB_NAME();
 GO
 
 IF OBJECT_ID(N'dbo.Journals', N'U') IS NULL
@@ -630,7 +515,7 @@ END
 
 IF OBJECT_ID(N'dbo.JournalPages', N'U') IS NULL
 BEGIN
-    -- 如果你的项目里 JournalPages 早已存在，这段不会执行
+
     CREATE TABLE dbo.JournalPages (
         PageId     INT IDENTITY(1,1) PRIMARY KEY,
         JournalId  INT NOT NULL,
@@ -648,12 +533,10 @@ GO
 DECLARE @hasCover BIT = CASE WHEN COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NOT NULL THEN 1 ELSE 0 END;
 DECLARE @hasAttach BIT = CASE WHEN COL_LENGTH('dbo.JournalPages', 'AttachmentPath') IS NOT NULL THEN 1 ELSE 0 END;
 
-PRINT N'JournalPages 扩展列：CoverImagePath=' + CAST(@hasCover AS NVARCHAR(10)) + N', AttachmentPath=' + CAST(@hasAttach AS NVARCHAR(10));
 GO
 
 DECLARE @sql NVARCHAR(MAX) = N'';
 
--- 为了兼容有/无 CoverImagePath、AttachmentPath 的两种表结构，这里用动态 SQL 拼接 MERGE
 SET @sql = N'
 DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId ASC);
 
@@ -731,8 +614,6 @@ WHEN NOT MATCHED THEN
     VALUES (S.JournalId, S.PageKey, S.Title, S.Content' + CASE WHEN 1=1 THEN N'' ELSE N'' END + N');
 ';
 
--- 如果表里有 CoverImagePath/AttachmentPath，并且它们是 NOT NULL 且无默认值，
--- 上面的 INSERT 可能失败；因此这里在拼接时，把这两列也塞进去（赋 NULL），最大化兼容。
 IF COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NOT NULL
 BEGIN
     SET @sql = REPLACE(@sql,
@@ -752,7 +633,6 @@ BEGIN
         N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL)',
         N'VALUES (S.JournalId, S.PageKey, S.Title, S.Content, NULL, NULL)');
 
-    -- 如果没有 CoverImagePath，只有 AttachmentPath
     SET @sql = REPLACE(@sql,
         N'INSERT (JournalId, PageKey, Title, Content)',
         N'INSERT (JournalId, PageKey, Title, Content, AttachmentPath)');
@@ -764,14 +644,8 @@ END
 EXEC sp_executesql @sql;
 GO
 
-PRINT N'✅ 已写入/更新 JournalPages：publish / guide / aims / policies';
-PRINT N'   你可以用下面语句验证：';
-PRINT N'   SELECT JournalId, PageKey, Title, UpdatedAt FROM dbo.JournalPages ORDER BY UpdatedAt DESC;';
 GO
 
-/* ======== END MERGED JournalPages seed ======== */
-
-/* 99.3 初始化 News（若 News 表为空） */
 IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.News)
@@ -801,18 +675,7 @@ BEGIN
 END
 GO
 
-PRINT N'? Online_SMSystem4SP full schema + AboutJournal seed initialized (v2025-12-21).';
 GO
-
-/* ============================================================
-   ADD-ON (2025-12-22): Issues + CallForPapers + minimal seeds
-   This section is appended to your original sqlserver.sql.
-   It does NOT modify or delete your original data.
-   It only:
-     - Creates dbo.Issues, dbo.CallForPapers if missing
-     - Inserts sample rows only if missing
-     - Inserts aims/policies pages ONLY IF they don't exist (no overwrite)
-   ============================================================ */
 
 USE [Online_SMSystem4SP];
 GO
@@ -821,26 +684,23 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
 
-/* 0) Get JournalId (your original script inserts at least one journal). */
 DECLARE @JournalId INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
 IF @JournalId IS NULL
 BEGIN
-    -- Extremely defensive fallback: only if original seed was removed.
+
     INSERT INTO dbo.Journals(Name, Description, ImpactFactor, Timeline, ISSN, CreatedBy)
     VALUES (N'Default Journal', N'Auto-created for Issues/Calls.', NULL, NULL, NULL, NULL);
     SET @JournalId = SCOPE_IDENTITY();
 END
 GO
 
-/* 1) Issues */
 IF OBJECT_ID(N'dbo.Issues', N'U') IS NULL
 BEGIN
-    PRINT N'Creating dbo.Issues...';
 
     CREATE TABLE dbo.Issues (
         IssueId      INT            IDENTITY(1,1) NOT NULL PRIMARY KEY,
         JournalId    INT            NOT NULL,
-        IssueType    NVARCHAR(20)   NOT NULL, -- LATEST / SPECIAL
+        IssueType    NVARCHAR(20)   NOT NULL,
         Title        NVARCHAR(300)  NOT NULL,
         Volume       INT            NULL,
         Number       INT            NULL,
@@ -858,11 +718,9 @@ BEGIN
 END
 GO
 
-/* Seed issues: only insert if there are no issues for this journal. */
 DECLARE @jid1 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
 IF NOT EXISTS (SELECT 1 FROM dbo.Issues WHERE JournalId = @jid1)
 BEGIN
-    PRINT N'Seeding sample Issues...';
     INSERT INTO dbo.Issues(JournalId, IssueType, Title, Volume, Number, [Year], Description, IsPublished, PublishDate)
     VALUES
       (@jid1, N'LATEST',  N'Latest Issues - Vol.1 No.1', 1, 1, YEAR(GETDATE()), N'（示例）最新一期', 1, CONVERT(date, DATEADD(day,-21,GETDATE()))),
@@ -870,16 +728,14 @@ BEGIN
 END
 GO
 
-/* 2) CallForPapers */
 IF OBJECT_ID(N'dbo.CallForPapers', N'U') IS NULL
 BEGIN
-    PRINT N'Creating dbo.CallForPapers...';
 
     CREATE TABLE dbo.CallForPapers (
         CallId      INT           IDENTITY(1,1) NOT NULL PRIMARY KEY,
         JournalId   INT           NOT NULL,
         Title       NVARCHAR(300) NOT NULL,
-        Content     NVARCHAR(MAX) NOT NULL, -- HTML allowed
+        Content     NVARCHAR(MAX) NOT NULL,
         StartDate   DATE          NULL,
         Deadline    DATE          NULL,
         EndDate     DATE          NULL,
@@ -893,11 +749,9 @@ BEGIN
 END
 GO
 
-/* Seed call: only if none for this journal. */
 DECLARE @jid2 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
 IF NOT EXISTS (SELECT 1 FROM dbo.CallForPapers WHERE JournalId = @jid2)
 BEGIN
-    PRINT N'Seeding sample Call for Papers...';
     INSERT INTO dbo.CallForPapers(JournalId, Title, Content, StartDate, Deadline, EndDate, IsPublished)
     VALUES
     (@jid2,
@@ -910,7 +764,6 @@ BEGIN
 END
 GO
 
-/* 3) JournalPages: Insert aims/policies only if missing (no overwrite). */
 IF OBJECT_ID(N'dbo.JournalPages', N'U') IS NOT NULL
 BEGIN
     DECLARE @jid3 INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
@@ -931,48 +784,22 @@ BEGIN
 END
 GO
 
--- news_feature_patch.sql
--- 说明：在原有 Online_SMSystem4SP 数据库基础上，为“发布新闻 / 更新期刊公告”增加：
--- 1）支持定时发布（PublishedAt 允许为空，由业务逻辑控制具体发布时间）
--- 2）支持上传附件（AttachmentPath 字段存储附件相对路径）
-
 IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
 BEGIN
-    PRINT '>> Patching dbo.News for scheduled publish & attachment support...';
 
-    -- 1. 确保 PublishedAt 允许为 NULL（用于草稿或尚未到发布时间的记录）
     BEGIN TRY
         ALTER TABLE dbo.News ALTER COLUMN PublishedAt DATETIME2(0) NULL;
-        PRINT ' - Column PublishedAt altered to DATETIME2(0) NULL.';
     END TRY
     BEGIN CATCH
-        PRINT ' - Skip altering PublishedAt (可能已为 NULL 或存在依赖)。';
+        DECLARE @__catch_ignore INT = 0;
     END CATCH;
 
-    -- 2. 如不存在 AttachmentPath 字段，则新增
     IF COL_LENGTH('dbo.News', 'AttachmentPath') IS NULL
     BEGIN
         ALTER TABLE dbo.News ADD AttachmentPath NVARCHAR(500) NULL;
-        PRINT ' - Column AttachmentPath(NVARCHAR(500) NULL) added.';
-    END
-    ELSE
-    BEGIN
-        PRINT ' - Column AttachmentPath already exists, skip.';
     END
 END
-ELSE
-BEGIN
-    PRINT '!! dbo.News 不存在，请先执行原始 sqlserver.sql 初始化数据库。';
-END;
 
-/* ============================================================
-   EXTRA PATCH APPENDED
-   Purpose: Keep original database schema/data exactly the same as sqlserver.sql,
-            then add journal-management board enhancements (cover/attachment columns, guest editors, etc.)
-   Generated: 2025-12-23 13:08:58
-   ============================================================ */
-
--- Ensure DB exists, then switch context
 IF DB_ID(N'Online_SMSystem4SP') IS NULL
 BEGIN
     THROW 50000, 'Database Online_SMSystem4SP not found. Run the base script section first.', 1;
@@ -980,71 +807,42 @@ END
 GO
 USE [Online_SMSystem4SP];
 GO
--- Patch: Journal management board columns (cover/attachment + guest editors)
--- Safe to run multiple times.
--- Target DB: SQL Server, schema dbo.
 
-PRINT '== Patch start: journal management board columns ==';
-
--- JournalPages: add resource columns
 IF COL_LENGTH('dbo.JournalPages', 'CoverImagePath') IS NULL
 BEGIN
     ALTER TABLE dbo.JournalPages ADD CoverImagePath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.JournalPages.CoverImagePath';
 END
-ELSE PRINT 'dbo.JournalPages.CoverImagePath already exists';
 
 IF COL_LENGTH('dbo.JournalPages', 'AttachmentPath') IS NULL
 BEGIN
     ALTER TABLE dbo.JournalPages ADD AttachmentPath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.JournalPages.AttachmentPath';
 END
-ELSE PRINT 'dbo.JournalPages.AttachmentPath already exists';
 
--- Issues: add GuestEditors + resource columns
 IF COL_LENGTH('dbo.Issues', 'GuestEditors') IS NULL
 BEGIN
     ALTER TABLE dbo.Issues ADD GuestEditors NVARCHAR(255) NULL;
-    PRINT 'Added dbo.Issues.GuestEditors';
 END
-ELSE PRINT 'dbo.Issues.GuestEditors already exists';
 
 IF COL_LENGTH('dbo.Issues', 'CoverImagePath') IS NULL
 BEGIN
     ALTER TABLE dbo.Issues ADD CoverImagePath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.Issues.CoverImagePath';
 END
-ELSE PRINT 'dbo.Issues.CoverImagePath already exists';
 
 IF COL_LENGTH('dbo.Issues', 'AttachmentPath') IS NULL
 BEGIN
     ALTER TABLE dbo.Issues ADD AttachmentPath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.Issues.AttachmentPath';
 END
-ELSE PRINT 'dbo.Issues.AttachmentPath already exists';
 
--- CallForPapers: add resource columns
 IF COL_LENGTH('dbo.CallForPapers', 'CoverImagePath') IS NULL
 BEGIN
     ALTER TABLE dbo.CallForPapers ADD CoverImagePath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.CallForPapers.CoverImagePath';
 END
-ELSE PRINT 'dbo.CallForPapers.CoverImagePath already exists';
 
 IF COL_LENGTH('dbo.CallForPapers', 'AttachmentPath') IS NULL
 BEGIN
     ALTER TABLE dbo.CallForPapers ADD AttachmentPath NVARCHAR(255) NULL;
-    PRINT 'Added dbo.CallForPapers.AttachmentPath';
 END
-ELSE PRINT 'dbo.CallForPapers.AttachmentPath already exists';
 
-PRINT '== Patch end: journal management board columns ==';
-
-/*
- * =========================
- * Patch: Notifications (In-App)
- * =========================
- */
 IF OBJECT_ID('dbo.Notifications', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Notifications(
@@ -1063,12 +861,7 @@ BEGIN
     );
 
     CREATE INDEX IX_Notifications_Recipient_Read ON dbo.Notifications(RecipientUserId, IsRead, CreatedAt DESC, NotificationId DESC);
-    PRINT 'Created dbo.Notifications';
 END
-ELSE PRINT 'dbo.Notifications already exists';
-
-PRINT '== Patch end: notifications ==';
-PRINT '== Patch begin: unique email constraint on dbo.Users.Email ==';
 
 IF NOT EXISTS (
     SELECT 1
@@ -1077,54 +870,36 @@ IF NOT EXISTS (
       AND object_id = OBJECT_ID(N'dbo.Users')
 )
 BEGIN
-    -- 为 Email 创建唯一索引（仅对非 NULL 值生效），保证同一邮箱只能注册一个账号
+
     CREATE UNIQUE NONCLUSTERED INDEX UX_Users_Email
         ON dbo.Users(Email)
         WHERE Email IS NOT NULL;
-    PRINT 'Created unique index UX_Users_Email on dbo.Users(Email).';
 END
-ELSE
-    PRINT 'Index UX_Users_Email already exists.';
 
-PRINT '== Patch end: unique email constraint on dbo.Users.Email ==';
 GO
-
-/* ============================================================
-   稿件阶段时间戳表 ManuscriptStageTimestamps
-   用于记录每份稿件在各审稿阶段的完成时间
-   Created: 2025-12-26
-   ============================================================ */
-
-PRINT '== Patch begin: ManuscriptStageTimestamps ==';
 
 IF OBJECT_ID(N'dbo.ManuscriptStageTimestamps', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ManuscriptStageTimestamps (
         ManuscriptId                    INT PRIMARY KEY,
-        DraftCompletedAt                DATETIME2(0) NULL,      -- 草稿编辑完成时间
-        SubmittedAt                     DATETIME2(0) NULL,      -- 已提交待处理完成时间
-        FormalCheckCompletedAt          DATETIME2(0) NULL,      -- 形式审查完成时间
-        DeskReviewInitialCompletedAt    DATETIME2(0) NULL,      -- 案头初筛完成时间
-        ToAssignCompletedAt             DATETIME2(0) NULL,      -- 待分配编辑完成时间
-        WithEditorCompletedAt           DATETIME2(0) NULL,      -- 编辑处理完成时间
-        UnderReviewCompletedAt          DATETIME2(0) NULL,      -- 外审完成时间
-        EditorRecommendationCompletedAt DATETIME2(0) NULL,      -- 编辑推荐意见完成时间
-        FinalDecisionPendingCompletedAt DATETIME2(0) NULL,      -- 待主编终审完成时间
-        
-        CONSTRAINT FK_MST_Manuscript 
-            FOREIGN KEY(ManuscriptId) 
+        DraftCompletedAt                DATETIME2(0) NULL,
+        SubmittedAt                     DATETIME2(0) NULL,
+        FormalCheckCompletedAt          DATETIME2(0) NULL,
+        DeskReviewInitialCompletedAt    DATETIME2(0) NULL,
+        ToAssignCompletedAt             DATETIME2(0) NULL,
+        WithEditorCompletedAt           DATETIME2(0) NULL,
+        UnderReviewCompletedAt          DATETIME2(0) NULL,
+        EditorRecommendationCompletedAt DATETIME2(0) NULL,
+        FinalDecisionPendingCompletedAt DATETIME2(0) NULL,
+
+        CONSTRAINT FK_MST_Manuscript
+            FOREIGN KEY(ManuscriptId)
             REFERENCES dbo.Manuscripts(ManuscriptId)
     );
-    
-    PRINT 'Created dbo.ManuscriptStageTimestamps';
+
 END
-ELSE
-    PRINT 'dbo.ManuscriptStageTimestamps already exists';
 
-PRINT '== Patch end: ManuscriptStageTimestamps ==';
 GO
-
-PRINT '== Patch: EditorSuggestions (编辑建议 + 总结报告) ==';
 
 IF OBJECT_ID(N'dbo.EditorSuggestions', N'U') IS NULL
 BEGIN
@@ -1145,23 +920,9 @@ BEGIN
 
     CREATE INDEX IX_EditorSuggestions_EditorId ON dbo.EditorSuggestions(EditorId);
 
-    PRINT 'Created dbo.EditorSuggestions';
 END
-ELSE
-    PRINT 'dbo.EditorSuggestions already exists';
 
-PRINT '== Patch end: EditorSuggestions ==';
 GO
-
-/* ============================================================
-   Patch: ArticleMetrics + FormalCheckResults（补齐缺失表）
-   Created: 2026-01-02
-   说明：
-   - 解决 PublicArticleServlet / ManuscriptDAO 依赖 dbo.ArticleMetrics 时报 “对象名无效”
-   - 合并形式审查功能所需 dbo.FormalCheckResults（使用 CheckResultId 主键）
-   ============================================================ */
-
-PRINT '== Patch begin: ArticleMetrics ==';
 
 IF OBJECT_ID(N'dbo.ArticleMetrics', N'U') IS NULL
 BEGIN
@@ -1181,17 +942,10 @@ BEGIN
 
     CREATE INDEX IX_ArticleMetrics_UpdatedAt ON dbo.ArticleMetrics(UpdatedAt DESC);
 
-    PRINT 'Created dbo.ArticleMetrics';
 END
-ELSE
-    PRINT 'dbo.ArticleMetrics already exists';
 
-PRINT '== Patch end: ArticleMetrics ==';
 GO
 
-PRINT '== Patch begin: FormalCheckResults ==';
-
--- 兼容：若旧库的 Manuscripts 缺少 LastStatusTime，则补上（新建库脚本一般已包含）
 IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('dbo.Manuscripts', 'LastStatusTime') IS NULL
@@ -1199,7 +953,6 @@ BEGIN
         ALTER TABLE dbo.Manuscripts
             ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME());
 
-        PRINT 'Added LastStatusTime to dbo.Manuscripts';
     END
 END
 GO
@@ -1239,52 +992,23 @@ BEGIN
     CREATE INDEX IX_FormalCheckResults_ManuscriptId ON dbo.FormalCheckResults(ManuscriptId, CheckTime DESC);
     CREATE INDEX IX_FormalCheckResults_ReviewerId ON dbo.FormalCheckResults(ReviewerId, CheckTime DESC);
 
-    PRINT 'Created dbo.FormalCheckResults';
 END
-ELSE
-    PRINT 'dbo.FormalCheckResults already exists';
 
-PRINT '== Patch end: FormalCheckResults ==';
 GO
 
--- ============================================================
--- 以下内容来自：sync_formal_check_database.sql
--- ============================================================
 GO
-
--- ============================================================
--- 形式审查功能数据库同步脚本
--- 执行日期: 2025-12-26
--- 说明: 此脚本用于同步形式审查功能相关的数据库变更
--- ============================================================
 
 USE Online_SMSystem4SP;
 GO
 
-PRINT '============================================================';
-PRINT '开始执行形式审查功能数据库同步脚本...';
-PRINT '============================================================';
 GO
 
-/* ============================================================
-   1. 检查并添加 LastStatusTime 字段到 Manuscripts 表
-   ============================================================ */
-PRINT '检查 Manuscripts 表的 LastStatusTime 字段...';
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.Manuscripts') AND name = 'LastStatusTime')
 BEGIN
     ALTER TABLE dbo.Manuscripts ADD LastStatusTime DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME());
-    PRINT '✅ 已添加字段 LastStatusTime 到 Manuscripts 表';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  字段 LastStatusTime 已存在，跳过添加';
 END
 GO
 
-/* ============================================================
-   2. 创建 FormalCheckResults 表（形式审查结果表）
-   ============================================================ */
-PRINT '检查 FormalCheckResults 表是否存在...';
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults'))
 BEGIN
     CREATE TABLE dbo.FormalCheckResults (
@@ -1313,75 +1037,39 @@ BEGIN
     CREATE INDEX IX_FormalCheckResults_ManuscriptId ON dbo.FormalCheckResults(ManuscriptId, CheckTime DESC);
     CREATE INDEX IX_FormalCheckResults_ReviewerId ON dbo.FormalCheckResults(ReviewerId, CheckTime DESC);
 
-    PRINT '✅ 已创建表 FormalCheckResults';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  表 FormalCheckResults 已存在，跳过创建';
 END
 GO
 
-/* ============================================================
-   3. 添加查重相关字段到 FormalCheckResults 表
-   ============================================================ */
-PRINT '检查并添加查重相关字段...';
-
--- 添加查重率字段
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'SimilarityScore')
 BEGIN
     ALTER TABLE dbo.FormalCheckResults ADD SimilarityScore DECIMAL(5,2) NULL;
-    PRINT '✅ 已添加字段 SimilarityScore';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  字段 SimilarityScore 已存在，跳过添加';
 END
 GO
 
--- 添加高相似度标记字段
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'HighSimilarity')
 BEGIN
     ALTER TABLE dbo.FormalCheckResults ADD HighSimilarity BIT NULL;
-    PRINT '✅ 已添加字段 HighSimilarity';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  字段 HighSimilarity 已存在，跳过添加';
 END
 GO
 
--- 添加查重报告URL字段
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'PlagiarismReportUrl')
 BEGIN
     ALTER TABLE dbo.FormalCheckResults ADD PlagiarismReportUrl NVARCHAR(500) NULL;
-    PRINT '✅ 已添加字段 PlagiarismReportUrl';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  字段 PlagiarismReportUrl 已存在，跳过添加';
 END
 GO
 
-/* ============================================================
-   4. 更新 Manuscripts 表的状态约束
-   ============================================================ */
-PRINT '检查并更新 Manuscripts 表的状态约束...';
-
--- 首先删除旧的状态约束（如果存在）
 IF EXISTS (SELECT * FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.Manuscripts') AND name = N'CK_Manuscripts_Status')
 BEGIN
     ALTER TABLE dbo.Manuscripts DROP CONSTRAINT CK_Manuscripts_Status;
-    PRINT 'ℹ️  已删除旧的状态约束 CK_Manuscripts_Status';
 END
 GO
 
--- 添加新的状态约束（包含 FORMAL_CHECK 和 RETURNED，移除 Incomplete Submission）
 ALTER TABLE dbo.Manuscripts
 ADD CONSTRAINT CK_Manuscripts_Status CHECK (Status IN (
     N'DRAFT',
     N'SUBMITTED',
-    N'FORMAL_CHECK',        -- 新增：形式审查中
-    N'RETURNED',            -- 新增：已退回
+    N'FORMAL_CHECK',
+    N'RETURNED',
     N'DESK_REVIEW_INITIAL',
     N'TO_ASSIGN',
     N'WITH_EDITOR',
@@ -1393,13 +1081,8 @@ ADD CONSTRAINT CK_Manuscripts_Status CHECK (Status IN (
     N'REJECTED',
     N'ARCHIVED'
 ));
-PRINT '✅ 已更新状态约束 CK_Manuscripts_Status';
 GO
 
-/* ============================================================
-   5. 更新状态为"Incomplete Submission"的稿件为"RETURNED"
-   ============================================================ */
-PRINT '检查并更新状态为"Incomplete Submission"的稿件...';
 DECLARE @updateCount INT;
 
 UPDATE dbo.Manuscripts
@@ -1409,94 +1092,42 @@ WHERE Status = 'Incomplete Submission';
 
 SET @updateCount = @@ROWCOUNT;
 
-IF @updateCount > 0
-BEGIN
-    PRINT '✅ 已将 ' + CAST(@updateCount AS NVARCHAR(10)) + ' 条记录的状态从"Incomplete Submission"更新为"RETURNED"';
-END
-ELSE
-BEGIN
-    PRINT 'ℹ️  没有找到状态为"Incomplete Submission"的记录，跳过更新';
-END
 GO
 
-/* ============================================================
-   6. 验证数据库结构
-   ============================================================ */
-PRINT '============================================================';
-PRINT '验证数据库结构...';
-PRINT '============================================================';
-
--- 验证 FormalCheckResults 表
 IF EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults'))
 BEGIN
-    PRINT '✅ 表 FormalCheckResults 存在';
 
-    -- 验证字段
     IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'SimilarityScore')
-        PRINT '✅ 字段 SimilarityScore 存在';
+        BEGIN
+            SET NOCOUNT ON;
+        END
     ELSE
-        PRINT '❌ 字段 SimilarityScore 不存在';
 
     IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'HighSimilarity')
-        PRINT '✅ 字段 HighSimilarity 存在';
+        BEGIN
+            SET NOCOUNT ON;
+        END
     ELSE
-        PRINT '❌ 字段 HighSimilarity 不存在';
 
     IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FormalCheckResults') AND name = 'PlagiarismReportUrl')
-        PRINT '✅ 字段 PlagiarismReportUrl 存在';
-    ELSE
-        PRINT '❌ 字段 PlagiarismReportUrl 不存在';
-END
-ELSE
-BEGIN
-    PRINT '❌ 表 FormalCheckResults 不存在';
+        BEGIN
+            SET NOCOUNT ON;
+        END
 END
 
--- 验证 Manuscripts 表的 LastStatusTime 字段
 IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.Manuscripts') AND name = 'LastStatusTime')
-    PRINT '✅ Manuscripts 表的 LastStatusTime 字段存在';
+    BEGIN
+        SET NOCOUNT ON;
+    END
 ELSE
-    PRINT '❌ Manuscripts 表的 LastStatusTime 字段不存在';
 
--- 验证 Manuscripts 表的状态约束
 IF EXISTS (SELECT * FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.Manuscripts') AND name = N'CK_Manuscripts_Status')
-    PRINT '✅ Manuscripts 表的状态约束 CK_Manuscripts_Status 存在';
-ELSE
-    PRINT '❌ Manuscripts 表的状态约束 CK_Manuscripts_Status 不存在';
+    BEGIN
+        SET NOCOUNT ON;
+    END
 
 GO
 
-/* ============================================================
-   7. 显示当前数据库状态
-   ============================================================ */
-PRINT '============================================================';
-PRINT '当前数据库状态统计';
-PRINT '============================================================';
-
--- 统计稿件数量
-SELECT
-    Status AS '稿件状态',
-    COUNT(*) AS '数量'
-FROM dbo.Manuscripts
-GROUP BY Status
-ORDER BY Status;
-GO
-
--- 统计形式审查结果数量
-SELECT
-    COUNT(*) AS '形式审查结果总数'
-FROM dbo.FormalCheckResults;
-GO
-
-PRINT '============================================================';
-PRINT '形式审查功能数据库同步脚本执行完成！';
-PRINT '============================================================';
-GO
-
-/* =========================================================
-   用户菜单入口权限表（可选增强）
-   兼容旧库：如果表已存在但缺少 Granted 列，则补齐。
-   ========================================================= */
 IF OBJECT_ID('dbo.UserMenuPermissions','U') IS NULL
 BEGIN
     CREATE TABLE dbo.UserMenuPermissions(
@@ -1516,21 +1147,10 @@ BEGIN
 END
 GO
 
-
-/* ============================================================
-   DEMO CONTENT ENHANCEMENT (Homepage + TopNav)
-   Purpose:
-     - Make homepage content non-empty (Journal / Editorial board / News / Calls / Issues / Articles)
-     - Provide more "mature" demo dataset for project showcasing
-   Safe to run multiple times:
-     - Uses NOT EXISTS checks
-     - Updates journal description only when it looks like a placeholder
-   ============================================================ */
 GO
 USE [Online_SMSystem4SP];
 GO
 
-/* 1) Enrich Journal basic info (only if current looks like placeholder) */
 DECLARE @DemoJournalId INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
 IF @DemoJournalId IS NOT NULL
 BEGIN
@@ -1552,7 +1172,6 @@ N'International Artificial Intelligence Research（IAIR）聚焦人工智能与�
 END
 GO
 
-/* 2) Add extra demo users (editorial board candidates) */
 DECLARE @Role_EDITOR INT = (SELECT TOP 1 RoleId FROM dbo.Roles WHERE RoleCode=N'EDITOR');
 DECLARE @Role_REVIEWER INT = (SELECT TOP 1 RoleId FROM dbo.Roles WHERE RoleCode=N'REVIEWER');
 
@@ -1585,7 +1204,6 @@ BEGIN
 END
 GO
 
-/* 3) Seed EditorialBoard (only insert missing rows) */
 IF OBJECT_ID(N'dbo.EditorialBoard', N'U') IS NOT NULL
 BEGIN
     DECLARE @jidEB INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
@@ -1626,7 +1244,6 @@ BEGIN
 END
 GO
 
-/* 4) Seed richer News (avoid duplicates by Title) */
 IF OBJECT_ID(N'dbo.News', N'U') IS NOT NULL
 BEGIN
     DECLARE @newsAuthor INT =
@@ -1665,7 +1282,6 @@ BEGIN
 END
 GO
 
-/* 5) Seed more Issues (Latest & Special) */
 IF OBJECT_ID(N'dbo.Issues', N'U') IS NOT NULL
 BEGIN
     DECLARE @jidIssue INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
@@ -1701,7 +1317,6 @@ BEGIN
 END
 GO
 
-/* 6) Seed more Call for Papers (published) */
 IF OBJECT_ID(N'dbo.CallForPapers', N'U') IS NOT NULL
 BEGIN
     DECLARE @jidCall INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
@@ -1741,7 +1356,6 @@ BEGIN
 END
 GO
 
-/* 7) Seed a few ACCEPTED manuscripts + metrics for public "Articles" page */
 IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
 BEGIN
     DECLARE @jidM INT = (SELECT TOP 1 JournalId FROM dbo.Journals ORDER BY JournalId);
@@ -1822,7 +1436,6 @@ BEGIN
             )
         OUTPUT inserted.ManuscriptId, s.SeedKey INTO @new(ManuscriptId, SeedKey);
 
-        /* Ensure each seeded manuscript has a current Version row (file paths left NULL for demo) */
         IF OBJECT_ID(N'dbo.ManuscriptVersions', N'U') IS NOT NULL
         BEGIN
             INSERT INTO dbo.ManuscriptVersions(ManuscriptId, VersionNumber, IsCurrent, FileAnonymousPath, FileOriginalPath, CoverLetterPath, CoverLetterHtml, ResponseLetterPath, CreatedBy, Remark)
@@ -1831,7 +1444,6 @@ BEGIN
             WHERE NOT EXISTS (SELECT 1 FROM dbo.ManuscriptVersions v WHERE v.ManuscriptId=n.ManuscriptId AND v.VersionNumber=1);
         END
 
-        /* Seed ArticleMetrics for nicer public list sorting */
         IF OBJECT_ID(N'dbo.ArticleMetrics', N'U') IS NOT NULL
         BEGIN
             INSERT INTO dbo.ArticleMetrics(ManuscriptId, ViewCount, DownloadCount, CitationCount, PopularityScore)
@@ -1845,4 +1457,86 @@ BEGIN
         END
     END
 END
+GO
+
+USE [Online_SMSystem4SP];
+GO
+
+IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Manuscripts','Doi') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD Doi NVARCHAR(128) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','PublishYear') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD PublishYear INT NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','Volume') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD [Volume] NVARCHAR(32) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','Issue') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD [Issue] NVARCHAR(32) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','PageRange') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD PageRange NVARCHAR(64) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','Language') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD [Language] NVARCHAR(32) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','ArticleType') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD ArticleType NVARCHAR(64) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','ClassificationNo') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD ClassificationNo NVARCHAR(64) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','CnkiUrl') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD CnkiUrl NVARCHAR(512) NULL;
+
+    IF COL_LENGTH('dbo.Manuscripts','PublishedAt') IS NULL
+        ALTER TABLE dbo.Manuscripts ADD PublishedAt DATETIME2(0) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
+BEGIN
+    UPDATE m
+       SET PublishYear      = COALESCE(m.PublishYear, YEAR(ISNULL(m.FinalDecisionTime, DATEADD(HOUR,8,SYSUTCDATETIME())))),
+           [Volume]         = COALESCE(NULLIF(m.[Volume],''), CAST(((COALESCE(m.PublishYear, YEAR(GETDATE())) - 2000) + 1) AS NVARCHAR(10))),
+           [Issue]          = COALESCE(NULLIF(m.[Issue],''), CAST((m.ManuscriptId % 12) + 1 AS NVARCHAR(10))),
+           PageRange        = COALESCE(NULLIF(m.PageRange,''), CAST(((m.ManuscriptId * 37) % 200) + 1 AS NVARCHAR(10)) + N'-' + CAST((((m.ManuscriptId * 37) % 200) + 1) + 10 AS NVARCHAR(10))),
+           [Language]       = COALESCE(NULLIF(m.[Language],''), N'中文'),
+           ArticleType      = COALESCE(NULLIF(m.ArticleType,''), N'研究论文'),
+           ClassificationNo = COALESCE(NULLIF(m.ClassificationNo,''), N'TP391.41'),
+           PublishedAt      = COALESCE(m.PublishedAt, DATEADD(DAY, 7, ISNULL(m.FinalDecisionTime, DATEADD(HOUR,8,SYSUTCDATETIME())))),
+           Doi              = COALESCE(NULLIF(m.Doi,''), N'10.1234/onlinesm.' + CAST(COALESCE(m.PublishYear, YEAR(GETDATE())) AS NVARCHAR(10)) + N'.' + CAST(m.ManuscriptId AS NVARCHAR(20)))
+      FROM dbo.Manuscripts m
+     WHERE m.Status = N'ACCEPTED';
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Manuscripts', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.Manuscripts
+       SET CnkiUrl = COALESCE(NULLIF(CnkiUrl,''), N'https://kns.cnki.net/kcms2/article/abstract?v=hyKDWyHWvTt9Oni1P6Lkq-5VqdV4b3UcgbOsmUcT1puL3W-6PsLlSDKHZ6gpEdPY4SfsGv3ZFS_c1MgyFn7GndnipDZeRu41wg_RxX5lHkaNEyCpeOnvM_KGe1fyQLkLDb9lgKT7TbAziCs8J_nvE2sOSYypoM57QybF9fXycU8=&uniplatform=NZKPT')
+     WHERE ManuscriptId = 15;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.ManuscriptFundings', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ManuscriptFundings (
+        FundingId      INT IDENTITY(1,1) PRIMARY KEY,
+        ManuscriptId   INT NOT NULL,
+        FundingName    NVARCHAR(200) NOT NULL,
+        FundingLevel   NVARCHAR(50)  NULL,
+        FundingAmount  DECIMAL(18,2) NULL,
+        CreatedAt      DATETIME2(0) NOT NULL DEFAULT DATEADD(HOUR, 8, SYSUTCDATETIME()),
+
+        CONSTRAINT FK_ManuscriptFundings_Manuscript
+            FOREIGN KEY(ManuscriptId) REFERENCES dbo.Manuscripts(ManuscriptId)
+            ON DELETE CASCADE
+    );
+
+    CREATE INDEX IX_ManuscriptFundings_ManuscriptId
+        ON dbo.ManuscriptFundings(ManuscriptId);
+END;
 GO

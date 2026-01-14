@@ -10,10 +10,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">关于期刊页面</h2>
-        <div class="chips">
-            <span class="chip">维护前台四个页面的内容：Publish / Guide / Aims / Policies。</span>
-        </div>
-    </div></div>
+</div></div>
     </div>
 
     <p>

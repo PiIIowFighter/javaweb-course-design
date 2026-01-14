@@ -11,10 +11,7 @@
         <div>
             <div class="page-head">
         <h2 class="page-title">Formatting（格式要求）</h2>
-        <div class="chips">
-            <span class="chip">提供投稿排版与材料准备要求，便于稿件进入同行评审流程。</span>
-        </div>
-    </div></div>
+</div></div>
         <a href="${ctx}/guide" style="white-space:nowrap; text-decoration:none;">
             返回用户指南 <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>

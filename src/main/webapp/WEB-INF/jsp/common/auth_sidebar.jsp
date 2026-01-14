@@ -54,8 +54,8 @@
             </div>
         </div>
         <div class="sidebar-user-actions">
-            <a class="side-link ${fn:contains(uri, '/dashboard') ? 'active' : ''}" href="${ctx}/dashboard">
-                <i class="bi bi-speedometer2" aria-hidden="true"></i> 工作台
+            <a class="side-link ${fn:contains(uri, '/profile') ? 'active' : ''}" href="${ctx}/profile">
+                <i class="bi bi-person" aria-hidden="true"></i> 个人信息
             </a>
         </div>
     </div>

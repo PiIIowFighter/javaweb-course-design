@@ -6,24 +6,57 @@
 
 <div class="page-head">
         <h2 class="page-title">新闻 / 公告管理</h2>
-        <div class="chips">
-            <span class="chip">展示站点公告列表，并支持新增、编辑和删除操作。</span>
-        </div>
-    </div><form method="get" action="${pageContext.request.contextPath}/admin/news/list" style="margin: 12px 0;">
-    <label>关键词：
-        <input type="text" name="keyword" value="${param.keyword}" style="width: 220px;"/>
-    </label>
-    &nbsp;&nbsp;
-    <label>起始日期：
-        <input type="date" name="fromDate" value="${param.fromDate}"/>
-    </label>
-    &nbsp;&nbsp;
-    <label>结束日期：
-        <input type="date" name="toDate" value="${param.toDate}"/>
-    </label>
-    &nbsp;&nbsp;
-    <input type="submit" value="筛选"/>
-    <a href="${pageContext.request.contextPath}/admin/news/list">清除条件</a>
+</div>
+
+<style>
+    /* 仅本页使用：将起始/结束日期和筛选按钮强制放在同一行，并缩小日期框左右间距 */
+    .news-filter-form { margin: 12px 0; }
+    .news-filter-row {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+    .news-filter-row label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        margin: 0;
+    }
+    .news-filter-row input[type="text"] {
+        width: 220px;
+        max-width: 220px;
+    }
+    .news-filter-row input[type="date"] {
+        width: 150px;
+        max-width: 150px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .news-filter-row input[type="submit"],
+    .news-filter-row a {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+</style>
+
+<form class="news-filter-form" method="get" action="${pageContext.request.contextPath}/admin/news/list">
+    <div class="news-filter-row">
+        <label>关键词：
+            <input type="text" name="keyword" value="${param.keyword}"/>
+        </label>
+        <label>起始日期：
+            <input type="date" name="fromDate" value="${param.fromDate}"/>
+        </label>
+        <label>结束日期：
+            <input type="date" name="toDate" value="${param.toDate}"/>
+        </label>
+        <input type="submit" value="筛选"/>
+        <a href="${pageContext.request.contextPath}/admin/news/list">清除条件</a>
+    </div>
 </form>
 
 <p>
