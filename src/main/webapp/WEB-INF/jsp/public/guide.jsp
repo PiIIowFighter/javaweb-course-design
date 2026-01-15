@@ -118,7 +118,7 @@
                             <li>摘要包含背景/方法/结果/结论四要素；关键词 3–6 个。</li>
                             <li>图表清晰，图题与注释完整；参考文献格式统一。</li>
                         </ul>
-                        <p class="muted">提示：后台“期刊管理 → 关于期刊页面”可配置本页内容。</p>
+                        
                     </div>
                 </c:otherwise>
             </c:choose>
@@ -131,7 +131,7 @@
                 </div>
                 <div class="illus-caption">
                     International Artificial Intelligence Research<br/>
-                    （用于填补右侧留白，窄屏自动下移）
+                    
                 </div>
             </div>
         </aside>
